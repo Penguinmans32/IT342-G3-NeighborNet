@@ -1,5 +1,5 @@
 
-<h1 align="center">🚀 <strong>Jes Emanuel Chavez</strong> — <em>A Wanna Be Dev</em></h1>
+<h1 align="center">🚀 <strong>Jes Emanuel Chavez</strong> — <em>HILOM MO BI</em></h1>
 
 <p align="center">
   🌟 <em>Passionate about building innovative solutions, contributing to open-source projects, and exploring emerging tech trends.</em>
