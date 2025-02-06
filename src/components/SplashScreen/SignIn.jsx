@@ -2,7 +2,9 @@ import {FaSearch, FaChalkboardTeacher, FaHandshake, FaBookReader, FaUsers } from
 import { motion } from 'framer-motion';
 import AuthModals from './AuthModal';
 import { useState, useEffect } from 'react';
-import '../styles/SignIn.css';
+import '../../styles/SignIn.css';
+import { CategorySection } from './CategorySection';
+import ExploreOnlineSection from './ExploreOnlineSection';
 
 function SignIn() {
   useEffect(() => {
@@ -293,6 +295,13 @@ function SignIn() {
           </motion.div>
         </div>
       </main>
+
+      <CategorySection />
+
+      {/* Explore Online Section */}
+      <ExploreOnlineSection />
+
+      {/* Footer Section */}
 
       <AuthModals
         isSignInOpen={isSignInOpen}

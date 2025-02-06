@@ -1,4 +1,4 @@
-import SignIn from "./components/SignIn"
+import SignIn from "./components/SplashScreen/SignIn"
 
 
 function App() {
