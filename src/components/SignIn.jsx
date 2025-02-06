@@ -1,74 +1,161 @@
-import { FaGithub, FaFacebook, FaGoogle, FaSearch } from 'react-icons/fa';
-import { MdEmail } from 'react-icons/md';
+import {FaSearch, FaChalkboardTeacher, FaHandshake, FaBookReader, FaUsers } from 'react-icons/fa';
 import { motion } from 'framer-motion';
+import AuthModals from './AuthModal';
+import { useState, useEffect } from 'react';
 import '../styles/SignIn.css';
 
 function SignIn() {
+  useEffect(() => {
+    if (window.particlesJS) {
+      window.particlesJS('particles-js', {
+        particles: {
+          number: { value: 80, density: { enable: true, value_area: 800 } },
+          color: { value: '#ffffff' },
+          opacity: { value: 0.5, random: false },
+          size: { value: 3, random: true },
+          line_linked: { enable: true, distance: 150, color: '#ffffff', opacity: 0.4, width: 1 },
+          move: { enable: true, speed: 2, direction: 'none', random: false, straight: false, out_mode: 'out' }
+        }
+      });
+    }
+  }, []);
+
+  const [isSignUpOpen, setIsSignUpOpen] = useState(false);
+  const [isSignInOpen, setIsSignInOpen] = useState(false);
+
+  const openSignInModal = () => setIsSignInOpen(true);
+  const closeSignInModal = () => setIsSignInOpen(false);
+
+  const openSignUpModal = () => setIsSignUpOpen(true);
+  const closeSignUpModal = () => setIsSignUpOpen(false);
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.2
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: {opacity: 0, y: 20},
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.5
+      }
+    }
+  };
+
+  const features = [
+    {
+      icon: FaChalkboardTeacher,
+      title: "Expert Teachers",
+      description: "Learn from experienced neighbors passionate about sharing their knowledge",
+      color: "from-blue-400 to-blue-600"
+    },
+    {
+      icon: FaHandshake,
+      title: "Community Connect",
+      description: "Build meaningful connections with people in your local area",
+      color: "from-purple-400 to-purple-600"
+    },
+    {
+      icon: FaBookReader,
+      title: "Diverse Classes",
+      description: "Explore a wide range of skills from cooking to coding",
+      color: "from-indigo-400 to-indigo-600"
+    },
+    {
+      icon: FaUsers,
+      title: "Group Learning",
+      description: "Join study groups and practice sessions with fellow learners",
+      color: "from-pink-400 to-pink-600"
+    }
+  ];
+
+
+
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-400 via-blue-300 to-purple-300 overflow-x-hidden relative">
       {/* Navigation Bar with Glass Effect and Animated Waves */}
       <header className="p-4 fixed w-full top-0 z-50 overflow-hidden">
-        {/* Animated Wave Background */}
+        {/* Background Gradient */}
         <div className="absolute inset-0 bg-gradient-to-r from-blue-500/95 via-blue-600/95 to-purple-500/95">
+          {/* Particles Container */}
+          <div id="particles-js" className="absolute inset-0 opacity-30"></div>
+          
+          {/* Educational Floating Elements */}
           <div className="absolute inset-0">
-            <div className="wave"></div>
-            <div className="wave wave2"></div>
-            <div className="wave wave3"></div>
+            <div className="floating-elements"></div>
+            <div className="floating-elements floating-elements2"></div>
+            <div className="floating-elements floating-elements3"></div>
           </div>
         </div>
 
         {/* Header Content with Glass Effect */}
-        <div className="relative z-10 backdrop-blur-sm py-1">
+        <div className="relative z-10 backdrop-blur-sm py-1 transition-all duration-300 hover:backdrop-blur-md">
           <div className="max-w-7xl mx-auto flex justify-between items-center">
+            {/* Logo Section */}
             <div className="flex items-center space-x-3 group cursor-pointer">
               <div className="w-10 h-10 bg-white/95 rounded-xl flex items-center justify-center 
-                            transform group-hover:rotate-12 transition-transform duration-300">
+                          transform group-hover:rotate-12 transition-transform duration-300">
                 <span className="text-blue-600 font-bold text-xl">N</span>
               </div>
               <h1 className="text-2xl font-bold text-white group-hover:text-blue-100 
-                           transition-colors duration-300 tracking wide">
+                        transition-colors duration-300 tracking-wide">
                 Neighbor Net
               </h1>
             </div>
             
-            {/* Enhanced Search Bar */}
+            {/* Search Bar */}
             <div className="flex-1 mx-8 hidden md:block">
               <div className="relative max-w-2xl mx-auto">
                 <div className="relative group">
                   <FaSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 
-                                     text-black text-xl opacity-100" />
+                                  text-black text-xl opacity-100" />
                   <input
                     type="text"
                     placeholder="Search Classes, Teachers and More"
                     className="w-full px-12 py-3 rounded-full border-2 border-transparent 
-                              outline-none bg-white/90 backdrop-blur-sm
-                              transition-all duration-300 shadow-lg
-                              focus:border-blue-400 focus:shadow-blue-300/30 focus:shadow-xl
-                              placeholder-shown:focus:placeholder-transparent hover:bg-white"
+                            outline-none bg-white/90 backdrop-blur-sm
+                            transition-all duration-300 shadow-lg
+                            focus:border-blue-400 focus:shadow-blue-300/30 focus:shadow-xl
+                            placeholder-shown:focus:placeholder-transparent hover:bg-white"
                   />
                   <span className="absolute right-4 top-1/2 transform -translate-y-1/2 
-                                 bg-gray-100 px-2 py-1 rounded-md text-xs text-gray-500
-                                 opacity-50 group-hover:opacity-100 transition-opacity duration-300">
+                              bg-gray-100 px-2 py-1 rounded-md text-xs text-gray-500
+                              opacity-50 group-hover:opacity-100 transition-opacity duration-300">
                     ⌘ K
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* Enhanced Navigation Buttons */}
+            {/* Navigation Buttons */}
             <div className="flex items-center space-x-6">
-              <button className="group relative px-6 py-2.5 text-white hover:text-blue-100 
-                               transition-all duration-300 overflow-hidden">
+              <button 
+                className="group relative px-6 py-2.5 text-white hover:text-blue-100 
+                        transition-all duration-300 overflow-hidden shimmer-hover" 
+                onClick={openSignInModal}
+              >
                 Sign In
                 <span className="absolute bottom-0 left-0 w-full h-0.5 bg-white transform 
-                               scale-x-0 group-hover:scale-x-100 transition-transform duration-300"></span>
+                            scale-x-0 group-hover:scale-x-100 transition-transform duration-300"></span>
               </button>
-              <button className="relative px-8 py-2.5 bg-black/90 text-white rounded-full 
-                               overflow-hidden group transform hover:-translate-y-0.5 
-                               transition-all duration-300 hover:shadow-xl border border-white/10">
+              <button 
+                className="relative px-8 py-2.5 bg-black/90 text-white rounded-full 
+                        overflow-hidden group transform hover:-translate-y-0.5 
+                        transition-all duration-300 hover:shadow-xl border border-white/10 shimmer-hover" 
+                onClick={openSignUpModal}
+              >
                 <span className="relative z-10">Sign Up</span>
                 <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 
-                              opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                            opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               </button>
             </div>
           </div>
@@ -122,89 +209,100 @@ function SignIn() {
             </div>
           </div>
 
-          {/* Right Sign In Card */}
-          <motion.div 
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8 }}
-            className="animation-fade-in-right"
+          {/* Right Image Section */}
+          {/* Add this new Right Content Section */}
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="relative"
           >
-            <div className="bg-white p-8 rounded-2xl shadow-2xl space-y-6 
-                          transform hover:scale-[1.01] transition-all duration-300
-                          relative overflow-hidden group">
-              {/* Decorative background pattern */}
-              <div className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity duration-500">
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-600 to-purple-600 animate-gradient"></div>
-                <div className="absolute inset-0" style={{
-                  backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")",
-                }}></div>
-              </div>
+            {/* Floating Elements */}
+            <div className="absolute -top-20 -right-20 w-40 h-40 bg-blue-400/20 rounded-full blur-xl animate-pulse"></div>
+            <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-purple-400/20 rounded-full blur-xl animate-pulse delay-300"></div>
 
-              <div className="relative z-10">
-                <h3 className="text-center text-2xl text-gray-800 font-semibold mb-8">
-                  Start Your Learning Journey
-                </h3>
-                
-                {/* Enhanced Social Sign In Buttons */}
-                <div className="space-y-4">
-                  {[
-                    { 
-                      icon: FaGoogle, 
-                      text: 'Continue with Google',
-                      bgColor: 'hover:bg-red-50 hover:border-red-200',
-                      iconColor: 'text-red-500',
-                      hoverEffect: 'hover:shadow-md'
-                    },
-                    { 
-                      icon: FaGithub, 
-                      text: 'Continue with Github',
-                      bgColor: 'hover:bg-gray-50 hover:border-gray-300',
-                      iconColor: 'text-gray-700',
-                      hoverEffect: 'hover:shadow-md'
-                    },
-                    { 
-                      icon: FaFacebook, 
-                      text: 'Continue with Facebook',
-                      bgColor: 'hover:bg-blue-50 hover:border-blue-200',
-                      iconColor: 'text-blue-600',
-                      hoverEffect: 'hover:shadow-md'
-                    },
-                    { 
-                      icon: MdEmail, 
-                      text: 'Sign up with Email',
-                      bgColor: 'hover:bg-green-50 hover:border-green-200',
-                      iconColor: 'text-green-600',
-                      hoverEffect: 'hover:shadow-md'
-                    }
-                  ].map((provider, index) => (
-                    <motion.button
-                      key={index}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      className={`w-full py-3 px-6 border border-gray-200 rounded-xl flex items-center 
-                                justify-center space-x-3 ${provider.bgColor} transition-all duration-300 
-                                hover:shadow-md bg-white group`}
-                    >
-                      <provider.icon className={`text-xl ${provider.iconColor} group-hover:scale-110 transition-transform duration-300`} />
-                      <span className="font-medium text-gray-700">{provider.text}</span>
-                    </motion.button>
-                  ))}
-                </div>
-
-                {/* Terms Section */}
-                <div className="mt-8 text-sm text-center text-gray-500 leading-relaxed">
-                  By joining, you agree to our{' '}
-                  <a href="#" className="text-blue-500 hover:underline font-medium">Terms</a>
-                  {' • '}
-                  <a href="#" className="text-blue-500 hover:underline font-medium">Privacy</a>
-                  {' • '}
-                  <a href="#" className="text-blue-500 hover:underline font-medium">Community Guidelines</a>
-                </div>
-              </div>
+            {/* Feature Cards Grid */}
+            <div className="grid grid-cols-2 gap-4 relative">
+              {features.map((feature, index) => (
+                <motion.div
+                  key={index}
+                  variants={itemVariants}
+                  whileHover={{ scale: 1.05, rotate: -1 }}
+                  className={`bg-white/90 backdrop-blur-lg rounded-2xl p-6 shadow-xl
+                            transform transition-all duration-300
+                            hover:shadow-2xl hover:bg-gradient-to-br ${feature.color}
+                            hover:text-white group`}
+                >
+                  <feature.icon className="text-3xl mb-4 text-gray-700 group-hover:text-white
+                                        transform transition-all duration-300" />
+                  <h3 className="text-lg font-semibold mb-2">{feature.title}</h3>
+                  <p className="text-sm opacity-90">{feature.description}</p>
+                  
+                  {/* Decorative dots */}
+                  <div className="absolute top-2 right-2 flex space-x-1">
+                    <div className="w-1 h-1 rounded-full bg-current opacity-50"></div>
+                    <div className="w-1 h-1 rounded-full bg-current opacity-30"></div>
+                    <div className="w-1 h-1 rounded-full bg-current opacity-10"></div>
+                  </div>
+                </motion.div>
+              ))}
             </div>
+
+            {/* Interactive Stats Section */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 1 }}
+              className="mt-8 bg-white/80 backdrop-blur-lg rounded-2xl p-6 shadow-lg"
+            >
+              <div className="grid grid-cols-3 gap-4">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-blue-600">1000+</div>
+                  <div className="text-sm text-gray-600">Active Classes</div>
+                </div>
+                <div className="text-center border-x border-gray-200">
+                  <div className="text-2xl font-bold text-purple-600">500+</div>
+                  <div className="text-sm text-gray-600">Teachers</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-indigo-600">5000+</div>
+                  <div className="text-sm text-gray-600">Students</div>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Call to Action Button */}
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="mt-6 w-full py-4 bg-gradient-to-r from-blue-500 to-purple-500
+                       text-white rounded-xl font-medium shadow-lg
+                       hover:shadow-xl transition-all duration-300
+                       flex items-center justify-center space-x-2"
+            >
+              <span>Explore Classes</span>
+              <svg 
+                className="w-5 h-5 animate-bounce" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+              </svg>
+            </motion.button>
           </motion.div>
         </div>
       </main>
+
+      <AuthModals
+        isSignInOpen={isSignInOpen}
+        isSignUpOpen={isSignUpOpen}
+        closeSignInModal={closeSignInModal}
+        closeSignUpModal={closeSignUpModal}
+        setIsSignInOpen={setIsSignInOpen}
+        setIsSignUpOpen={setIsSignUpOpen}
+      />
+
 
       {/* Decorative Elements */}
       <div className="fixed top-40 -right-20 w-72 h-72 bg-purple-300 rounded-full filter blur-3xl opacity-30 animate-blob"></div>
