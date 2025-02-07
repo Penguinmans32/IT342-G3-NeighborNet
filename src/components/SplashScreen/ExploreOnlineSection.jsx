@@ -1,7 +1,9 @@
 import { motion } from 'framer-motion';
+import { p } from 'framer-motion/client';
 import { Play, Users, Clock, Star } from 'lucide-react';
+import { forwardRef, useRef } from 'react';
 
-function ExploreOnlineSection() {
+const ExploreOnlineSection = forwardRef((props, ref) => { 
   const categories = [
     "Featured",
     "Music",
@@ -57,7 +59,7 @@ function ExploreOnlineSection() {
   ];
 
   return (
-    <section className="py-24 relative overflow-hidden">
+    <section className="py-24 relative overflow-hidden" ref={ref}>
       {/* Animated background elements */}
       <div className="absolute inset-0 bg-gradient-to-br from-blue-900/20 via-black to-purple-900/20" />
       <div className="absolute inset-0">
@@ -114,10 +116,9 @@ function ExploreOnlineSection() {
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           transition={{ duration: 0.8 }}
-          className="relative max-w-5xl mx-auto" // Reduced max width
+          className="relative max-w-5xl mx-auto" 
         >
-          {/* First row */}
-          <div className="grid grid-cols-3 gap-4 mb-12"> {/* Reduced gap and margin */}
+          <div className="grid grid-cols-3 gap-4 mb-12"> 
             {courses.slice(0, 3).map((course, index) => (
               <motion.div
                 key={course.id}
@@ -130,7 +131,7 @@ function ExploreOnlineSection() {
                          hover:border-white/20 transition-all duration-300 hover:shadow-xl
                          hover:shadow-blue-500/10"
               >
-                <div className="aspect-[5/4] relative overflow-hidden"> {/* Changed aspect ratio */}
+                <div className="aspect-[5/4] relative overflow-hidden"> 
                   <img
                     src={course.image}
                     alt={course.title}
@@ -140,7 +141,6 @@ function ExploreOnlineSection() {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent 
                                opacity-0 group-hover:opacity-100 transition-all duration-500" />
                   
-                  {/* Smaller Play button */}
                   <motion.button
                     whileHover={{ scale: 1.1 }}
                     className="absolute inset-0 m-auto w-10 h-10 bg-white/10 rounded-full 
@@ -151,7 +151,6 @@ function ExploreOnlineSection() {
                     <Play className="w-4 h-4 text-white" />
                   </motion.button>
 
-                  {/* Course info overlay */}
                   <div className="absolute inset-x-0 bottom-0 p-3 translate-y-full 
                                group-hover:translate-y-0 transition-transform duration-500">
                     <div className="space-y-1.5">
@@ -185,7 +184,6 @@ function ExploreOnlineSection() {
             ))}
           </div>
 
-          {/* Second row - Offset */}
           <div className="grid grid-cols-2 gap-4 px-12">
             {courses.slice(3, 5).map((course, index) => (
               <motion.div
@@ -286,6 +284,6 @@ function ExploreOnlineSection() {
       </div>
     </section>
   );
-}
+});
 
 export default ExploreOnlineSection;

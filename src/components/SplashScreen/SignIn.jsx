@@ -1,10 +1,16 @@
 import {FaSearch, FaChalkboardTeacher, FaHandshake, FaBookReader, FaUsers } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 import AuthModals from './AuthModal';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import '../../styles/SignIn.css';
 import { CategorySection } from './CategorySection';
 import ExploreOnlineSection from './ExploreOnlineSection';
+import ExpertsSection from './ExpertsSection';
+import Testimonials from './Testimonals';
+import Questions from './Questions';
+import Footer from './Footer';
+import ScrollProgressBar from './ScrollProgressBar';
+
 
 function SignIn() {
   useEffect(() => {
@@ -21,6 +27,16 @@ function SignIn() {
       });
     }
   }, []);
+
+  const exploreRef = useRef(null);
+
+  const scrollToExplore = () => {
+    const yOffset = -80;
+    const element = exploreRef.current;
+    const y = element.getBoundingClientRect().top + window.scrollY + yOffset;
+  
+    window.scrollTo({ top: y, behavior: 'smooth' });
+  };
 
   const [isSignUpOpen, setIsSignUpOpen] = useState(false);
   const [isSignInOpen, setIsSignInOpen] = useState(false);
@@ -84,6 +100,7 @@ function SignIn() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-400 via-blue-300 to-purple-300 overflow-x-hidden relative">
+      <ScrollProgressBar />
       {/* Navigation Bar with Glass Effect and Animated Waves */}
       <header className="p-4 fixed w-full top-0 z-50 overflow-hidden">
         {/* Background Gradient */}
@@ -277,6 +294,7 @@ function SignIn() {
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
+              onClick={scrollToExplore}
               className="mt-6 w-full py-4 bg-gradient-to-r from-blue-500 to-purple-500
                        text-white rounded-xl font-medium shadow-lg
                        hover:shadow-xl transition-all duration-300
@@ -299,7 +317,13 @@ function SignIn() {
       <CategorySection />
 
       {/* Explore Online Section */}
-      <ExploreOnlineSection />
+      <div ref={exploreRef}>
+        <ExploreOnlineSection />
+      </div>
+      <ExpertsSection />
+      <Testimonials />
+      <Questions />
+      <Footer />
 
       {/* Footer Section */}
 
