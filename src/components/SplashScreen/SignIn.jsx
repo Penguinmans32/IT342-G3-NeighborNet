@@ -10,9 +10,12 @@ import Testimonials from './Testimonals';
 import Questions from './Questions';
 import Footer from './Footer';
 import ScrollProgressBar from './ScrollProgressBar';
+import { useAuth } from '../../backendApi/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 
 function SignIn() {
+
   useEffect(() => {
     if (window.particlesJS) {
       window.particlesJS('particles-js', {
@@ -27,6 +30,15 @@ function SignIn() {
       });
     }
   }, []);
+
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user) {
+        navigate('/homepage');
+    }
+  }, [user, navigate]);
 
   const exploreRef = useRef(null);
 
