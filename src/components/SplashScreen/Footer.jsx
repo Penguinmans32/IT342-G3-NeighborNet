@@ -98,12 +98,12 @@ export default function Footer() {
                 <a href="mailto:office@neighbornet.com" 
                    className="flex items-center gap-2 text-sm hover:text-blue-400 transition-colors">
                   <Mail className="w-4 h-4" />
-                  office@neighbornet.com
+                  neighbonet0@gmail.com
                 </a>
                 <a href="tel:+1-356-255-0284" 
                    className="flex items-center gap-2 text-sm hover:text-blue-400 transition-colors">
                   <Phone className="w-4 h-4" />
-                  +1-356-255-0284
+                  +63-356-255-0284
                 </a>
                 <div className="flex items-center gap-2 text-sm">
                   <MapPin className="w-4 h-4" />
