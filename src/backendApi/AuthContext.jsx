@@ -8,11 +8,27 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const initialUser = AuthService.initializeAuth();
-        if (initialUser) {
-            setUser(initialUser);
-        }
-        setLoading(false);
+        const initializeAuth = async () => {
+            try {
+                const token = localStorage.getItem('token');
+                if (token) {
+                    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+                    
+                    const response = await axios.get('http://localhost:8080/api/auth/user');
+                    setUser(response.data);
+                }
+            } catch (error) {
+                console.error('Auth initialization failed:', error);
+                // Clear invalid auth data
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                delete axios.defaults.headers.common['Authorization'];
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        initializeAuth();
     }, []);
 
     const login = async (username, password) => {
@@ -43,6 +59,7 @@ export const AuthProvider = ({ children }) => {
     return (
         <AuthContext.Provider value={{ 
             user, 
+            setUser,
             login, 
             register, 
             logout, 
