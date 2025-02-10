@@ -14,6 +14,9 @@ class AuthService {
                 localStorage.setItem("user", JSON.stringify(response.data));
                 localStorage.setItem("token", token);
                 axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
+                const userResponse = await axios.get('http://localhost:8080/api/auth/user');
+                return userResponse.data;
             }
             return response.data;
         } catch (error) {
