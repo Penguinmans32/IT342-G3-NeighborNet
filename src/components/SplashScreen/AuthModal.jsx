@@ -426,10 +426,10 @@
       },
       { 
         icon: FaMicrosoft, 
-        text: 'Continue with Facebook',
+        text: 'Continue with Microsoft',
         bgColor: 'hover:bg-blue-50',
         iconColor: 'text-blue-600',
-        provider: 'facebook',
+        provider: 'microsoft',
         authUrl: `${import.meta.env.VITE_APP_API_URL}/oauth2/authorize/microsoft`
       }
     ];
