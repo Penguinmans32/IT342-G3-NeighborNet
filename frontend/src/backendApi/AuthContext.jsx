@@ -1,35 +1,89 @@
-import { createContext, useState, useContext, useEffect } from "react";
+import React, { createContext, useState, useContext, useEffect } from "react";
 import AuthService from "./AuthService";
+import  axios  from "axios";
+import { useNavigate } from "react-router-dom";
 
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [initialized, setInitialized] = useState(false);
+    const navigate = useNavigate();
+
+
+    const checkAuthStatus = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                return false;
+            }
+    
+            if (!axios.defaults.headers.common['Authorization']) {
+                axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+            }
+            
+            if (!user) {
+                const response = await axios.get('http://localhost:8080/api/auth/user');
+                setUser(response.data);
+            }
+            return true;
+        } catch (error) {
+            if (error.response?.status !== 401 && error.response?.status !== 403) {
+                console.error('System error occurred');
+            }
+    
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            delete axios.defaults.headers.common['Authorization'];
+            setUser(null);
+            return false;
+        }
+    };
 
     useEffect(() => {
+        let mounted = true;
+    
         const initializeAuth = async () => {
+            if (!mounted) return;
+    
             try {
-                const token = localStorage.getItem('token');
-                if (token) {
-                    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-                    
-                    const response = await axios.get('http://localhost:8080/api/auth/user');
-                    setUser(response.data);
+                const isAuthenticated = await checkAuthStatus();
+                if (!isAuthenticated && 
+                    window.location.pathname !== '/' && 
+                    window.location.pathname !== '/about' && 
+                    !window.location.pathname.startsWith('/verify-email')) {
+                    window.location.replace('/');
                 }
             } catch (error) {
-                console.error('Auth initialization failed:', error);
-                // Clear invalid auth data
-                localStorage.removeItem('token');
-                localStorage.removeItem('user');
-                delete axios.defaults.headers.common['Authorization'];
+                // silent error
             } finally {
-                setLoading(false);
+                if (mounted) {
+                    setLoading(false);
+                    setInitialized(true);
+                }
             }
         };
-
+    
         initializeAuth();
+    
+        return () => {
+            mounted = false;
+        };
     }, []);
+
+
+    const requireAuth = async () => {
+        if (!initialized) return true; 
+        if (!user) {
+            const isAuthenticated = await checkAuthStatus();
+            if (!isAuthenticated) {
+                navigate('/');
+                return false;
+            }
+        }
+        return true;
+    };
 
     const login = async (username, password) => {
         try {
@@ -64,6 +118,7 @@ export const AuthProvider = ({ children }) => {
             register, 
             logout, 
             loading,
+            requireAuth,
             isAuthenticated: !!user 
         }}>
             {!loading && children}
@@ -71,6 +126,46 @@ export const AuthProvider = ({ children }) => {
     );
 };
 
-export const useAuth = () => useContext(AuthContext);
+class AuthErrorBoundary extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = { hasError: false };
+    }
+
+    static getDerivedStateFromError(error) {
+        return { hasError: true };
+    }
+
+    componentDidCatch(error, errorInfo) {
+    }
+
+    render() {
+        if (this.state.hasError) {
+            return null; 
+        }
+
+        return this.props.children;
+    }
+}
+
+export const AuthProviderWithErrorBoundary = ({ children }) => {
+    return (
+        <AuthErrorBoundary>
+            <AuthProvider>{children}</AuthProvider>
+        </AuthErrorBoundary>
+    );
+};
+
+export const useAuth = () => {
+    const context = useContext(AuthContext);
+    if (!context) {
+        return {
+            user: null,
+            loading: false,
+            isAuthenticated: false
+        };
+    }
+    return context;
+};
 
 export default AuthContext;

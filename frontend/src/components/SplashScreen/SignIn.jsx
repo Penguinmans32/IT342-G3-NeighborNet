@@ -143,29 +143,31 @@ function SignIn() {
               </h1>
             </div>
             
-            {/* Search Bar */}
-            <div className="flex-1 mx-8 hidden md:block">
-              <div className="relative max-w-2xl mx-auto">
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                const searchQuery = e.target.search.value;
+                navigate(`/search?query=${encodeURIComponent(searchQuery)}`);
+              }}>
                 <div className="relative group">
                   <FaSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 
-                                  text-black text-xl opacity-100" />
+                                    text-black text-xl opacity-100" />
                   <input
-                    type="text"
+                    type="search"
+                    name="search"
                     placeholder="Search Classes, Teachers and More"
                     className="w-full px-12 py-3 rounded-full border-2 border-transparent 
-                            outline-none bg-white/90 backdrop-blur-sm
-                            transition-all duration-300 shadow-lg
-                            focus:border-blue-400 focus:shadow-blue-300/30 focus:shadow-xl
-                            placeholder-shown:focus:placeholder-transparent hover:bg-white"
+                              outline-none bg-white/90 backdrop-blur-sm
+                              transition-all duration-300 shadow-lg
+                              focus:border-blue-400 focus:shadow-blue-300/30 focus:shadow-xl
+                              placeholder-shown:focus:placeholder-transparent hover:bg-white"
                   />
                   <span className="absolute right-4 top-1/2 transform -translate-y-1/2 
-                              bg-gray-100 px-2 py-1 rounded-md text-xs text-gray-500
-                              opacity-50 group-hover:opacity-100 transition-opacity duration-300">
+                                bg-gray-100 px-2 py-1 rounded-md text-xs text-gray-500
+                                opacity-50 group-hover:opacity-100 transition-opacity duration-300">
                     ⌘ K
                   </span>
                 </div>
-              </div>
-            </div>
+              </form>
 
             {/* Navigation Buttons */}
             <div className="flex items-center space-x-6">
