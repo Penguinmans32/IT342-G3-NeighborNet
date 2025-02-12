@@ -22,7 +22,7 @@ const stats = [
   { value: '25K+', label: 'Classes' },
   { value: '600K', label: 'Members' },
   { value: '8K', label: 'Teacher' },
-  { value: '4.8', label: 'Rate' },
+  { value: '4.8', label: 'Rate' },``
 ];
 
 
