@@ -1,8 +1,7 @@
-<h1 align="center">🚀 <strong>NeighborNet 📚 </strong>
+<h1 align="center">🚀 <strong>NeighborNet 📚 </strong> </h1>
 
 <p align="center">
-  ⭐ <em>NeighborNet is a user-friendly digital platform that brings neighbors together through sharing resources and skills within their community. The app makes it simple for neighbors to lend and borrow items they occasionally need, from tools and camping gear to kitchen appliances, eliminating the need to buy things that might only be used a few times. Beyond item sharing, NeighborNet creates learning opportunities by connecting people who want to share their expertise with those eager to learn new skills – whether it's cooking, gardening, photography, or any other talent.</em>
-</p>
+  ⭐ <em><small>NeighborNet is a user-friendly digital platform that brings neighbors together through sharing resources and skills within their community. The app makes it simple for neighbors to lend and borrow items they occasionally need, from tools and camping gear to kitchen appliances, eliminating the need to buy things that might only be used a few times. Beyond item sharing, NeighborNet creates learning opportunities by connecting people who want to share their expertise with those eager to learn new skills – whether it's cooking, gardening, photography, or any other talent.</small></em>
 
 <h2 align="center">📚 <strong>Features</strong></h2>
 <p align="center">
@@ -54,13 +53,25 @@
 
 </p>
 
-TEAM MEMBERS
+# 👋 Hi, I'm **Kyla Dominic Genodiala**
 
-Member3
-NAME: Kyla Dominic Genodiala
-COURSE & YEAR: BSIT-4
+## 💻 About Me
+I’m a third-year **BSIT** student at **CIT University**. I consider myself an **ambivert**—comfortable in social situations, but also enjoy my time alone. 
 
-Hi I'm Kyla Dominic Genodiala, a third year IT student in CIT University. I consider myself as a ambivert comfortable in social situations but also enjoy time alone. 
+
+
+## 📚 Course & Year
+- **Course**: BSIT
+- **Year**: 4th Year
+
+
+
+## 🌱 Interests
+- Web Development
+- Programming
+- Problem-solving
+
+
 
 <h1 align="center">Hello, I'm Penguinmans32 🐧</h1>
 
