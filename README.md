@@ -1,3 +1,24 @@
+<h1 align="center">🚀 <strong>NeighborNet 📚 </strong>
+
+<p align="center">
+  ⭐ <em>NeighborNet is a user-friendly digital platform that brings neighbors together through sharing resources and skills within their community. The app makes it simple for neighbors to lend and borrow items they occasionally need, from tools and camping gear to kitchen appliances, eliminating the need to buy things that might only be used a few times. Beyond item sharing, NeighborNet creates learning opportunities by connecting people who want to share their expertise with those eager to learn new skills – whether it's cooking, gardening, photography, or any other talent.</em>
+</p>
+
+<h2 align="center">📚 <strong>Features</strong></h2>
+<p align="center">
+  - 🔒 <strong>Feature 1:</strong> User Verification<br />
+  - ⭐ <strong>Feature 2:</strong> Rating & Review System<br />
+  - 🌱 <strong>Feature 3:</strong> Community Dashboard<br />
+  - 🧠 <strong>Feature 4</strong> Offering a Skill
+</p>
+
+<h2 align="center">🗂️ <strong>Links</strong></h2>
+<p align="center">
+  <a href="https://www.figma.com/design/N9JXCEig0TYOnKqWx1unTT/NeighborNet?node-id=0-1&t=LnxphxT733CiAe7v-1" target="_blank"><img src="https://img.shields.io/badge/Figma-Visit-blue?style=for-the-badge&logo=figma&logoColor=white" alt="Figma"/></a>
+  <a href="https://www.lucidchart.com" target="_blank"><img src="https://img.shields.io/badge/Lucidchart-Visit-blue?style=for-the-badge&logo=lucidchart&logoColor=white" alt="Lucidchart"/></a>
+</p>
+
+
 
 <h1 align="center">🚀 <strong>Jes Emanuel Chavez</strong> — <em>HILOM MO BI</em></h1>
 
