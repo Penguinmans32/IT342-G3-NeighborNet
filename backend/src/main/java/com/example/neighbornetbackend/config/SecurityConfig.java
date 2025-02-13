@@ -78,6 +78,7 @@ public class SecurityConfig {
                 .httpBasic(basic -> basic.disable())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**", "/oauth2/**", "/login/oauth2/code/**", "/", "/error", "/login").permitAll()
+                        .requestMatchers("api/classes/thumbnail/**").permitAll()
                         .requestMatchers("/api/test/public").permitAll()
                         .requestMatchers("/swagger-ui/**").permitAll()
                         .requestMatchers("/v3/api-docs/**").permitAll()
