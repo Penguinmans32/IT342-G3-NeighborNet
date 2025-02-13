@@ -8,8 +8,8 @@ const YourClasses = () => {
   const navigate = useNavigate();
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('all'); // all, active, draft
-  const [sortBy, setSortBy] = useState('newest'); // newest, oldest, popular
+  const [filter, setFilter] = useState('all'); 
+  const [sortBy, setSortBy] = useState('newest'); 
 
   useEffect(() => {
     fetchClasses();
@@ -17,11 +17,12 @@ const YourClasses = () => {
 
   const fetchClasses = async () => {
     try {
-      const response = await axios.get('http://localhost:8080/api/classes/user', {
+      const response = await axios.get('http://localhost:8080/api/classes/my-classes', {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`
         }
       });
+      console.log('Fetched classes:', response.data); // Debug log
       setClasses(response.data);
     } catch (error) {
       console.error('Error fetching classes:', error);
@@ -29,6 +30,13 @@ const YourClasses = () => {
       setLoading(false);
     }
   };
+
+  const getThumbnailUrl = (thumbnailUrl) => {
+    if (!thumbnailUrl) return '/default-class-image.jpg';
+    console.log('Thumbnail URL:', thumbnailUrl); // Debug log
+    return `http://localhost:8080${thumbnailUrl}`;
+  };
+
 
   const handleDeleteClass = async (classId) => {
     if (window.confirm('Are you sure you want to delete this class?')) {
@@ -56,7 +64,7 @@ const YourClasses = () => {
         return new Date(a.createdAt) - new Date(b.createdAt);
       case 'popular':
         return b.enrolledCount - a.enrolledCount;
-      default: // newest
+      default:
         return new Date(b.createdAt) - new Date(a.createdAt);
     }
   });
@@ -113,7 +121,7 @@ const YourClasses = () => {
         ) : sortedClasses.length === 0 ? (
           <div className="text-center py-12 bg-white rounded-lg shadow-sm">
             <img
-              src="/empty-classes.svg" // Add an appropriate image
+              src="/empty-classes.svg"
               alt="No classes"
               className="w-48 h-48 mx-auto mb-4 opacity-50"
             />
@@ -136,10 +144,9 @@ const YourClasses = () => {
                 whileHover={{ scale: 1.02 }}
                 className="bg-white rounded-xl shadow-sm overflow-hidden"
               >
-                {/* Class Image */}
                 <div className="h-48 bg-gray-200 relative">
                   <img
-                    src={classItem.thumbnail || '/default-class-image.jpg'}
+                    src={getThumbnailUrl(classItem.thumbnailUrl)}
                     alt={classItem.title}
                     className="w-full h-full object-cover"
                   />
@@ -152,14 +159,12 @@ const YourClasses = () => {
                   </div>
                 </div>
 
-                {/* Class Info */}
                 <div className="p-6">
                   <h3 className="font-semibold text-lg mb-2">{classItem.title}</h3>
                   <p className="text-gray-600 text-sm mb-4 line-clamp-2">
                     {classItem.description}
                   </p>
 
-                  {/* Stats */}
                   <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
                     <div className="flex items-center">
                       <MdPeople className="mr-1" />
@@ -171,7 +176,6 @@ const YourClasses = () => {
                     </div>
                   </div>
 
-                  {/* Actions */}
                   <div className="flex justify-between items-center">
                     <motion.button
                       whileHover={{ scale: 1.05 }}
