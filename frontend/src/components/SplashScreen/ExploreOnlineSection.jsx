@@ -1,7 +1,6 @@
 import { motion } from 'framer-motion';
-import { p } from 'framer-motion/client';
-import { Play, Users, Clock, Star } from 'lucide-react';
-import { forwardRef, useRef } from 'react';
+import { Play, Users, Clock } from 'lucide-react';
+import { forwardRef } from 'react';
 
 const ExploreOnlineSection = forwardRef((props, ref) => { 
   const categories = [
@@ -22,7 +21,8 @@ const ExploreOnlineSection = forwardRef((props, ref) => {
       instructor: "Coquillette",
       students: "23",
       duration: "1h 50m",
-      image: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-SANFesKo2o9mz67NnwYBCNlRcricxO.png"
+      video: "https://www.youtube.com/embed/Vn8bj0YpZg4",
+      thumbnail: "https://img.youtube.com/vi/Vn8bj0YpZg4/0.jpg"
     },
     {
       id: 2,
@@ -30,7 +30,8 @@ const ExploreOnlineSection = forwardRef((props, ref) => {
       instructor: "Andy J. Pizza",
       students: "74,514",
       duration: "1h 12m",
-      image: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-SANFesKo2o9mz67NnwYBCNlRcricxO.png"
+      video: "https://youtu.be/kcQsGC1Y7Fw?si=QxD9c8x22ftaaVTq",
+      thumbnail: "https://img.youtube.com/vi/kcQsGC1Y7Fw/0.jpg"
     },
     {
       id: 3,
@@ -38,7 +39,8 @@ const ExploreOnlineSection = forwardRef((props, ref) => {
       instructor: "Hallease",
       students: "11,525",
       duration: "1h 15m",
-      image: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-SANFesKo2o9mz67NnwYBCNlRcricxO.png"
+      video: "https://www.youtube.com/watch?v=OrG3kHkLJyo",
+      thumbnail: "https://img.youtube.com/vi/OrG3kHkLJyo/0.jpg"
     },
     {
       id: 4,
@@ -46,15 +48,17 @@ const ExploreOnlineSection = forwardRef((props, ref) => {
       instructor: "Jacob Collier",
       students: "10,024",
       duration: "1h 16m",
-      image: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-SANFesKo2o9mz67NnwYBCNlRcricxO.png"
+      video: "https://www.youtube.com/watch?v=AmC_qmSODEk",
+      thumbnail: "https://img.youtube.com/vi/AmC_qmSODEk/0.jpg"
     },
     {
       id: 5,
-      title: "YouTube Success: Script, Shoot & Edit with MKBHD",
-      instructor: "Marques Brownlee",
+      title: "How To Learn Programming for BEGINNERS",
+      instructor: "CroatCode",
       students: "90,039",
       duration: "1h 13m",
-      image: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-SANFesKo2o9mz67NnwYBCNlRcricxO.png"
+      video: "https://youtu.be/bJzb-RuUcMU?si=4nMaa-TCjSNXZwQk",
+      thumbnail: "https://img.youtube.com/vi/bJzb-RuUcMU/0.jpg"
     }
   ];
 
@@ -132,12 +136,14 @@ const ExploreOnlineSection = forwardRef((props, ref) => {
                          hover:shadow-blue-500/10"
               >
                 <div className="aspect-[5/4] relative overflow-hidden"> 
-                  <img
-                    src={course.image}
-                    alt={course.title}
-                    className="object-cover w-full h-full transition-transform duration-500 
-                             group-hover:scale-110"
-                  />
+                  <a href={course.video} target="_blank" rel="noopener noreferrer">
+                    <img
+                      src={course.thumbnail || course.image}
+                      alt={course.title}
+                      className="object-cover w-full h-full transition-transform duration-500 
+                               group-hover:scale-110"
+                    />
+                  </a>
                   <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent 
                                opacity-0 group-hover:opacity-100 transition-all duration-500" />
                   
@@ -198,12 +204,14 @@ const ExploreOnlineSection = forwardRef((props, ref) => {
                        hover:shadow-blue-500/10"
             >
               <div className="aspect-[5/3] relative overflow-hidden">
-                <img
-                  src={course.image}
-                  alt={course.title}
-                  className="object-cover w-full h-full transition-transform duration-500 
-                           group-hover:scale-110"
-                />
+                <a href={course.video} target="_blank" rel="noopener noreferrer">
+                  <img
+                    src={course.thumbnail || course.image}
+                    alt={course.title}
+                    className="object-cover w-full h-full transition-transform duration-500 
+                             group-hover:scale-110"
+                  />
+                </a>
                 <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent 
                                opacity-0 group-hover:opacity-100 transition-all duration-500" />
                 
