@@ -1,0 +1,46 @@
+# Ignore all .idea folders completely
+.idea/
+**/.idea/
+
+# Base Android ignores
+*.iml
+.gradle
+local.properties
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+
+# Built application files
+*.apk
+*.aar
+*.ap_
+*.aab
+
+# Files for the ART/Dalvik VM
+*.dex
+
+# Java class files
+*.class
+
+# Generated files
+**/bin/
+**/gen/
+**/out/
+
+# Gradle files
+**/.gradle/
+**/build/
+
+# Local configuration file
+**/local.properties
+
+# Android Studio
+**/*.iml
+
+# Debug log files
+*.log
+
+# App build directory
+**/app/build/
