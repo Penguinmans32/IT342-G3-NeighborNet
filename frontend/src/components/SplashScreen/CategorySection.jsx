@@ -2,11 +2,13 @@ import { CheckCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const categories = [
-    { name: 'Marketing', image: 'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-jAHkq4tW9wfLANXM6CYYjMFlszBP9j.png' },
-    { name: 'Graphic Design', image: 'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-jAHkq4tW9wfLANXM6CYYjMFlszBP9j.png' },
-    { name: 'Illustration', image: 'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-jAHkq4tW9wfLANXM6CYYjMFlszBP9j.png' },
-    { name: 'Animation', image: 'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-jAHkq4tW9wfLANXM6CYYjMFlszBP9j.png' },
-    { name: 'Film & Video', image: 'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-jAHkq4tW9wfLANXM6CYYjMFlszBP9j.png' },
+    { name: 'Marketing', image: 'https://i0.wp.com/www.iedunote.com/img/1178/marketing-definition-what-is-modern-definition-of-marketing.jpg' },
+    { name: 'Music', image: 'https://media.istockphoto.com/id/894058154/photo/musical-instruments.jpg?s=612x612&w=0&k=20&c=uB0TFyqeY1wu1BPyH2EB7NMoOCaSb86pk7YNQ5QVCGQ=' },
+    { name: 'Graphic Design', image: 'https://www.designyourway.net/blog/wp-content/uploads/2023/09/graphic-designer-vs-art-director.jpg' },
+    { name: 'Programming', image: 'https://f.hubspotusercontent10.net/hubfs/6448316/applications-of-computer-programming.jpg' },
+    { name: 'Animation', image: 'https://www.slashgear.com/img/gallery/9-of-the-best-android-apps-for-drawing-and-animation-in-2023/intro-1689105104.jpg' },
+    { name: 'Creative Writing', image: 'https://www.hope.ac.uk/media/studywithus/undergraduate/images/2023-24ugcoursebannerimages/BA%20(Hons)%20Creative%20Writing%20(Major).jpg' },
+    { name: 'Film & Video', image: 'https://www.marketingdonut.co.uk/sites/default/files/how-use-video-promote-your-business226081837.jpg' },
   ];
 
 
