@@ -1,49 +1,124 @@
-import { motion } from "framer-motion";
+import { useState } from "react";
 import { useAuth } from "../backendApi/AuthContext";
-import { useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
 import { MdMenu, MdAccountCircle, MdDashboard, MdSchool, MdSwapHoriz, MdChat, MdPeople, MdAdd, MdLibraryBooks, MdLogout } from "react-icons/md";
-import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
-const Homepage = () => {
+const Profile = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(true);
-  const [userClasses, setUserClasses] = useState([]);
   const [isProfileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("profile");
 
-  useEffect(() => {
-    const fetchUserClasses = async () => {
-      try {
-        const response = await axios.get("http://localhost:8080/api/classes/user", {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        });
-        setUserClasses(response.data);
-      } catch (error) {
-        console.error("Error fetching user classes:", error);
-      }
-    };
-
-    if (user) {
-      fetchUserClasses();
-    }
-  }, [user]);
-
-  useEffect(() => {
-    if (!user) {
-      navigate("/");
-    }
-  }, [user, navigate]);
-
-  const handleLogout = () => {
-    logout();
-    navigate("/");
+  const styles = {
+    container: {
+      minHeight: "100vh",
+      backgroundColor: "#fff",
+    },
+    content: {
+      backgroundColor: "#fff",
+      margin: "20px",
+      borderRadius: "8px",
+      padding: "20px",
+      display: "flex",
+    },
+    profileSection: {
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "flex-start",
+      marginTop: "20px",
+      marginLeft: "20px",
+    },
+    avatar: {
+      width: "100px",
+      height: "100px",
+      borderRadius: "50%",
+      backgroundColor: "#ddd",
+      marginBottom: "15px",
+    },
+    name: {
+      fontSize: "1.5rem",
+      fontWeight: "bold",
+      marginBottom: "5px",
+      color: "#333",
+    },
+    bio: {
+      color: "#666",
+      marginBottom: "10px",
+      fontSize: "0.9rem",
+    },
+    editButton: {
+      background: "linear-gradient(to right, #3b82f6, #8b5cf6)",
+      color: "#fff",
+      border: "none",
+      padding: "8px 20px",
+      borderRadius: "4px",
+      cursor: "pointer",
+      marginBottom: "20px",
+    },
+    tabs: {
+      display: "flex",
+      borderBottom: "1px solid #eee",
+      marginBottom: "20px",
+    },
+    tab: {
+      padding: "10px 20px",
+      cursor: "pointer",
+      color: "#666",
+      borderBottom: "2px solid transparent",
+    },
+    activeTab: {
+      borderBottom: "2px solid #8b5cf6",
+      color: "#8b5cf6",
+    },
+    section: {
+      marginBottom: "20px",
+      textAlign: "center",
+    },
+    sectionTitle: {
+      fontSize: "1.1rem",
+      fontWeight: "bold",
+      marginBottom: "10px",
+      color: "#333",
+    },
+    statsContainer: {
+      display: "flex",
+      gap: "20px",
+      marginBottom: "20px",
+    },
+    stat: {
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "flex-start",
+    },
+    statLabel: {
+      color: "#333",
+      fontWeight: "bold",
+    },
+    statValue: {
+      color: "#666",
+    },
+    linkButton: {
+      display: "flex",
+      alignItems: "center",
+      gap: "8px",
+      width: "100%",
+      padding: "10px",
+      border: "1px solid #ddd",
+      borderRadius: "4px",
+      backgroundColor: "transparent",
+      cursor: "pointer",
+      color: "#333",
+      marginBottom: "20px",
+    },
+    progressNote: {
+      fontSize: "0.8rem",
+      color: "#666",
+      fontStyle: "italic",
+    },
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div style={styles.container}>
       {/* Header */}
       <header className="sticky top-0 z-40 w-full border-b bg-gradient-to-r from-blue-500 via-blue-400 to-purple-500">
         <div className="container flex h-16 items-center justify-between px-4">
@@ -162,7 +237,7 @@ const Homepage = () => {
             </button>
             <button
               className="w-full flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100"
-              onClick={handleLogout}
+              onClick={logout}
             >
               <MdLogout className="text-xl text-blue-500" />
               <span>Log out</span>
@@ -171,31 +246,79 @@ const Homepage = () => {
         </div>
       )}
 
-      {/* Main Content Area */}
-      <div className="p-8 space-y-8 flex-1">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Quick Actions */}
-          <motion.div whileHover={{ scale: 1.02 }} className="p-6 bg-white rounded-xl shadow-sm">
-            <h3 className="text-lg font-semibold mb-4">Share a Skill</h3>
-            <p className="text-gray-600 mb-4">Share your expertise with your neighbors and earn community points.</p>
-            <button className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">Start Sharing</button>
-          </motion.div>
+      <div style={styles.content}>
+        <div style={styles.profileSection}>
+          <div style={styles.avatar}>
+            <img
+              src={user?.avatar || "/placeholder.svg"}
+              alt="Profile"
+              style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }}
+            />
+          </div>
+          <h1 style={styles.name}>{user?.name || "Kyla Dominic Genodiala"}</h1>
+          <p style={styles.bio}>@kylatech21 - She/Her</p>
+          <button style={styles.editButton} onClick={() => navigate("/edit-profile")}>Edit Profile</button>
 
-          <motion.div whileHover={{ scale: 1.02 }} className="p-6 bg-white rounded-xl shadow-sm">
-            <h3 className="text-lg font-semibold mb-4">Borrow Items</h3>
-            <p className="text-gray-600 mb-4">Need something? Check what your neighbors are willing to lend.</p>
-            <button className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">Browse Items</button>
-          </motion.div>
+          <div style={styles.statsContainer}>
+            <div style={styles.stat}>
+              <span style={styles.statLabel}>Followers</span>
+              <span style={styles.statValue}>0</span>
+            </div>
+            <div style={styles.stat}>
+              <span style={styles.statLabel}>Following</span>
+              <span style={styles.statValue}>0</span>
+            </div>
+          </div>
 
-          <motion.div whileHover={{ scale: 1.02 }} className="p-6 bg-white rounded-xl shadow-sm">
-            <h3 className="text-lg font-semibold mb-4">Community Chat</h3>
-            <p className="text-gray-600 mb-4">Connect with your neighbors and join the conversation.</p>
-            <button className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">Start Chatting</button>
-          </motion.div>
+          <button style={styles.linkButton} onClick={() => navigate("/link-social-accounts")}>
+            <span>🔗</span>
+            Link social accounts
+          </button>
+
+          <div style={styles.section}>
+            <h3 style={styles.sectionTitle}>Progress*</h3>
+            <p style={styles.progressNote}>*These stats are only visible to you</p>
+          </div>
+        </div>
+
+        <div>
+          <div style={styles.tabs}>
+            <div
+              style={{
+                ...styles.tab,
+                ...(activeTab === "profile" ? styles.activeTab : {}),
+              }}
+              onClick={() => setActiveTab("profile")}
+            >
+              Profile
+            </div>
+            <div
+              style={{
+                ...styles.tab,
+                ...(activeTab === "achievements" ? styles.activeTab : {}),
+              }}
+              onClick={() => setActiveTab("achievements")}
+            >
+              Achievements
+            </div>
+          </div>
+
+          {activeTab === "profile" && (
+            <>
+              <div style={styles.section}>
+                <h2 style={styles.sectionTitle}>About Me</h2>
+                <p>Hello, I'm Kyla Dominic.</p>
+              </div>
+            </>
+          )}
+
+          {activeTab === "achievements" && (
+            <div style={{ textAlign: "center", color: "#666", padding: "20px" }}>No achievements yet</div>
+          )}
         </div>
       </div>
     </div>
   );
 };
 
-export default Homepage;
+export default Profile;
