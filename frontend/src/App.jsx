@@ -1,21 +1,21 @@
-import SignIn from "./components/SplashScreen/SignIn"
-import { BrowserRouter, Routes, Route } from "react-router-dom"
-import { AuthProvider } from "./backendApi/AuthContext"
-import Homepage from "./components/HomePage"
-import ProtectedRoute from "./components/ProtectedRoute"
-import VerifyEmail from "./components/SplashScreen/VerifyEmail"
-import { NotificationProvider } from "./backendApi/NotificationContext"
-import AboutUs from "./components/AboutUs"
-import ScrollToTop from "./components/SplashScreen/ScrolltoTop"
-import OAuth2RedirectHandler from "./auth/OAuth2RedirectHandler"  
-import { AuthProviderWithErrorBoundary } from "./backendApi/AuthContext"
-import ClassDetails from "./components/SplashScreen/ClassDetails"
-import CreateClass from "./components/SplashScreen/CreateClass"
-import YourClasses from "./components/SplashScreen/YourClasses"
+import SignIn from "./components/SplashScreen/SignIn";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { AuthProviderWithErrorBoundary } from "./backendApi/AuthContext";
+import Homepage from "./components/HomePage";
+import ProtectedRoute from "./components/ProtectedRoute";
+import VerifyEmail from "./components/SplashScreen/VerifyEmail";
+import { NotificationProvider } from "./backendApi/NotificationContext";
+import AboutUs from "./components/AboutUs";
+import ScrollToTop from "./components/SplashScreen/ScrolltoTop";
+import OAuth2RedirectHandler from "./auth/OAuth2RedirectHandler";
+import ClassDetails from "./components/SplashScreen/ClassDetails";
+import CreateClass from "./components/SplashScreen/CreateClass";
+import YourClasses from "./components/SplashScreen/YourClasses";
+import Profile from "./components/Profile";
 
 function App() {
   return (
-    <BrowserRouter>
+    <Router>
       <NotificationProvider>
         <AuthProviderWithErrorBoundary>
           <ScrollToTop />
@@ -56,10 +56,19 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            <Route 
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <Profile />
+                </ProtectedRoute>
+              }
+            />
           </Routes>
         </AuthProviderWithErrorBoundary>
       </NotificationProvider>
-    </BrowserRouter>
-  )
+    </Router>
+  );
 }
-export default App
+
+export default App;
