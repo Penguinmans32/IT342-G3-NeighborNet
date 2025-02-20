@@ -9,8 +9,10 @@ import {
 import { Play, Clock, Book, Award, TrendingUp } from 'lucide-react';
 import axios from "axios"
 import '../../styles/YourClasses.css';
+import LessonList from "./LessonList";
+import AddLessonModal from "./AddLessonModal";
 
-const RecentClassCard = ({ classItem, onEdit, thumbnailUrl }) => { // Add thumbnailUrl prop
+const RecentClassCard = ({ classItem, onEdit, thumbnailUrl }) => { 
   const [imageLoaded, setImageLoaded] = useState(false);
 
   return (
@@ -21,7 +23,7 @@ const RecentClassCard = ({ classItem, onEdit, thumbnailUrl }) => { // Add thumbn
       <div className="flex items-center gap-4">
         <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-gray-200">
           <motion.img 
-            src={thumbnailUrl || '/default-class-image.jpg'} // Use thumbnailUrl prop instead of classItem.thumbnailUrl
+            src={thumbnailUrl || '/default-class-image.jpg'} 
             alt={classItem.title}
             className="object-cover w-full h-full transition-opacity duration-300"
             style={{ opacity: imageLoaded ? 1 : 0 }}
@@ -67,6 +69,51 @@ const StatCard = ({ icon: Icon, label, value, color }) => (
 const TreeNode = ({ classItem, index, onExpand, isExpanded, onDelete, onEdit, thumbnailUrl }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [isAddingLesson, setIsAddingLesson] = useState(false);
+  const [lessons, setLessons] = useState([]);
+
+  useEffect(() => {
+    const fetchLessons = async () => {
+      try {
+        const response = await axios.get(
+          `http://localhost:8080/api/classes/${classItem.id}/lessons`,
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }
+        );
+        setLessons(response.data);
+      } catch (error) {
+        console.error("Error fetching lessons:", error);
+        setLessons([]); // Set empty array on error
+      }
+    };
+
+    if (classItem?.id) {
+      fetchLessons();
+    }
+  }, [classItem?.id]);
+
+  const handleAddLesson = async (formData) => {
+    try {
+      const response = await axios.post(
+        `http://localhost:8080/api/classes/${classItem.id}/lessons`,
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
+      // Update lessons after adding new one
+      setLessons(prev => [...prev, response.data]);
+      setIsAddingLesson(false);
+    } catch (error) {
+      console.error("Error adding lesson:", error);
+    }
+  };
 
   const nodeVariants = {
     hidden: { opacity: 0, y: 20 },
@@ -203,6 +250,21 @@ const TreeNode = ({ classItem, index, onExpand, isExpanded, onDelete, onEdit, th
           </div>
         </div>
       </motion.div>
+
+      <LessonList
+        classId={classItem.id}
+        lessons={lessons || []} 
+        onAddLesson={() => setIsAddingLesson(true)}
+      />
+
+      {isAddingLesson && (
+        <AddLessonModal
+          isOpen={isAddingLesson}
+          onClose={() => setIsAddingLesson(false)}
+          onSubmit={handleAddLesson}
+          classId={classItem.id}
+        />
+      )}
     </motion.div>
   );
 };

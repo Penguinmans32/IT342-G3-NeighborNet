@@ -24,6 +24,7 @@ public class ClassResponse {
     private List<Class.Section> sections;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private List<LessonResponse> lessons;
 
     public static ClassResponse fromEntity(Class classEntity) {
         ClassResponse response = new ClassResponse();
@@ -179,5 +180,13 @@ public class ClassResponse {
 
     public void setRating(double rating) {
         this.rating = rating;
+    }
+
+    public List<LessonResponse> getLessons() {
+        return lessons;
+    }
+
+    public void setLessons(List<LessonResponse> lessons) {
+        this.lessons = lessons;
     }
 }

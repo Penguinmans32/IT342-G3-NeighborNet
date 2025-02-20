@@ -77,6 +77,9 @@ public class SecurityConfig {
                 .formLogin(form -> form.disable())
                 .httpBasic(basic -> basic.disable())
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/classes/*/lessons/video/*").permitAll()
+                        .requestMatchers("/api/classes/lessons/video/*").permitAll()
+                        .requestMatchers("/videos/*").permitAll()
                         .requestMatchers("/api/auth/**", "/oauth2/**", "/login/oauth2/code/**", "/", "/error", "/login").permitAll()
                         .requestMatchers("api/classes/thumbnail/**").permitAll()
                         .requestMatchers("/api/test/public").permitAll()

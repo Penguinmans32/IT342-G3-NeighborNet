@@ -554,6 +554,29 @@ const CreateClass = () => {
 };
 
 const BasicInformationStep = ({ formData, setFormData, touched, error }) => {
+    const [showCustomCategory, setShowCustomCategory] = useState(false);
+
+    const categories = [
+        { id: "programming", name: "Programming" },
+        { id: "design", name: "Design" },
+        { id: "business", name: "Business" },
+        { id: "marketing", name: "Marketing" },
+        { id: "photography", name: "Photography" },
+        { id: "music", name: "Music" },
+        { id: "writing", name: "Writing" },
+        { id: "other", name: "Other" },
+      ];
+
+      const handleCategoryChange = (e) => {
+        const value = e.target.value;
+        setFormData(prev => ({
+          ...prev,
+          category: value,
+          customCategory: value === 'other' ? '' : undefined
+        }));
+        setShowCustomCategory(value === 'other');
+      };
+
   return (
       <div className="space-y-6">
           <div className="mb-8">
@@ -585,28 +608,61 @@ const BasicInformationStep = ({ formData, setFormData, touched, error }) => {
                       touched={touched}
                   />
 
-                  <div className="grid grid-cols-2 gap-4">
-                      <InputField
-                          label="Category"
-                          fieldName="category"
-                          type="select"
-                          icon={MdSchool}
-                          formData={formData}
-                          setFormData={setFormData}
-                          touched={touched}
-                      />
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700">
+                        Category
+                    </label>
+                    <div className="relative">
+                        <select
+                        value={formData.category || ''}
+                        onChange={handleCategoryChange}
+                        className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent pl-10"
+                        >
+                        <option value="">Select Category</option>
+                        {categories.map(cat => (
+                            <option key={cat.id} value={cat.id}>
+                            {cat.name}
+                            </option>
+                        ))}
+                        </select>
+                        <MdSchool className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-xl" />
+                    </div>
+                    </div>
 
-                      <InputField
-                          label="Difficulty Level"
-                          fieldName="difficulty"
-                          type="select"
-                          icon={MdPeople}
-                          formData={formData}
-                          setFormData={setFormData}
-                          touched={touched}
-                      />
-                  </div>
-              </div>
+                    {showCustomCategory && (
+                    <div className="space-y-2">
+                        <label className="block text-sm font-medium text-gray-700">
+                        Specify Category
+                        </label>
+                        <div className="relative">
+                        <input
+                            type="text"
+                            value={formData.customCategory || ''}
+                            onChange={(e) => setFormData(prev => ({
+                            ...prev,
+                            customCategory: e.target.value,
+                            category: e.target.value // Update the actual category with the custom value
+                            }))}
+                            className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent pl-10"
+                            placeholder="Enter category name"
+                        />
+                        <MdEdit className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-xl" />
+                        </div>
+                    </div>
+                    )}
+
+                    <InputField
+                    label="Difficulty Level"
+                    fieldName="difficulty"
+                    type="select"
+                    icon={MdPeople}
+                    formData={formData}
+                    setFormData={setFormData}
+                    touched={touched}
+                    />
+                </div>
+                </div>
 
               {/* Right Column - Creator Info */}
               <div className="space-y-6 bg-gray-50 p-6 rounded-xl">
@@ -1064,7 +1120,6 @@ const SectionField = memo(({ label, value, onChange, placeholder, icon: Icon, ty
 ));
 
 const SectionCard = memo(({ section, index, onDelete, onChange, formData, touched }) => {
-  // Memoize the change handlers
   const handleTitleChange = useCallback((e) => {
       onChange({ ...section, title: e.target.value });
   }, [onChange, section]);
@@ -1074,8 +1129,14 @@ const SectionCard = memo(({ section, index, onDelete, onChange, formData, touche
   }, [onChange, section]);
 
   const handleDurationChange = useCallback((e) => {
-      onChange({ ...section, duration: e.target.value });
+    let value = e.target.value;
+    if (/^\d+$/.test(value)) {
+      value = `${value} Minutes`;
+    }
+    onChange({ ...section, duration: value });
   }, [onChange, section]);
+
+  
 
   return (
       <motion.div
@@ -1125,14 +1186,15 @@ const SectionCard = memo(({ section, index, onDelete, onChange, formData, touche
                   touched={touched}
               />
 
-              <SectionField
-                  label="Duration"
-                  value={section.duration}
-                  onChange={handleDurationChange}
-                  placeholder="e.g., 30 minutes"
-                  icon={MdAccessTime}
-                  touched={touched}
-              />
+            <SectionField
+                label="Duration"
+                value={section.duration}
+                onChange={handleDurationChange}
+                placeholder="e.g., 30 Minutes"
+                icon={MdAccessTime}
+                touched={touched}
+                helperText="Enter duration in minutes (e.g., 30 Minutes) or hours (e.g., 1.5 Hours)"
+                />
           </div>
       </motion.div>
   );
@@ -1271,9 +1333,7 @@ const SectionsStep = memo(({ formData, setFormData, touched, error }) => {
                   </motion.button>
               </div>
 
-              {/* Right Sidebar */}
               <div className="space-y-6">
-                  {/* Tips Section */}
                   <div className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-xl p-6 shadow-sm">
                       <h3 className="text-lg font-semibold mb-6">Section Structure Tips</h3>
                       <ul className="space-y-6">
@@ -1300,11 +1360,9 @@ const SectionsStep = memo(({ formData, setFormData, touched, error }) => {
                       </ul>
                   </div>
 
-                  {/* Progress Section */}
                   <div className="bg-white rounded-xl shadow-sm p-6">
                       <h3 className="text-lg font-semibold mb-4">Your Progress</h3>
                       <div className="space-y-4">
-                          {/* Sections Created Progress */}
                           <div>
                               <div className="flex justify-between text-sm text-gray-600 mb-2">
                                   <span>Sections Created</span>
@@ -1319,7 +1377,6 @@ const SectionsStep = memo(({ formData, setFormData, touched, error }) => {
                               </div>
                           </div>
 
-                          {/* Sections Completed Progress */}
                           <div>
                               <div className="flex justify-between text-sm text-gray-600 mb-2">
                                   <span>Sections Completed</span>
@@ -1341,7 +1398,7 @@ const SectionsStep = memo(({ formData, setFormData, touched, error }) => {
                       </div>
                   </div>
 
-                  {/* Quick Actions */}
+
                   <div className="bg-white rounded-xl shadow-sm p-6">
                       <h3 className="text-lg font-semibold mb-4">Quick Actions</h3>
                       <div className="space-y-2">

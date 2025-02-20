@@ -45,6 +45,39 @@ public class ClassService {
         this.fileStorageService = fileStorageService;
     }
 
+    private String calculateTotalDuration(List<Class.Section> sections) {
+        if (sections == null || sections.isEmpty()) {
+            return "0 minutes";
+        }
+
+        int totalMinutes = 0;
+        for (Class.Section section : sections) {
+            String duration = section.getDuration();
+            if (duration != null && !duration.trim().isEmpty()) {
+                try {
+                    String numberOnly = duration.replaceAll("[^0-9.]", "");
+                    if (duration.toLowerCase().contains("hour")) {
+                        totalMinutes += (int) (Double.parseDouble(numberOnly) * 60);
+                    } else {
+                        totalMinutes += Integer.parseInt(numberOnly);
+                    }
+                } catch (NumberFormatException e) {
+                    continue;
+                }
+            }
+        }
+
+        if (totalMinutes >= 60) {
+            int hours = totalMinutes / 60;
+            int minutes = totalMinutes % 60;
+            if (minutes == 0) {
+                return hours + "h";
+            }
+            return hours + "h " + minutes + "m";
+        }
+        return totalMinutes + "m";
+    }
+
     @Transactional
     public ClassResponse createClass(CreateClassRequest request,
                                      MultipartFile thumbnail,
@@ -52,13 +85,21 @@ public class ClassService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
+        String category = request.getCategory();
+        String customCategory = request.getCustomCategory();
+
+        if ("other".equals(category) && customCategory != null && !customCategory.trim().isEmpty()) {
+            category = customCategory.trim();
+        }
+
         Class newClass = new Class();
         newClass.setTitle(request.getTitle());
         newClass.setDescription(request.getDescription());
         newClass.setThumbnailDescription(request.getThumbnailDescription());
-        newClass.setDuration(request.getDuration());
+        String totalDuration = calculateTotalDuration(request.getSections());
+        newClass.setDuration(totalDuration);
         newClass.setDifficulty(request.getDifficulty());
-        newClass.setCategory(request.getCategory());
+        newClass.setCategory(category);
         newClass.setCreatorName(request.getCreatorName());
         newClass.setCreatorEmail(request.getCreatorEmail());
         newClass.setCreatorPhone(request.getCreatorPhone());
