@@ -10,6 +10,7 @@ public class CreateClassRequest {
     private String description;
     private String thumbnailDescription;
     private String duration;
+    private String customCategory;
     private Class.DifficultyLevel difficulty;
     private String category;
     private String creatorName;
@@ -131,5 +132,13 @@ public class CreateClassRequest {
 
     public void setSections(List<Class.Section> sections) {
         this.sections = sections;
+    }
+
+    public String getCustomCategory() {
+        return customCategory;
+    }
+
+    public void setCustomCategory(String customCategory) {
+        this.customCategory = customCategory;
     }
 }
