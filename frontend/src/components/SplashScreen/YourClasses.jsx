@@ -445,12 +445,11 @@ const YourClasses = () => {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 py-12">
       {renderBackgroundEffects()}
 
-        {/* Back Button */}
         <motion.div
-          initial={{ x: -100, opacity: 0 }}  // Changed from 100 to -100 to slide in from left
+          initial={{ x: -100, opacity: 0 }} 
           animate={{ x: 0, opacity: 1 }}
           transition={{ duration: 0.5 }}
-          className="fixed top-6 left-6 z-50"  // Changed right-6 to left-6
+          className="fixed top-6 left-6 z-50" 
         >
           <motion.button
             onClick={() => navigate("/homepage")}
@@ -461,7 +460,7 @@ const YourClasses = () => {
                       transition-all duration-300 backdrop-blur-sm border border-white/50"
           >
             <motion.div
-              whileHover={{ x: -4 }}  // Changed direction of hover
+              whileHover={{ x: -4 }} 
               transition={{ duration: 0.2 }}
               className="relative"
             >
@@ -484,7 +483,7 @@ const YourClasses = () => {
             <motion.span
               initial={{ x: 0 }}
               animate={{ x: 0 }}
-              whileHover={{ x: 4 }}  // Changed direction of hover
+              whileHover={{ x: 4 }}  
               transition={{ duration: 0.2 }}
               className="text-transparent bg-clip-text bg-gradient-to-r 
                         from-blue-600 to-purple-600 font-medium"
@@ -518,13 +517,11 @@ const YourClasses = () => {
           </motion.button>
         </motion.div>
 
-        {/* Controls section */}
         <motion.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           className="bg-white/80 backdrop-blur-lg rounded-3xl shadow-lg p-6 mb-12"
         >
-          {/* Search and filters */}
           <div className="flex flex-wrap gap-6 items-center justify-between">
             <div className="flex-1 min-w-[300px]">
               <div className="relative">
