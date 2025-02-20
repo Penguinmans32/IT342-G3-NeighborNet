@@ -43,6 +43,8 @@ const Homepage = () => {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [profileData, setProfileData] = useState(null);
 
+  const [availableCategories, setAvailableCategories] = useState([]);
+
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -64,6 +66,38 @@ const Homepage = () => {
     hover: { x: 8 },
   };
 
+  useEffect(() => {
+    if (classes.length > 0) {
+      const uniqueCategories = [...new Set(classes.map(cls => cls.category))];
+      
+      const categoryList = [
+        { id: "all", name: "All Classes", icon: <MdApps className="text-blue-500" /> },
+        ...uniqueCategories.map(cat => ({
+          id: cat,
+          name: cat.charAt(0).toUpperCase() + cat.slice(1),
+          icon: getCategoryIcon(cat)
+        }))
+      ];
+      
+      setAvailableCategories(categoryList);
+    }
+  }, [classes]);
+
+  const getCategoryIcon = (category) => {
+    const iconMap = {
+      programming: <MdCode className="text-purple-500" />,
+      design: <MdBrush className="text-pink-500" />,
+      business: <MdBusinessCenter className="text-green-500" />,
+      marketing: <MdTrendingUp className="text-red-500" />,
+      photography: <MdCamera className="text-yellow-500" />,
+      music: <MdMusicNote className="text-indigo-500" />,
+      writing: <MdEdit className="text-cyan-500" />,
+      // Add more mappings as needed
+      default: <MdSchool className="text-gray-500" />
+    };
+    
+    return iconMap[category.toLowerCase()] || iconMap.default;
+  };
 
   useEffect(() => {
     const fetchClasses = async () => {
@@ -84,7 +118,6 @@ const Homepage = () => {
         setClasses(classesData);
         setUserClasses(classesData);
         
-        console.log("Fetched classes:", classesData);
       } catch (error) {
         console.error("Error fetching classes:", error);
         setClasses([]);
@@ -99,6 +132,7 @@ const Homepage = () => {
       fetchClasses();
     }
   }, [user]);
+
 
   const [isNotificationsOpen, setNotificationsOpen] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState(2);
@@ -144,6 +178,7 @@ const Homepage = () => {
     }
   }, [user]);
 
+
   useEffect(() => {
     const fetchUserClasses = async () => {
       try {
@@ -152,7 +187,7 @@ const Homepage = () => {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
         });
-        console.log("User Classes Data:", response.data); // Add this line to see the data
+        console.log("User Classes Data:", response.data); 
         setUserClasses(response.data);
       } catch (error) {
         console.error("Error fetching user classes:", error);
@@ -161,7 +196,6 @@ const Homepage = () => {
   
     if (user) {
       fetchUserClasses();
-      console.log("Current User:", user); // Add this line to see the user object
     }
   }, [user]);
 
@@ -180,6 +214,25 @@ const Homepage = () => {
     hidden: { opacity: 0, x: -20 },
     visible: { opacity: 1, x: 0 },
   };
+
+  const getFullThumbnailUrl = (thumbnailUrl) => {
+    if (!thumbnailUrl) return "/default-class-image.jpg";
+    return thumbnailUrl.startsWith('http') 
+      ? thumbnailUrl 
+      : `http://localhost:8080${thumbnailUrl}`;
+  };
+
+    const getFullProfileImageUrl = (imageUrl) => {
+    console.log("Raw imageUrl:", imageUrl);
+    if (!imageUrl) {
+      return "/images/defaultProfile.png";
+    }
+    const fullUrl = imageUrl.startsWith('http') 
+      ? imageUrl 
+      : `http://localhost:8080${imageUrl}`;
+    return fullUrl;
+  };
+
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -346,16 +399,16 @@ const Homepage = () => {
 
       <main className="flex-1 flex min-h-screen bg-gray-50">
         {/* Categories Sidebar */}
-        <div className="fixed left-12 top-32 z-40 w-72"> {/* Increased width from w-56 to w-72 */}
+        <div className="fixed left-12 top-32 z-40 w-72">
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="space-y-2" // Increased spacing between items
+            className="space-y-2"
           >
             <h2 className="text-2xl font-bold text-gray-900 mb-8 pl-4 tracking-tight">
               Categories
             </h2>
-            {categories.map((category) => (
+            {availableCategories.map((category) => (
               <motion.button
                 key={category.id}
                 onClick={() => setSelectedCategory(category.id)}
@@ -420,7 +473,6 @@ const Homepage = () => {
               {/* Classes Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {loading ? (
-                  // Loading Skeletons
                   [...Array(6)].map((_, i) => (
                     <div key={i} className="animate-pulse">
                       <div className="aspect-video rounded-xl bg-gray-200 mb-4" />
@@ -429,7 +481,6 @@ const Homepage = () => {
                     </div>
                   ))
                 ) : (
-                  // Filter classes based on selected category
                   classes
                     .filter(classItem => 
                       selectedCategory === "all" ? true : classItem.category === selectedCategory
@@ -442,16 +493,14 @@ const Homepage = () => {
                         whileHover={{ y: -5 }}
                         className="group relative bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300"
                       >
-                        {/* Thumbnail */}
                         <div className="aspect-video relative overflow-hidden">
                           <img
-                            src={classItem.thumbnailUrl || "/default-class-image.jpg"}
+                            src={getFullThumbnailUrl(classItem.thumbnailUrl)}
                             alt={classItem.title}
                             className="object-cover w-full h-full group-hover:scale-110 transition-transform duration-300"
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                           
-                          {/* Play Button Overlay */}
                           <motion.div
                             initial={false}
                             animate={{ scale: [0.9, 1], opacity: [0, 1] }}
@@ -466,7 +515,6 @@ const Homepage = () => {
                           </motion.div>
                         </div>
 
-                        {/* Class Info */}
                         <div className="p-6">
                           <div className="flex items-center gap-2 mb-3">
                             <span className="px-3 py-1 bg-blue-50 text-blue-600 text-xs font-medium rounded-full">
@@ -483,32 +531,34 @@ const Homepage = () => {
                             {classItem.description}
                           </p>
                           
-                          {/* Instructor Info */}
                           <div className="flex items-center gap-3">
                             <img
-                              src={classItem.instructorAvatar || "/default-avatar.jpg"}
-                              alt={classItem.instructorName}
+                              src={profileData?.imageUrl 
+                                ? getFullProfileImageUrl(profileData.imageUrl)
+                                : "/images/defaultProfile.png"
+                              }
+                              alt={classItem.creatorName}
                               className="w-8 h-8 rounded-full object-cover"
                             />
                             <div>
                               <h4 className="text-sm font-medium text-gray-900">
-                                {classItem.instructorName || "Instructor Name"}
+                                {classItem.creatorName}
                               </h4>
                               <p className="text-xs text-gray-500">
-                                {classItem.enrolledCount || 0} students
+                                {classItem.sections?.length || 0} sections
                               </p>
                             </div>
                           </div>
                         </div>
 
-                        {/* Hover Overlay */}
                         <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
                           <div className="space-x-4">
                             <motion.button
                               whileHover={{ scale: 1.1 }}
                               className="px-6 py-2 bg-white text-blue-600 rounded-full font-medium"
+                              onClick={() => navigate(`/class/${classItem.id}`)}
                             >
-                              Enroll Now
+                              View Class
                             </motion.button>
                           </div>
                         </div>
@@ -631,19 +681,16 @@ const Homepage = () => {
               className="w-20 h-20 mx-auto mb-3 relative group"
             >
               <img
-                src={
-                  profileData?.imageUrl
-                    ? profileData.imageUrl.startsWith('http')
-                      ? profileData.imageUrl
-                      : `http://localhost:8080${profileData.imageUrl}`
-                    : "/placeholder.svg"
+                src={profileData?.imageUrl 
+                  ? getFullProfileImageUrl(profileData.imageUrl)
+                  : "/images/defaultProfile.png"
                 }
                 alt="Profile"
                 className="w-full h-full rounded-full object-cover ring-2 ring-offset-2 ring-blue-500"
                 onError={(e) => {
-                  console.error("Error loading image:", e);
+                  console.log("Image load error. Using placeholder.");
                   e.target.onerror = null;
-                  e.target.src = "/placeholder.svg";
+                  e.target.src = "/images/defaultProfile.png";
                 }}
               />
             </motion.div>

@@ -11,6 +11,7 @@ import OAuth2RedirectHandler from "./auth/OAuth2RedirectHandler";
 import ClassDetails from "./components/SplashScreen/ClassDetails";
 import CreateClass from "./components/SplashScreen/CreateClass";
 import YourClasses from "./components/SplashScreen/YourClasses";
+import LessonView from "./components/SplashScreen/LessonView";
 import Profile from "./components/Profile";
 
 function App() {
@@ -63,6 +64,14 @@ function App() {
                   <Profile />
                 </ProtectedRoute>
               }
+            />
+             <Route 
+              path="/your-classes/:classId/lessons/:lessonId" 
+              element={
+                <ProtectedRoute>
+                  <LessonView />
+                </ProtectedRoute>
+              } 
             />
           </Routes>
         </AuthProviderWithErrorBoundary>
