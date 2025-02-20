@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../backendApi/AuthContext";
-import { MdMenu, MdAccountCircle, MdDashboard, MdSchool, MdSwapHoriz, MdChat, MdPeople, MdAdd, MdLibraryBooks, MdLogout, MdSearch } from "react-icons/md";
+import { MdMenu, MdAccountCircle, MdDashboard, MdSchool, MdSwapHoriz, MdChat, MdPeople, MdAdd, MdLibraryBooks, MdLogout, MdSearch, MdNotifications, MdNotificationsActive, MdNotificationsOff, MdInfo, MdClose} from "react-icons/md";
 import { useNavigate, useLocation } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
 
 const Profile = () => {
@@ -13,6 +13,27 @@ const Profile = () => {
   const [activeTab, setActiveTab] = useState("profile");
   const [isUpdating, setIsUpdating] = useState(false);
   const [profileData, setProfileData] = useState(null);
+
+  const [isNotificationsOpen, setNotificationsOpen] = useState(false);
+  const [unreadNotifications, setUnreadNotifications] = useState(2); 
+  const [notifications, setNotifications] = useState([
+    {
+      id: 1,
+      type: 'message',
+      title: 'New Message',
+      message: 'You have a new message from John Doe',
+      time: '5 minutes ago',
+      unread: true
+    },
+    {
+      id: 2,
+      type: 'alert',
+      title: 'Class Reminder',
+      message: 'Your next class starts in 30 minutes',
+      time: '10 minutes ago',
+      unread: true
+    },
+  ]);
 
   const location = useLocation();
   const isProfilePage = location.pathname === "/profile";
@@ -183,9 +204,7 @@ const Profile = () => {
   return (
     <div style={styles.container}>
        <header className="sticky top-0 z-50 w-full">
-          {/* Animated Background */}
           <div className="absolute inset-0 bg-gradient-to-r from-blue-600/95 via-blue-500/95 to-purple-600/95 overflow-hidden">
-            {/* Floating Elements */}
             <div className="absolute inset-0">
               <div className="floating-elements"></div>
               <div className="floating-elements floating-elements2"></div>
@@ -193,11 +212,9 @@ const Profile = () => {
             </div>
           </div>
 
-          {/* Main Header Content */}
           <div className="relative z-10 backdrop-blur-sm transition-all duration-300">
             <div className="container mx-auto">
               <div className="flex h-16 items-center justify-between px-4 relative">
-                {/* Mobile Menu Button */}
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
@@ -214,7 +231,6 @@ const Profile = () => {
                   </motion.div>
                 </motion.button>
 
-                {/* Logo Section */}
                 <motion.div
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -235,7 +251,6 @@ const Profile = () => {
                   </motion.span>
                 </motion.div>
 
-                {/* Search Bar */}
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -258,7 +273,6 @@ const Profile = () => {
                   </div>
                 </motion.div>
 
-                {/* Profile Section */}
                 <motion.div
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -292,6 +306,24 @@ const Profile = () => {
                   ) : (
                     <div className="flex items-center gap-3">
                   <span className="text-white hidden lg:block">{user.username}</span>
+
+
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    onClick={() => setNotificationsOpen(!isNotificationsOpen)}
+                    className="relative flex items-center justify-center w-10 h-10 rounded-full hover:bg-white/10 transition-colors"
+                  >
+                    <div className="relative">
+                      <MdNotifications className="text-2xl text-white" />
+                      {unreadNotifications > 0 && (
+                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
+                          <span className="text-xs text-white">{unreadNotifications}</span>
+                        </div>
+                      )}
+                    </div>
+                  </motion.button>
+
+
                   <motion.button
                     whileHover={{ scale: 1.05 }}
                     onClick={() => setProfileMenuOpen(!isProfileMenuOpen)}
@@ -306,7 +338,6 @@ const Profile = () => {
             </div>
           </div>
 
-        {/* Mobile Menu */}
           {isMobileMenuOpen && (
             <motion.div
               initial={{ opacity: 0, y: -20 }}
@@ -349,14 +380,88 @@ const Profile = () => {
           )}
       </header>
 
-      {/* Quick Actions Menu */}
+              <AnimatePresence>
+                  {isNotificationsOpen && (
+                    <>
+                      {/* Overlay */}
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => setNotificationsOpen(false)}
+                        className="fixed inset-0 bg-black/50 z-40"
+                      />
+                      
+                      <motion.div
+                        initial={{ x: "100%" }}
+                        animate={{ x: 0 }}
+                        exit={{ x: "100%" }}
+                        transition={{ type: "tween", duration: 0.3 }}
+                        className="fixed right-0 top-0 h-screen w-80 bg-white shadow-xl z-50"
+                      >
+                        <div className="p-4 border-b border-gray-100">
+                          <div className="flex items-center justify-between">
+                            <h2 className="text-lg font-semibold">Notifications</h2>
+                            <button
+                              onClick={() => setNotificationsOpen(false)}
+                              className="p-2 hover:bg-gray-100 rounded-full"
+                            >
+                              <MdClose className="text-xl" />
+                            </button>
+                          </div>
+                        </div>
+      
+                        <div className="overflow-y-auto h-[calc(100vh-64px)]">
+                          {notifications.map((notification, index) => (
+                            <motion.div
+                              key={notification.id}
+                              initial={{ opacity: 0, x: -20 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: index * 0.1 }}
+                              className={`p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer
+                                        ${notification.unread ? 'bg-blue-50/50' : ''}`}
+                            >
+                              <div className="flex gap-3">
+                                <div className="flex-shrink-0">
+                                  <span className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                                    {notification.type === 'message' && <MdChat className="text-blue-500" />}
+                                    {notification.type === 'alert' && <MdNotificationsActive className="text-red-500" />}
+                                    {notification.type === 'update' && <MdInfo className="text-green-500" />}
+                                  </span>
+                                </div>
+                                <div className="flex-1">
+                                  <p className="text-sm font-medium text-gray-900">{notification.title}</p>
+                                  <p className="text-sm text-gray-500">{notification.message}</p>
+                                  <p className="text-xs text-gray-400 mt-1">
+                                    {notification.time}
+                                  </p>
+                                </div>
+                                {notification.unread && (
+                                  <div className="w-2 h-2 rounded-full bg-blue-500 self-center" />
+                                )}
+                              </div>
+                            </motion.div>
+                          ))}
+      
+                          {notifications.length === 0 && (
+                            <div className="flex flex-col items-center justify-center h-full p-8 text-center text-gray-500">
+                              <MdNotificationsOff className="text-4xl mb-2" />
+                              <p>No notifications yet</p>
+                            </div>
+                          )}
+                        </div>
+                      </motion.div>
+                    </>
+                  )}
+                </AnimatePresence>
+
+  
         {isProfileMenuOpen && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             className="absolute right-4 top-16 bg-white shadow-xl rounded-xl w-[300px] overflow-hidden border border-gray-100 z-50"
           >
-            {/* Profile Section */}
             <div className="p-6 text-center border-b">
               <motion.div
                 whileHover={{ scale: 1.05 }}
@@ -401,7 +506,6 @@ const Profile = () => {
                 {profileData?.email || "Add your email"}
               </p>
               
-              {/* Only show the View Profile button if not on the profile page */}
               {!isProfilePage && (
                 <motion.button
                   whileHover={{ scale: 1.02 }}
@@ -413,9 +517,7 @@ const Profile = () => {
               )}
             </div>
 
-            {/* Navigation Menu with Groups */}
             <nav className="py-2">
-              {/* Main Features Group */}
               <div className="px-3 py-2">
                 <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-3">
                   Main Features
@@ -440,7 +542,6 @@ const Profile = () => {
                 ))}
               </div>
 
-              {/* Class Management Group */}
               <div className="px-3 py-2 border-t border-gray-100">
                 <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-3">
                   Class Management
@@ -464,7 +565,6 @@ const Profile = () => {
                 ))}
               </div>
 
-              {/* Communication Group */}
               <div className="px-3 py-2 border-t border-gray-100">
                 <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-3">
                   Communication
@@ -488,7 +588,6 @@ const Profile = () => {
                 ))}
               </div>
 
-              {/* Account Group */}
               <div className="px-3 py-2 border-t border-gray-100">
                 <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-3">
                   Account
@@ -510,11 +609,8 @@ const Profile = () => {
           </motion.div>
         )}
 
-      {/* Main content area */}
     <div style={styles.content}>  
-      {/* Left side - Profile Information */}
       <div style={styles.profileSection}>
-        {/* Profile Picture with Upload Functionality */}
         <div style={styles.avatar} className="relative group">
         <img
             src={
@@ -532,7 +628,6 @@ const Profile = () => {
               e.target.src = "/images/defaultProfile.png";
             }}
           />
-          {/* Hover overlay for photo upload */}
           <div className="absolute inset-0 bg-black/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
             <label className="cursor-pointer">
               <span className="text-white text-sm">Change Photo</span>
