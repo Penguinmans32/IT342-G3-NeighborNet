@@ -64,8 +64,9 @@ public class Class {
     private List<Section> sections = new ArrayList<>();
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    @JoinColumn(name = "user_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "password"})
+    private User creator;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
@@ -262,12 +263,12 @@ public class Class {
         this.sections = sections;
     }
 
-    public User getUser() {
-        return user;
+    public User getCreator() {
+        return creator;
     }
 
-    public void setUser(User user) {
-        this.user = user;
+    public void setCreator(User creator) {
+        this.creator = creator;
     }
 
     public LocalDateTime getCreatedAt() {

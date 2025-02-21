@@ -2,6 +2,7 @@ package com.example.neighbornetbackend.controller;
 
 import com.example.neighbornetbackend.dto.CreateClassRequest;
 import com.example.neighbornetbackend.dto.ClassResponse;
+import com.example.neighbornetbackend.exception.ResourceNotFoundException;
 import com.example.neighbornetbackend.security.CurrentUser;
 import com.example.neighbornetbackend.security.UserPrincipal;
 import com.example.neighbornetbackend.service.ClassService;
@@ -54,6 +55,7 @@ public class ClassController {
         return ResponseEntity.ok(classes);
     }
 
+
     @GetMapping("/thumbnail/{filename:.+}")
     public ResponseEntity<Resource> getThumbnail(@PathVariable String filename) {
         try {
@@ -88,5 +90,27 @@ public class ClassController {
         return "image/jpeg"; // default
     }
 
-    // Add other endpoints as needed
+    @GetMapping("/{classId}")
+    public ResponseEntity<ClassResponse> getClass(@PathVariable Long classId) {
+        try {
+            ClassResponse classResponse = classService.getClassById(classId);
+            return ResponseEntity.ok(classResponse);
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @GetMapping("/all")
+    public ResponseEntity<List<ClassResponse>> getAllClasses() {
+        try {
+            List<ClassResponse> classes = classService.getAllClasses();
+            return ResponseEntity.ok(classes);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.badRequest().build();
+        }
+    }
 }

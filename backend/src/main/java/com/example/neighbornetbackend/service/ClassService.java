@@ -2,6 +2,7 @@ package com.example.neighbornetbackend.service;
 
 import com.example.neighbornetbackend.dto.CreateClassRequest;
 import com.example.neighbornetbackend.dto.ClassResponse;
+import com.example.neighbornetbackend.exception.ResourceNotFoundException;
 import com.example.neighbornetbackend.model.Class;
 import com.example.neighbornetbackend.model.User;
 import com.example.neighbornetbackend.repository.ClassRepository;
@@ -82,7 +83,12 @@ public class ClassService {
     public ClassResponse createClass(CreateClassRequest request,
                                      MultipartFile thumbnail,
                                      Long userId) throws IOException {
-        User user = userRepository.findById(userId)
+
+        if (classRepository.existsByTitleAndCreatorId(request.getTitle(), userId)) {
+            throw new RuntimeException("You already have a class with this title");
+        }
+
+        User creator = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         String category = request.getCategory();
@@ -114,14 +120,14 @@ public class ClassService {
             newClass.setThumbnailUrl(thumbnailUrl);
         }
 
-        newClass.setUser(user);
+        newClass.setCreator(creator);
         Class savedClass = classRepository.save(newClass);
         return ClassResponse.fromEntity(savedClass);
     }
 
 
     public List<ClassResponse> getClassesByUser(Long userId) {
-        return classRepository.findByUserId(userId).stream()
+        return classRepository.findByCreatorId(userId).stream()
                 .map(ClassResponse::fromEntity)
                 .collect(Collectors.toList());
     }
@@ -133,5 +139,16 @@ public class ClassService {
                 .orElse(".jpg");
     }
 
-    // Add other methods as needed
+    public ClassResponse getClassById(Long classId) {
+        Class classObj = classRepository.findById(classId)
+                .orElseThrow(() -> new ResourceNotFoundException("Class not found with id: " + classId));
+
+        return ClassResponse.fromEntity(classObj);
+    }
+
+    public List<ClassResponse> getAllClasses() {
+        return classRepository.findAllWithCreator().stream()
+                .map(ClassResponse::fromEntity)
+                .collect(Collectors.toList());
+    }
 }

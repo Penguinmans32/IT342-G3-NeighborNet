@@ -25,8 +25,11 @@ public class ClassResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private List<LessonResponse> lessons;
+    private CreatorDTO creator;
 
     public static ClassResponse fromEntity(Class classEntity) {
+        if (classEntity == null) return null;
+
         ClassResponse response = new ClassResponse();
         response.setId(classEntity.getId());
         response.setTitle(classEntity.getTitle());
@@ -42,6 +45,19 @@ public class ClassResponse {
         response.setSections(classEntity.getSections());
         response.setCreatedAt(classEntity.getCreatedAt());
         response.setUpdatedAt(classEntity.getUpdatedAt());
+        if (classEntity.getCreator() != null) {
+            try {
+                response.setCreator(new CreatorDTO(
+                        classEntity.getCreator().getId(),
+                        classEntity.getCreator().getUsername(),
+                        classEntity.getCreator().getImageUrl(),
+                        classEntity.getCreator().getEmail()
+                ));
+            } catch (Exception e) {
+                // Log the error and set a default creator if needed
+                System.err.println("Error mapping creator: " + e.getMessage());
+            }
+        }
         return response;
 
     }
@@ -188,5 +204,13 @@ public class ClassResponse {
 
     public void setLessons(List<LessonResponse> lessons) {
         this.lessons = lessons;
+    }
+
+    public CreatorDTO getCreator() {
+        return creator;
+    }
+
+    public void setCreator(CreatorDTO creator) {
+        this.creator = creator;
     }
 }
