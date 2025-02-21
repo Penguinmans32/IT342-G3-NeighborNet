@@ -79,6 +79,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/classes/*/lessons/video/*").permitAll()
                         .requestMatchers("/api/classes/lessons/video/*").permitAll()
+                        .requestMatchers("/api/users/profile-pictures/*").permitAll()
                         .requestMatchers("/videos/*").permitAll()
                         .requestMatchers("/api/auth/**", "/oauth2/**", "/login/oauth2/code/**", "/", "/error", "/login").permitAll()
                         .requestMatchers("api/classes/thumbnail/**").permitAll()
