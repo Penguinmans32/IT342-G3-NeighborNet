@@ -34,7 +34,7 @@ function App() {
               } 
             />
             <Route 
-              path="/class/:id"
+              path="/class/:classId"
               element={
                 <ProtectedRoute>
                   <ClassDetails />
