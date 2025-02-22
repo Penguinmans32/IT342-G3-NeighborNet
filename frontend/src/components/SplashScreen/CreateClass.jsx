@@ -2,6 +2,7 @@ import { useState, useEffect, memo, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import InputField from './InputField';
+import Footer from './Footer';
 import axios from 'axios';
 import { 
   MdArrowBack, 

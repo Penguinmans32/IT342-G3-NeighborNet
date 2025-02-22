@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react"
 import { motion, AnimatePresence, useAnimation } from "framer-motion"
 import { useNavigate } from "react-router-dom"
+import Footer from './Footer';
 import { 
   MdAdd, MdEdit, MdDelete, MdPeople, MdStar,
   MdTimeline, MdGridView, MdSearch, MdPlayCircle,
@@ -725,6 +726,7 @@ const YourClasses = () => {
           </motion.div>
         )}
       </div>
+      <Footer />
     </div>
   )
 }

@@ -3,6 +3,7 @@ import { useAuth } from "../backendApi/AuthContext";
 import { MdMenu, MdAccountCircle, MdDashboard, MdSchool, MdSwapHoriz, MdChat, MdPeople, MdAdd, MdLibraryBooks, MdLogout, MdSearch, MdNotifications, MdNotificationsActive, MdNotificationsOff, MdInfo, MdClose} from "react-icons/md";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import Footer from './SplashScreen/Footer';
 import axios from "axios";
 
 const Profile = () => {
@@ -735,6 +736,7 @@ const Profile = () => {
         </div>
       </div>
     </div>
+    <Footer />
   </div>
   );
 };
