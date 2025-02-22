@@ -13,6 +13,7 @@ import CreateClass from "./components/SplashScreen/CreateClass";
 import YourClasses from "./components/SplashScreen/YourClasses";
 import LessonView from "./components/SplashScreen/LessonView";
 import Profile from "./components/Profile";
+import { Toaster } from 'react-hot-toast';
 
 function App() {
   return (
@@ -20,6 +21,15 @@ function App() {
       <NotificationProvider>
         <AuthProviderWithErrorBoundary>
           <ScrollToTop />
+          <Toaster
+              position="top-center"
+              reverseOrder={false}
+              toastOptions={{
+                style: {
+                  zIndex: 9999,
+                },
+              }}
+            />
           <Routes>
             <Route path="/" element={<SignIn />} />
             <Route path="/verify-email" element={<VerifyEmail />} />

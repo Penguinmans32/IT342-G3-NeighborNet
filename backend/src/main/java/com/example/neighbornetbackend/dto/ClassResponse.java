@@ -1,9 +1,10 @@
 package com.example.neighbornetbackend.dto;
 
+import com.example.neighbornetbackend.model.CourseClass;
+
 import java.time.LocalDateTime;
 import java.util.List;
 
-import com.example.neighbornetbackend.model.Class;
 
 public class ClassResponse {
 
@@ -13,7 +14,7 @@ public class ClassResponse {
     private String thumbnailUrl;
     private String thumbnailDescription;
     private String duration;
-    private Class.DifficultyLevel difficulty;
+    private CourseClass.DifficultyLevel difficulty;
     private String category;
     private String creatorName;
     private String creatorEmail;
@@ -21,13 +22,13 @@ public class ClassResponse {
     private String status;
     private int enrolledCount;
     private double rating;
-    private List<Class.Section> sections;
+    private List<CourseClass.Section> sections;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private List<LessonResponse> lessons;
     private CreatorDTO creator;
 
-    public static ClassResponse fromEntity(Class classEntity) {
+    public static ClassResponse fromEntity(CourseClass classEntity) {
         if (classEntity == null) return null;
 
         ClassResponse response = new ClassResponse();
@@ -60,6 +61,10 @@ public class ClassResponse {
         }
         return response;
 
+    }
+
+    public Long getCreatorId() {
+        return creator != null ? creator.getId() : null;
     }
 
     public Long getId() {
@@ -110,11 +115,11 @@ public class ClassResponse {
         this.thumbnailDescription = thumbnailDescription;
     }
 
-    public Class.DifficultyLevel getDifficulty() {
+    public CourseClass.DifficultyLevel getDifficulty() {
         return difficulty;
     }
 
-    public void setDifficulty(Class.DifficultyLevel difficulty) {
+    public void setDifficulty(CourseClass.DifficultyLevel difficulty) {
         this.difficulty = difficulty;
     }
 
@@ -150,11 +155,11 @@ public class ClassResponse {
         this.requirements = requirements;
     }
 
-    public List<Class.Section> getSections() {
+    public List<CourseClass.Section> getSections() {
         return sections;
     }
 
-    public void setSections(List<Class.Section> sections) {
+    public void setSections(List<CourseClass.Section> sections) {
         this.sections = sections;
     }
 

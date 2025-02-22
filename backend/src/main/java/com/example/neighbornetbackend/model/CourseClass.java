@@ -12,7 +12,7 @@ import java.util.ArrayList;
 
 @Entity
 @Table(name = "classes")
-public class Class {
+public class CourseClass {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -63,7 +63,7 @@ public class Class {
     @Column(columnDefinition = "JSON")
     private List<Section> sections = new ArrayList<>();
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "user_id")
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "password"})
     private User creator;
@@ -76,6 +76,9 @@ public class Class {
 
     @OneToMany(mappedBy = "classEntity", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Lesson> lessons = new ArrayList<>();
+
+    @OneToMany(mappedBy = "classEntity", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<LessonProgress> progressRecords = new ArrayList<>();
 
 
     @PrePersist
@@ -293,5 +296,13 @@ public class Class {
 
     public void setLessons(List<Lesson> lessons) {
         this.lessons = lessons;
+    }
+
+    public List<LessonProgress> getProgressRecords() {
+        return progressRecords;
+    }
+
+    public void setProgressRecords(List<LessonProgress> progressRecords) {
+        this.progressRecords = progressRecords;
     }
 }

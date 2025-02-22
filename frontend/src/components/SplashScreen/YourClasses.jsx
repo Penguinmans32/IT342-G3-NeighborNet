@@ -11,6 +11,8 @@ import axios from "axios"
 import '../../styles/YourClasses.css';
 import LessonList from "./LessonList";
 import AddLessonModal from "./AddLessonModal";
+import toast, { Toaster } from 'react-hot-toast';
+
 
 const RecentClassCard = ({ classItem, onEdit, thumbnailUrl }) => { 
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -107,7 +109,6 @@ const TreeNode = ({ classItem, index, onExpand, isExpanded, onDelete, onEdit, th
           },
         }
       );
-      // Update lessons after adding new one
       setLessons(prev => [...prev, response.data]);
       setIsAddingLesson(false);
     } catch (error) {
@@ -235,12 +236,17 @@ const TreeNode = ({ classItem, index, onExpand, isExpanded, onDelete, onEdit, th
                       <motion.button
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
-                        onClick={() => onDelete(classItem.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          onDelete(classItem.id);
+                        }}
                         className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 
-                                 text-red-400 rounded-lg backdrop-blur-sm flex items-center 
-                                 justify-center gap-2 border border-red-500/30"
+                                  text-red-400 rounded-lg backdrop-blur-sm flex items-center 
+                                  justify-center gap-2 border border-red-500/30"
                       >
                         <MdDelete />
+                        <span>Delete</span>
                       </motion.button>
                     </div>
                   </motion.div>
@@ -392,34 +398,66 @@ const YourClasses = () => {
   )
 
   const handleDeleteClass = useCallback(async (classId) => {
-    if (window.confirm("Are you sure you want to delete this class?")) {
+    const confirmDelete = () => {
+      return new Promise((resolve) => {
+        toast.custom(
+          (t) => (
+            <div className="bg-white rounded-lg shadow-lg p-6 max-w-sm mx-auto">
+              <h3 className="text-lg font-semibold mb-2">Delete Class</h3>
+              <p className="text-gray-600 mb-4">
+                Are you sure you want to delete this class? This action cannot be undone.
+              </p>
+              <div className="flex justify-end gap-2">
+                <button
+                  className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded"
+                  onClick={() => {
+                    toast.dismiss(t.id);
+                    resolve(false);
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+                  onClick={() => {
+                    toast.dismiss(t.id);
+                    resolve(true);
+                  }}
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          ),
+          {
+            duration: Infinity,
+          }
+        );
+      });
+    };
+  
+    if (await confirmDelete()) {
       try {
-        await axios.delete(`http://localhost:8080/api/classes/${classId}`, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        })
-        setClasses((prev) => prev.filter((c) => c.id !== classId))
+        const response = await axios.delete(
+          `http://localhost:8080/api/classes/${classId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }
+        );
+  
+        if (response.status === 200) {
+          setClasses((prev) => prev.filter((c) => c.id !== classId));
+          toast.success('Class deleted successfully!');
+        }
       } catch (error) {
-        console.error("Error deleting class:", error)
+        console.error("Error deleting class:", error);
+        toast.error('Failed to delete class. Please try again.');
       }
     }
-  }, [])
+  }, []);
 
-  const getThumbnailUrl = useCallback(
-    (thumbnailUrl) => {
-      if (!thumbnailUrl) return "/default-class-image.jpg"
-
-      if (thumbnailCache[thumbnailUrl]) {
-        return thumbnailCache[thumbnailUrl]
-      }
-
-      const fullUrl = `http://localhost:8080${thumbnailUrl}`
-      setThumbnailCache((prev) => ({ ...prev, [thumbnailUrl]: fullUrl }))
-      return fullUrl
-    },
-    [thumbnailCache],
-  )
 
   const filteredAndSortedClasses = useMemo(() => {
     // Ensure classes is an array

@@ -1,6 +1,7 @@
 package com.example.neighbornetbackend.dto;
 
-import com.example.neighbornetbackend.model.Class;
+
+import com.example.neighbornetbackend.model.CourseClass;
 
 import java.util.List;
 
@@ -11,7 +12,7 @@ public class CreateClassRequest {
     private String thumbnailDescription;
     private String duration;
     private String customCategory;
-    private Class.DifficultyLevel difficulty;
+    private CourseClass.DifficultyLevel difficulty;
     private String category;
     private String creatorName;
     private String creatorEmail;
@@ -20,7 +21,7 @@ public class CreateClassRequest {
     private String linkedinUrl;
     private String portfolioUrl;
     private List<String> requirements;
-    private List<Class.Section> sections;
+    private List<CourseClass.Section> sections;
 
     public String getTitle() {
         return title;
@@ -54,11 +55,11 @@ public class CreateClassRequest {
         this.duration = duration;
     }
 
-    public Class.DifficultyLevel getDifficulty() {
+    public CourseClass.DifficultyLevel getDifficulty() {
         return difficulty;
     }
 
-    public void setDifficulty(Class.DifficultyLevel difficulty) {
+    public void setDifficulty(CourseClass.DifficultyLevel difficulty) {
         this.difficulty = difficulty;
     }
 
@@ -126,11 +127,11 @@ public class CreateClassRequest {
         this.requirements = requirements;
     }
 
-    public List<Class.Section> getSections() {
+    public List<CourseClass.Section> getSections() {
         return sections;
     }
 
-    public void setSections(List<Class.Section> sections) {
+    public void setSections(List<CourseClass.Section> sections) {
         this.sections = sections;
     }
 

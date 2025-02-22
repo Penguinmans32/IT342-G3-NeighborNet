@@ -2,8 +2,11 @@ package com.example.neighbornetbackend.repository;
 
 import com.example.neighbornetbackend.model.Lesson;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.util.List;
 
 public interface LessonRepository extends JpaRepository<Lesson, Long> {
@@ -18,4 +21,10 @@ public interface LessonRepository extends JpaRepository<Lesson, Long> {
 
     @Query("SELECT l FROM Lesson l WHERE l.classEntity.id = :classId AND l.id < :currentId ORDER BY l.id DESC LIMIT 1")
     Lesson findPrevLesson(@Param("classId") Long classId, @Param("currentId") Long currentId);
+
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM Lesson l WHERE l.classEntity.id = :classId")
+    void deleteByClassId(@Param("classId") Long classId);
+
 }

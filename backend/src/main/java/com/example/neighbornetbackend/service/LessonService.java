@@ -1,5 +1,6 @@
 package com.example.neighbornetbackend.service;
 
+import com.example.neighbornetbackend.model.CourseClass;
 import com.example.neighbornetbackend.model.Lesson;
 import com.example.neighbornetbackend.model.Class;
 import com.example.neighbornetbackend.repository.LessonRepository;
@@ -34,7 +35,7 @@ public class LessonService {
             MultipartFile videoFile,
             Long parentLessonId
     ) throws IOException {
-        Class classEntity = classRepository.findById(classId)
+        CourseClass classEntity = classRepository.findById(classId)
                 .orElseThrow(() -> new RuntimeException("Class not found"));
 
         Lesson lesson = new Lesson();
