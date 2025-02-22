@@ -2,6 +2,8 @@ package com.example.neighbornetbackend.model;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "lessons")
@@ -21,7 +23,10 @@ public class Lesson {
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "class_id", nullable = false)
-    private Class classEntity;
+    private CourseClass classEntity;
+
+    @OneToMany(mappedBy = "lesson", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<LessonProgress> progressRecords = new ArrayList<>();
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "parent_lesson_id")
@@ -77,11 +82,11 @@ public class Lesson {
         this.videoUrl = videoUrl;
     }
 
-    public Class getClassEntity() {
+    public CourseClass getClassEntity() {
         return classEntity;
     }
 
-    public void setClassEntity(Class classEntity) {
+    public void setClassEntity(CourseClass classEntity) {
         this.classEntity = classEntity;
     }
 
@@ -99,5 +104,13 @@ public class Lesson {
 
     public LocalDateTime getUpdatedAt() {
         return updatedAt;
+    }
+
+    public List<LessonProgress> getProgressRecords() {
+        return progressRecords;
+    }
+
+    public void setProgressRecords(List<LessonProgress> progressRecords) {
+        this.progressRecords = progressRecords;
     }
 }

@@ -3,6 +3,7 @@ package com.example.neighbornetbackend.service;
 import com.example.neighbornetbackend.dto.LessonProgressDTO;
 import com.example.neighbornetbackend.dto.UpdateProgressRequest;
 import com.example.neighbornetbackend.model.Class;
+import com.example.neighbornetbackend.model.CourseClass;
 import com.example.neighbornetbackend.model.Lesson;
 import com.example.neighbornetbackend.model.LessonProgress;
 import com.example.neighbornetbackend.model.User;
@@ -48,7 +49,7 @@ public class LessonProgressService {
         LessonProgress progress = progressRepository.findByLesson_IdAndUser_Id(lessonId, userId)
                 .orElseGet(() -> {
                     LessonProgress newProgress = new LessonProgress();
-                    Class classEntity = classRepository.findById(classId)
+                    CourseClass classEntity = classRepository.findById(classId)
                             .orElseThrow(() -> new RuntimeException("Class not found"));
                     Lesson lesson = lessonRepository.findById(lessonId)
                             .orElseThrow(() -> new RuntimeException("Lesson not found"));

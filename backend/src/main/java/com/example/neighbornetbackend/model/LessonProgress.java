@@ -20,7 +20,7 @@ public class LessonProgress {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "class_id")
-    private Class classEntity;
+    private CourseClass classEntity;
 
     @Column(name = "completed")
     private boolean completed;
@@ -65,11 +65,11 @@ public class LessonProgress {
         this.lesson = lesson;
     }
 
-    public Class getClassEntity() {
+    public CourseClass getClassEntity() {
         return classEntity;
     }
 
-    public void setClassEntity(Class classEntity) {
+    public void setClassEntity(CourseClass classEntity) {
         this.classEntity = classEntity;
     }
 

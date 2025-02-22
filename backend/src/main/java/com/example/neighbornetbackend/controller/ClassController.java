@@ -3,12 +3,15 @@ package com.example.neighbornetbackend.controller;
 import com.example.neighbornetbackend.dto.CreateClassRequest;
 import com.example.neighbornetbackend.dto.ClassResponse;
 import com.example.neighbornetbackend.exception.ResourceNotFoundException;
+import com.example.neighbornetbackend.model.CourseClass;
+import com.example.neighbornetbackend.repository.ClassRepository;
 import com.example.neighbornetbackend.security.CurrentUser;
 import com.example.neighbornetbackend.security.UserPrincipal;
 import com.example.neighbornetbackend.service.ClassService;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.core.io.Resource;
@@ -24,9 +27,11 @@ import java.util.List;
 @CrossOrigin
 public class ClassController {
     private final ClassService classService;
+    private final ClassRepository classRepository;
 
-    public ClassController(ClassService classService) {
+    public ClassController(ClassService classService, ClassRepository classRepository) {
         this.classService = classService;
+        this.classRepository = classRepository;
     }
 
     @Operation(summary = "Create a new class")
@@ -108,6 +113,50 @@ public class ClassController {
         try {
             List<ClassResponse> classes = classService.getAllClasses();
             return ResponseEntity.ok(classes);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @DeleteMapping("/{classId}")
+    @Transactional
+    public ResponseEntity<?> deleteClass(
+            @PathVariable Long classId,
+            @CurrentUser UserPrincipal currentUser) {
+        try {
+            // First fetch the class with its creator
+            CourseClass classToDelete = classRepository.findByIdWithCreator(classId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Class not found"));
+
+            // Check if the current user is the creator
+            if (!classToDelete.getCreator().getId().equals(currentUser.getId())) {
+                return ResponseEntity.status(403).body("Not authorized to delete this class");
+            }
+
+            classService.deleteClass(classId);
+            return ResponseEntity.ok().build();
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @PutMapping(value = "/{classId}", consumes = { "multipart/form-data" })
+    public ResponseEntity<ClassResponse> updateClass(
+            @PathVariable Long classId,
+            @RequestPart(value = "thumbnail", required = false) MultipartFile thumbnail,
+            @RequestPart("classData") CreateClassRequest request,
+            @CurrentUser UserPrincipal currentUser) {
+        try {
+            ClassResponse updatedClass = classService.updateClass(classId, request, thumbnail, currentUser.getId());
+            return ResponseEntity.ok(updatedClass);
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.notFound().build();
+        } catch (SecurityException e) {
+            return ResponseEntity.status(403).build();
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.badRequest().build();
