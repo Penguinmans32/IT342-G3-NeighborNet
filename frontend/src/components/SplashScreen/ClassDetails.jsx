@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MdPlayArrow, MdLock, MdCheck, MdAccessTime, MdPeople, MdLockOpen, MdStar } from 'react-icons/md';
+import { MdPlayArrow, MdLock, MdCheck, MdAccessTime, MdPeople, MdLockOpen, MdStar, MdInfo } from 'react-icons/md';
 import axios from 'axios';
 import { useAuth } from '../../backendApi/AuthContext';
+import Footer from './Footer';
 
 const ClassDetails = () => {
   const { classId } = useParams();
@@ -22,6 +23,7 @@ const ClassDetails = () => {
   const [showUnlockAnimation, setShowUnlockAnimation] = useState(false);
   const [unlockedLessonId, setUnlockedLessonId] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [selectedVideo, setSelectedVideo] = useState(0);
 
   useEffect(() => {
     const fetchClassDetails = async () => {
@@ -151,13 +153,67 @@ const ClassDetails = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Class Header */}
-      <div className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Thumbnail Section */}
-            <div className="relative aspect-video rounded-xl overflow-hidden bg-gray-100">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-blue-50">
+      {/* Back Home Button */}
+      <motion.div
+        initial={{ x: -100, opacity: 0 }} 
+        animate={{ x: 0, opacity: 1 }}
+        transition={{ duration: 0.5 }}
+        className="fixed top-6 left-6 z-50" 
+      >
+        <motion.button
+          onClick={() => navigate("/homepage")}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          className="group relative flex items-center gap-2 px-6 py-3 bg-white/80 
+                    hover:bg-white/90 rounded-full shadow-lg hover:shadow-xl 
+                    transition-all duration-300 backdrop-blur-sm border border-white/50"
+        >
+          <motion.div
+            whileHover={{ x: -4 }} 
+            transition={{ duration: 0.2 }}
+            className="relative"
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-purple-400 
+                          rounded-full blur-sm opacity-50 group-hover:opacity-75 transition-opacity" />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5 text-blue-600 relative z-10"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                fillRule="evenodd"
+                d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </motion.div>
+          
+          <motion.span
+            initial={{ x: 0 }}
+            animate={{ x: 0 }}
+            whileHover={{ x: 4 }}  
+            transition={{ duration: 0.2 }}
+            className="text-transparent bg-clip-text bg-gradient-to-r 
+                      from-blue-600 to-purple-600 font-medium"
+          >
+            Back Home
+          </motion.span>
+
+          {/* Hover Effect */}
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 
+                        rounded-full opacity-0 group-hover:opacity-100 transition-opacity 
+                        duration-300" />
+        </motion.button>
+      </motion.div>
+
+      {/* Section 1: Preview Image and Title */}
+      <div className="relative bg-gradient-to-r from-blue-600/95 via-blue-500/95 to-purple-600/95">
+        <div className="relative max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+          <div className="grid lg:grid-cols-[2fr,1fr] gap-8">
+            {/* Image Section */}
+            <div className="relative aspect-video rounded-xl overflow-hidden bg-black/20 shadow-2xl ring-1 ring-white/10">
               {classData?.thumbnailUrl ? (
                 <img
                   src={`http://localhost:8080${classData.thumbnailUrl}`}
@@ -165,70 +221,20 @@ const ClassDetails = () => {
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <MdPlayArrow className="text-6xl text-gray-400" />
+                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-900/50 to-purple-900/50">
+                  <MdPlayArrow className="text-6xl text-white/80" />
                 </div>
               )}
-              
-              {/* Overlay with class info */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent">
-                <div className="absolute bottom-6 left-6 right-6">
-                  <span className="px-3 py-1 bg-blue-500 text-white text-sm font-medium rounded-full">
-                    {classData?.category}
-                  </span>
-                  <h1 className="mt-2 text-2xl font-bold text-white">
-                    {classData?.title}
-                  </h1>
-                </div>
-              </div>
             </div>
 
             {/* Class Info Section */}
             <div className="space-y-6">
-              <div className="flex items-center gap-4 text-gray-500">
-                <div className="flex items-center gap-2">
-                  <MdAccessTime className="text-xl" />
-                  <span>{classData?.duration}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <MdPeople className="text-xl" />
-                  <span>{classData?.enrolledCount || 0} enrolled</span>
-                </div>
-                {classData?.difficulty && (
-                  <span className="px-3 py-1 bg-blue-50 text-blue-600 text-sm font-medium rounded-full">
-                    {classData.difficulty}
-                  </span>
-                )}
-              </div>
-
-              <p className="text-gray-600 text-lg leading-relaxed">
+              <h1 className="text-3xl font-bold text-white bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent">
+                {classData?.title}
+              </h1>
+              <p className="text-white text-lg leading-relaxed">
                 {classData?.description}
               </p>
-
-              {/* Requirements Section */}
-              {classData?.requirements && classData.requirements.length > 0 && (
-                <div className="space-y-3">
-                  <h3 className="font-semibold text-gray-900">Requirements</h3>
-                  <ul className="list-disc pl-5 space-y-2">
-                    {classData.requirements.map((req, index) => (
-                      <li key={index} className="text-gray-600">{req}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* Creator Info */}
-              <div className="flex items-center gap-4 pt-4 border-t">
-                <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center">
-                  <span className="text-xl font-medium text-blue-600">
-                    {classData?.creatorName?.[0]?.toUpperCase()}
-                  </span>
-                </div>
-                <div>
-                  <h3 className="font-medium text-gray-900">{classData?.creatorName}</h3>
-                  <p className="text-gray-500">{classData?.creatorEmail}</p>
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -350,7 +356,84 @@ const ClassDetails = () => {
             })}
           </div>
         </div>
+
+        {/* Section 3: Class Statistics */}
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-purple-100 p-6 mt-8">
+          <h2 className="text-xl font-bold bg-gradient-to-r from-blue-600/95 via-blue-500/95 to-purple-600/95 bg-clip-text text-transparent mb-6">
+            Class Statistics
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              { label: "Enrolled Students", value: classData?.enrolledCount || 0, icon: MdPeople },
+              { label: "Total Lessons", value: lessons.length, icon: MdPlayArrow },
+              { label: "Duration", value: classData?.duration, icon: MdAccessTime },
+              { label: "Difficulty", value: classData?.difficulty, icon: MdStar },
+            ].map((stat, index) => (
+              <div
+                key={index}
+                className="flex items-center gap-4 p-4 rounded-xl bg-gradient-to-r from-blue-50 to-purple-50 hover:from-blue-100 hover:to-purple-100 transition-colors"
+              >
+                <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center flex-shrink-0">
+                  <stat.icon className="text-white text-2xl" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm text-gray-600">{stat.label}</p>
+                  <p className="font-medium text-gray-900">{stat.value}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Section 4: About the Class */}
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-purple-100 p-6 mt-8">
+          <h2 className="text-xl font-bold bg-gradient-to-r from-blue-600/95 via-blue-500/95 to-purple-600/95 bg-clip-text text-transparent mb-6">
+            About the Class
+          </h2>
+          <div className="space-y-6">
+            <div className="prose max-w-none">
+              <p className="text-gray-600 leading-relaxed">
+                {classData?.description ||
+                  "A comprehensive course designed to help you master the fundamentals and advanced techniques of the subject matter."}
+              </p>
+            </div>
+            {classData?.requirements && classData.requirements.length > 0 && (
+              <div className="space-y-4">
+                <h3 className="font-semibold text-gray-900">Requirements</h3>
+                <ul className="space-y-2">
+                  {classData.requirements.map((req, index) => (
+                    <li key={index} className="flex items-start gap-2 text-gray-600">
+                      <MdInfo className="mt-1 text-blue-500 flex-shrink-0" />
+                      <span>{req}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Section 5: Class Creator */}
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-purple-100 p-6 mt-8">
+          <h2 className="text-xl font-bold bg-gradient-to-r from-blue-600/95 via-blue-500/95 to-purple-600/95 bg-clip-text text-transparent mb-6">
+            Class Creator
+          </h2>
+          <div className="flex items-start gap-6">
+            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center flex-shrink-0 shadow-lg">
+              <span className="text-3xl font-medium text-white">{classData?.creatorName?.[0]?.toUpperCase()}</span>
+            </div>
+            <div className="flex-1">
+              <h3 className="text-xl font-medium text-gray-900">{classData?.creatorName}</h3>
+              <p className="text-blue-600">{classData?.creatorEmail}</p>
+              <p className="text-gray-600 mt-4 p-4 rounded-xl bg-gradient-to-r from-blue-50 to-purple-50">
+                {classData?.creatorBio ||
+                  "Expert instructor with years of experience in the field, dedicated to providing high-quality education and helping students achieve their learning goals."}
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
+      <Footer />
     </div>
   );
 };
