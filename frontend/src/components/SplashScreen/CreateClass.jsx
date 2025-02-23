@@ -554,7 +554,7 @@ const CreateClass = () => {
   );
 };
 
-const BasicInformationStep = ({ formData, setFormData, touched, error }) => {
+export const BasicInformationStep = ({ formData, setFormData, touched, error }) => {
     const [showCustomCategory, setShowCustomCategory] = useState(false);
 
     const categories = [
@@ -748,7 +748,7 @@ const BasicInformationStep = ({ formData, setFormData, touched, error }) => {
 };
 
 
-const ThumbnailStep = ({ formData, setFormData, touched, error }) => {
+export const ThumbnailStep = ({ formData, setFormData, touched, error }) => {
   const getInputClassName = () => `
       w-full px-4 py-3 rounded-lg transition-all duration-200
       ${touched && !formData.thumbnailDescription?.trim() 
@@ -983,7 +983,7 @@ const RequirementInput = memo(({ requirement, index, onDelete, onChange, touched
 RequirementInput.displayName = 'RequirementInput';
 
 
-const RequirementsStep = ({ formData, setFormData, touched, error }) => {
+export const RequirementsStep = ({ formData, setFormData, touched, error }) => {
   // Memoized handlers to prevent unnecessary recreations
   const handleRequirementChange = useCallback((index, value) => {
       setFormData(prev => ({
@@ -1088,7 +1088,7 @@ const RequirementsStep = ({ formData, setFormData, touched, error }) => {
   );
 };
 
-const SectionField = memo(({ label, value, onChange, placeholder, icon: Icon, type = "text", rows, touched }) => (
+export const SectionField = memo(({ label, value, onChange, placeholder, icon: Icon, type = "text", rows, touched }) => (
   <div className="space-y-2">
       <label className="block text-sm font-medium text-gray-700">
           {label}
@@ -1423,5 +1423,10 @@ const SectionsStep = memo(({ formData, setFormData, touched, error }) => {
       </motion.div>
   );
 });
+
+CreateClass.BasicInformationStep = BasicInformationStep;
+CreateClass.ThumbnailStep = ThumbnailStep;
+CreateClass.RequirementsStep = RequirementsStep;
+CreateClass.SectionsStep = SectionsStep;
   
 export default CreateClass;
