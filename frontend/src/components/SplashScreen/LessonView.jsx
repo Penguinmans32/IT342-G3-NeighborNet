@@ -12,7 +12,9 @@ import {
   MdFullscreen,
   MdChevronLeft,
   MdLock,
+  MdClose,
   MdCheck,
+  MdAccessTime,
   MdChevronRight
 } from 'react-icons/md';
 import axios from 'axios';
@@ -292,106 +294,231 @@ const LessonView = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-blue-100">
-      <Toaster position="top-right" />
-      {/* Top Navigation */}
-      <nav className="fixed top-0 left-0 right-0 bg-gradient-to-r from-blue-600/95 via-blue-500/95 to-purple-600/95 shadow-sm z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => navigate('/your-classes')}
-              className="flex items-center gap-2 text-white hover:text-gray-300"
-            >
-              <MdArrowBack className="text-xl" />
-              <span>Back to Classes</span>
-            </motion.button>
-            <h1 className="text-xl font-semibold text-white">
-              {lesson?.title}
-            </h1>
-            <div className="w-24"></div> {/* Spacer for alignment */}
+      {/* Enhanced Top Navigation */}
+      <nav className="fixed top-0 left-0 right-0 bg-gradient-to-r from-gray-900 to-blue-900 shadow-lg z-50">
+        <div className="max-w-7xl mx-auto">
+          {/* Progress Bar */}
+          <div className="h-1 bg-gray-800">
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${videoProgress}%` }}
+              className="h-full bg-gradient-to-r from-blue-500 to-purple-500"
+            />
+          </div>
+          
+          <div className="px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center py-4">
+              <div className="flex items-center gap-4">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => navigate('/homepage')}
+                  className="flex items-center gap-2 text-white/90 hover:text-white
+                            bg-white/10 px-3 py-1.5 rounded-full backdrop-blur-sm
+                            border border-white/10 transition-all duration-300"
+                >
+                  <MdArrowBack className="text-xl" />
+                  <span>Back to Course</span>
+                </motion.button>
+                
+                {/* Lesson Progress */}
+                <div className="hidden md:flex items-center gap-2 text-white/80">
+                  <span className="text-sm">Lesson {progressData.currentLessonIndex + 1} of {lesson.length}</span>
+                  <div className="w-px h-4 bg-white/20" />
+                </div>
+              </div>
+  
+              <h1 className="text-xl font-medium text-white truncate max-w-xl">
+                {lesson?.title}
+              </h1>
+  
+              {/* Right Actions */}
+              <div className="flex items-center gap-3">
+                {isLessonCompleted ? (
+                  <div className="flex items-center gap-2 text-green-400 bg-green-400/10 
+                                px-3 py-1.5 rounded-full">
+                    <MdCheck className="text-lg" />
+                    <span className="text-sm">Completed</span>
+                  </div>
+                ) : (
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={markLessonAsComplete}
+                    disabled={!canMarkComplete}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-full
+                              transition-all duration-300 ${
+                                canMarkComplete
+                                  ? 'bg-green-500 text-white hover:bg-green-600'
+                                  : 'bg-gray-700 text-gray-300 cursor-not-allowed'
+                              }`}
+                  >
+                    {canMarkComplete ? 'Mark Complete' : 'Watch to Complete'}
+                  </motion.button>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </nav>
-
+  
       {/* Main Content */}
       <main className="pt-20 pb-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Video Section */}
-            <div className="lg:col-span-2">
-              <LessonPlayer
-                videoUrl={lesson?.videoUrl}
-                classId={classId}
-                onProgress={(progress) => {
-                  setVideoProgress(progress);
-                }}
-                onComplete={handleVideoComplete}
-                isCompleted={isLessonCompleted}
-                showTranscript={showTranscript}
-                onTranscriptToggle={() => setShowTranscript(!showTranscript)}
-              />
-
-              <LessonCompletionTracker
-                isCompleted={isLessonCompleted}
-                canMarkComplete={canMarkComplete}
-                onComplete={markLessonAsComplete}
-              />
-
-              {/* Lesson Navigation */}
-              <div className="mt-6 flex justify-between items-center">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={handlePrevLesson}
-                  disabled={!prevLesson}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg ${
-                    prevLesson
-                      ? 'bg-gradient-to-r from-blue-600/95 via-blue-500/95 to-purple-600/95 text-white hover:from-blue-700 hover:via-blue-600 hover:to-purple-700'
-                      : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                  }`}
-                >
-                  <MdChevronLeft className="text-xl" />
-                  {prevLesson ? (
-                    <span>Previous: {prevLesson.title}</span>
-                  ) : (
-                    <span>No Previous Lesson</span>
-                  )}
-                </motion.button>
-
-                {nextLesson ? (
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={handleNextLesson}
-                    disabled={!isLessonCompleted}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg ${
-                      isLessonCompleted
-                        ? 'bg-gradient-to-r from-blue-600/95 via-blue-500/95 to-purple-600/95 text-white hover:from-blue-700 hover:via-blue-600 hover:to-purple-700'
-                        : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                    }`}
-                  >
-                    <span>Next: {nextLesson.title}</span>
-                    {!isLessonCompleted && <MdLock className="text-xl" />}
-                    <MdChevronRight className="text-xl" />
-                  </motion.button>
-                ) : (
-                  <div className="px-4 py-2 text-gray-500">
-                    Last Lesson
+            {/* Left Column - Video and Content */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* Video Player Container */}
+              <div className="relative rounded-2xl overflow-hidden shadow-2xl bg-gray-900">
+                <LessonPlayer
+                  videoUrl={lesson?.videoUrl}
+                  classId={classId}
+                  onProgress={(progress) => setVideoProgress(progress)}
+                  onComplete={handleVideoComplete}
+                  isCompleted={isLessonCompleted}
+                  showTranscript={showTranscript}
+                  onTranscriptToggle={() => setShowTranscript(!showTranscript)}
+                />
+              </div>
+  
+              {/* Lesson Description */}
+              <div className="bg-white rounded-xl shadow-lg p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">About this Lesson</h3>
+                <div className="prose prose-blue max-w-none">
+                  {lesson?.description}
+                </div>
+                
+                {/* Learning Objectives */}
+                {lesson?.learningObjectives && (
+                  <div className="mt-6">
+                    <h4 className="font-medium text-gray-900 mb-3">Learning Objectives</h4>
+                    <ul className="space-y-2">
+                      {lesson.learningObjectives.map((objective, index) => (
+                        <li key={index} className="flex items-start gap-3">
+                          <div className="flex-shrink-0 w-5 h-5 rounded-full bg-blue-100 
+                                        flex items-center justify-center">
+                            <span className="text-xs text-blue-600">{index + 1}</span>
+                          </div>
+                          <span className="text-gray-700">{objective}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                
+                {/* Resources */}
+                {lesson?.resources && lesson.resources.length > 0 && (
+                  <div className="mt-6">
+                    <h4 className="font-medium text-gray-900 mb-3">Additional Resources</h4>
+                    <div className="grid gap-3">
+                      {lesson.resources.map((resource, index) => (
+                        <a
+                          key={index}
+                          href={resource.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 
+                                   hover:bg-gray-100 transition-colors"
+                        >
+                          <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center 
+                                        justify-center text-blue-600">
+                            <MdInfo className="text-xl" />
+                          </div>
+                          <div className="flex-1">
+                            <h5 className="font-medium text-gray-900">{resource.title}</h5>
+                            <p className="text-sm text-gray-500">{resource.description}</p>
+                          </div>
+                          <MdArrowForward className="text-gray-400" />
+                        </a>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
+  
+              {/* Lesson Navigation */}
+              <div className="grid grid-cols-2 gap-4">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handlePrevLesson}
+                  disabled={!prevLesson}
+                  className={`flex items-center gap-3 p-4 rounded-xl transition-all ${
+                    prevLesson
+                      ? 'bg-white hover:bg-gray-50 shadow-lg'
+                      : 'bg-gray-100 cursor-not-allowed'
+                  }`}
+                >
+                  <MdChevronLeft className={`text-2xl ${prevLesson ? 'text-blue-500' : 'text-gray-400'}`} />
+                  <div className="text-left">
+                    <div className="text-sm text-gray-500">Previous Lesson</div>
+                    <div className={`font-medium ${prevLesson ? 'text-gray-900' : 'text-gray-400'}`}>
+                      {prevLesson ? prevLesson.title : 'No Previous Lesson'}
+                    </div>
+                  </div>
+                </motion.button>
+  
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleNextLesson}
+                  disabled={!nextLesson || !isLessonCompleted}
+                  className={`flex items-center gap-3 p-4 rounded-xl transition-all ${
+                    nextLesson && isLessonCompleted
+                      ? 'bg-white hover:bg-gray-50 shadow-lg'
+                      : 'bg-gray-100 cursor-not-allowed'
+                  }`}
+                >
+                  <div className="text-right flex-1">
+                    <div className="text-sm text-gray-500">Next Lesson</div>
+                    <div className={`font-medium ${
+                      nextLesson && isLessonCompleted ? 'text-gray-900' : 'text-gray-400'
+                    }`}>
+                      {nextLesson ? nextLesson.title : 'Last Lesson'}
+                    </div>
+                  </div>
+                  {nextLesson && !isLessonCompleted && <MdLock className="text-gray-400 text-xl" />}
+                  <MdChevronRight className={`text-2xl ${
+                    nextLesson && isLessonCompleted ? 'text-blue-500' : 'text-gray-400'
+                  }`} />
+                </motion.button>
+              </div>
             </div>
-
-            {/* Transcript Section */}
+  
+            {/* Right Column - Transcript */}
             {showTranscript && (
               <div className="lg:col-span-1">
-                <div className="bg-white rounded-xl shadow-lg p-6">
-                  <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                    Transcript
-                  </h2>
-                  <div className="prose prose-sm max-w-none">
-                    {lesson?.description || 'No transcript available.'}
+                <div className="sticky top-24">
+                  <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+                    <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+                      <h2 className="text-lg font-semibold text-gray-900">
+                        Lesson Transcript
+                      </h2>
+                      <button
+                        onClick={() => setShowTranscript(false)}
+                        className="text-gray-400 hover:text-gray-500"
+                      >
+                        <MdClose className="text-xl" />
+                      </button>
+                    </div>
+                    
+                    <div className="p-6 max-h-[calc(100vh-200px)] overflow-y-auto">
+                      <div className="prose prose-sm max-w-none">
+                        {lesson?.transcript ? (
+                          <div className="space-y-4">
+                            {lesson.transcript.split('\n\n').map((paragraph, index) => (
+                              <p key={index} className="text-gray-700">
+                                {paragraph}
+                              </p>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-gray-500 italic">
+                            No transcript available for this lesson.
+                          </p>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -399,49 +526,82 @@ const LessonView = () => {
           </div>
         </div>
       </main>
-
+  
+      {/* Enhanced Completion Modal */}
       {showCompletionModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-xl p-8 max-w-md w-full mx-4"
+            className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 relative"
           >
-            <div className="text-center">
-              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
-                <MdCheck className="h-6 w-6 text-green-600" />
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
+            <div className="absolute -top-12 left-1/2 transform -translate-x-1/2">
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: "spring", stiffness: 200, damping: 15 }}
+                className="w-24 h-24 rounded-full bg-green-500 border-4 border-white
+                          flex items-center justify-center shadow-xl"
+              >
+                <MdCheck className="text-white text-4xl" />
+              </motion.div>
+            </div>
+            
+            <div className="text-center mt-8">
+              <motion.h3
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="text-2xl font-bold text-gray-900 mb-2"
+              >
                 Lesson Completed!
-              </h3>
-              <p className="text-sm text-gray-500 mb-6">
+              </motion.h3>
+              
+              <motion.p
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="text-gray-600 mb-8"
+              >
                 {nextLesson 
-                  ? "Great job! You've completed this lesson. Ready to move on to the next one?"
-                  : "Congratulations! You've completed the final lesson of this course!"}
-              </p>
-              <div className="flex gap-4 justify-center">
+                  ? "Great progress! Ready to tackle the next lesson?"
+                  : "Congratulations! You've completed the final lesson of this course! 🎉"}
+              </motion.p>
+              
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+                className="flex gap-4 justify-center"
+              >
                 <button
                   onClick={() => setShowCompletionModal(false)}
-                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                  className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl
+                           hover:bg-gray-200 transition-colors"
                 >
                   {nextLesson ? 'Stay Here' : 'Close'}
                 </button>
-                {nextLesson && progressData.unlockedLessons.has(progressData.currentLessonIndex + 1) && (
+                
+                {nextLesson && (
                   <button
                     onClick={() => {
                       setShowCompletionModal(false);
-                      navigate(`/your-classes/${classId}/lessons/${nextLesson.id}`, { replace: true });
+                      navigate(`/your-classes/${classId}/lessons/${nextLesson.id}`);
                     }}
-                    className="px-4 py-2 bg-gradient-to-r from-blue-600/95 via-blue-500/95 to-purple-600/95 text-white rounded-lg hover:from-blue-700 hover:via-blue-600 hover:to-purple-700 transition-colors"
+                    className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600
+                             text-white rounded-xl hover:from-blue-700 hover:to-purple-700
+                             transition-colors flex items-center gap-2"
                   >
-                    Next Lesson
+                    Continue Learning
+                    <MdArrowForward />
                   </button>
                 )}
-              </div>
+              </motion.div>
             </div>
           </motion.div>
         </div>
       )}
+      
       <Footer />
     </div>
   );
