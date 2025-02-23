@@ -21,6 +21,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.neighbornet.ui.theme.NeighbornetTheme
 import kotlinx.coroutines.delay
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -31,7 +33,24 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    LandingPage()
+                    var currentScreen by remember { mutableStateOf("landing") }
+                    
+                    when (currentScreen) {
+                        "landing" -> LandingPage(
+                            onGetStartedClick = { currentScreen = "login" }
+                        )
+                        "login" -> LoginScreen(
+                            onLoginSuccess = { currentScreen = "home" },
+                            onSignUpClick = { currentScreen = "signup" }
+                        )
+                        "signup" -> SignUpScreen(
+                            onSignUpSuccess = { currentScreen = "login" },
+                            onGoogleSignUp = { /* TODO */ },
+                            onGithubSignUp = { /* TODO */ },
+                            onNavigateToLogin = { currentScreen = "login" }
+                        )
+                        "home" -> HomePage()
+                    }
                 }
             }
         }
@@ -39,7 +58,10 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun LandingPage(isPreview: Boolean = false) {
+fun LandingPage(
+    isPreview: Boolean = false,
+    onGetStartedClick: () -> Unit = {}
+) {
     // For preview, we'll show everything immediately
     var isVisible by remember { mutableStateOf(isPreview) }
     var isDescriptionVisible by remember { mutableStateOf(isPreview) }
@@ -86,7 +108,7 @@ fun LandingPage(isPreview: Boolean = false) {
 
             // Button
             if (isPreview || isDescriptionVisible) {
-                ContinueButton()
+                ContinueButton(onClick = onGetStartedClick)
             }
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -154,9 +176,9 @@ fun Description() {
 }
 
 @Composable
-fun ContinueButton() {
+fun ContinueButton(onClick: () -> Unit) {
     Button(
-        onClick = { /* TODO: Navigation */ },
+        onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
             .height(60.dp)
