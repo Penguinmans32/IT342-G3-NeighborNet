@@ -1,0 +1,38 @@
+@keyframes pulse {
+    0% { transform: scale(1); opacity: 0.5; }
+    50% { transform: scale(1.1); opacity: 0.8; }
+    100% { transform: scale(1); opacity: 0.5; }
+  }
+  
+  @keyframes float {
+    0% { transform: translateY(0px) rotate(0deg); }
+    50% { transform: translateY(-10px) rotate(2deg); }
+    100% { transform: translateY(0px) rotate(0deg); }
+  }
+  
+  .node-pulse {
+    animation: pulse 3s ease-in-out infinite;
+  }
+  
+  .float-animation {
+    animation: float 6s ease-in-out infinite;
+  }
+  
+  /* Add glow effect */
+  .glow {
+    filter: drop-shadow(0 0 10px rgba(59, 130, 246, 0.5));
+  }
+  
+  /* Custom scrollbar for the tree container */
+  .tree-container::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  .tree-container::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.1);
+  }
+  
+  .tree-container::-webkit-scrollbar-thumb {
+    background: linear-gradient(to bottom, #3b82f6, #8b5cf6);
+    border-radius: 3px;
+  }

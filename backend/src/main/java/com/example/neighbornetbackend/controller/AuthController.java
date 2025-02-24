@@ -19,7 +19,11 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.mail.MessagingException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -41,6 +45,8 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/auth")
 public class AuthController {
 
+    private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
+
     private final AuthenticationManager authenticationManager;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -48,6 +54,9 @@ public class AuthController {
     private final RefreshTokenService refreshTokenService;
     private final EmailVerificationService emailVerificationService;
     private final EmailService emailService;
+
+    @Value("${app.mobile.header:X-Mobile-Request}")
+    private String mobileHeaderName;
 
     public AuthController(AuthenticationManager authenticationManager, UserRepository userRepository, PasswordEncoder passwordEncoder, JwtTokenProvider tokenProvider, RefreshTokenService refreshTokenService, EmailVerificationService emailVerificationService, EmailService emailService) {
         this.authenticationManager = authenticationManager;
@@ -64,9 +73,12 @@ public class AuthController {
             description = "Verify user's email address using verification token"
     )
     @GetMapping("/verify-email")
-    public ResponseEntity<?> verifyEmail(@RequestParam String token) {
+    public ResponseEntity<?> verifyEmail(@RequestParam String token,
+                                         @RequestHeader(required = false) Map<String, String> headers) {
+        boolean isMobileRequest = headers.containsKey(mobileHeaderName);
+
         try {
-            emailVerificationService.verifyEmail(token);
+            emailVerificationService.verifyEmail(token, isMobileRequest);
             return ResponseEntity.ok("Email verified successfully!");
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
@@ -89,12 +101,18 @@ public class AuthController {
             )
     })
     @PostMapping("/signup")
-    public ResponseEntity<?> registerUser(@RequestBody SignupRequest signupRequest) {
+    public ResponseEntity<?> registerUser(@RequestBody SignupRequest signupRequest,
+                                          @RequestHeader Map<String, String> headers) {
+        boolean isMobileRequest = headers.containsKey(mobileHeaderName.toLowerCase()) ||
+                headers.containsKey(mobileHeaderName);
+
+        logger.debug("Is mobile request: " + isMobileRequest);
+
         if(userRepository.existsByUsername(signupRequest.getUsername())) {
-            return ResponseEntity.badRequest().body("Error: Username is already taken!");
+            return ResponseEntity.badRequest().body(com.example.neighbornetbackend.dto.ApiResponse.error("Error: Username is already taken!"));
         }
         if(userRepository.existsByEmail(signupRequest.getEmail())) {
-            return ResponseEntity.badRequest().body("Error: Email is already in use!");
+            return ResponseEntity.badRequest().body(com.example.neighbornetbackend.dto.ApiResponse.error("Error: Email is already in use!"));
         }
 
         User user = new User();
@@ -105,14 +123,12 @@ public class AuthController {
 
         userRepository.save(user);
 
-        // Create verification token and send email
-        String token = emailVerificationService.createVerificationToken(user);
         try {
-            emailService.sendVerificationEmail(user.getEmail(), token);
-            return ResponseEntity.ok("User registered successfully! Please check your email to verify your account.");
-        } catch (MessagingException e) {
+            String token = emailVerificationService.createVerificationToken(user, isMobileRequest);
+            return ResponseEntity.ok(com.example.neighbornetbackend.dto.ApiResponse.success(null, "User registered successfully"));
+        } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("User registered but failed to send verification email.");
+                    .body(com.example.neighbornetbackend.dto.ApiResponse.error("User registered but failed to send verification email."));
         }
     }
 
@@ -131,16 +147,24 @@ public class AuthController {
                     description = "Invalid credentials"
             )
     })
-    @PostMapping("/login")
+    @PostMapping(value = "/login",
+            produces = MediaType.APPLICATION_JSON_VALUE,
+            consumes = MediaType.APPLICATION_JSON_VALUE)
     @Transactional
     public ResponseEntity<?> authenticateUser(@RequestBody LoginRequest loginRequest) {
         try {
-            User user = userRepository.findByUsernameOrEmail(loginRequest.getUsername(), loginRequest.getUsername())
-                    .orElseThrow(() -> new RuntimeException("User not found"));
+            logger.debug("Login attempt for username: '{}'", loginRequest.getUsername());
+            User user = userRepository.findByUsernameOrEmail(
+                    loginRequest.getUsername().trim(),
+                    loginRequest.getUsername().trim()
+            ).orElseThrow(() -> new RuntimeException("User not found"));
+
+            logger.debug("Found user with username: '{}'", user.getUsername());
 
             if (!user.isEmailVerified()) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body("Please verify your email before logging in.");
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body(com.example.neighbornetbackend.dto.ApiResponse.error("Please verify your email before logging in."));
             }
 
             Authentication authentication = authenticationManager.authenticate(
@@ -153,8 +177,6 @@ public class AuthController {
             SecurityContextHolder.getContext().setAuthentication(authentication);
             String jwt = tokenProvider.generateToken(authentication);
 
-            UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
-
             refreshTokenService.invalidateAllUserTokens(user.getId());
 
             long activeTokens = refreshTokenService.countActiveTokensForUser(user.getId());
@@ -164,15 +186,20 @@ public class AuthController {
 
             RefreshToken refreshToken = refreshTokenService.createRefreshToken(user.getId());
 
-            return ResponseEntity.ok(new AuthResponse(
+            AuthResponse authResponse = new AuthResponse(
                     jwt,
                     refreshToken.getToken(),
                     "Bearer",
                     user.getUsername()
-            ));
+            );
+
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(com.example.neighbornetbackend.dto.ApiResponse.success(authResponse, "Login successful"));
         } catch (Exception e) {
+            logger.error("Login failed", e);
             return ResponseEntity.badRequest()
-                    .body(new MessageResponse("Invalid username or password"));
+                    .body(com.example.neighbornetbackend.dto.ApiResponse.error("Invalid username or password"));
         }
     }
 
@@ -272,5 +299,15 @@ public class AuthController {
         }
 
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    }
+
+    @PostMapping("/verify-mobile")
+    public ResponseEntity<?> verifyMobileEmail(@RequestBody VerificationRequest request) {
+        try {
+            emailVerificationService.verifyEmail(request.getOtp(), true);
+            return ResponseEntity.ok(com.example.neighbornetbackend.dto.ApiResponse.success(null, "Email verified successfully"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(com.example.neighbornetbackend.dto.ApiResponse.error(e.getMessage()));
+        }
     }
 }

@@ -57,12 +57,10 @@ fun SignUpScreen(
     LaunchedEffect(authState.signUpSuccess) {
         if (authState.signUpSuccess) {
             snackbarHostState.showSnackbar(
-                message = "Account created successfully!",
+                message = "Account created successfully! Please verify your email.",
                 duration = SnackbarDuration.Short
             )
-            delay(1000)
-            authViewModel.clearSignUpSuccess()
-            onNavigateToLogin()
+            onSignUpSuccess()
         }
     }
 

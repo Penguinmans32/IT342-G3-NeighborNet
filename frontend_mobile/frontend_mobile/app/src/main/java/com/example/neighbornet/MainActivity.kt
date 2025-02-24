@@ -1,8 +1,10 @@
 package com.example.neighbornet
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -23,12 +25,31 @@ import com.example.neighbornet.ui.theme.NeighbornetTheme
 import kotlinx.coroutines.delay
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.lifecycleScope
+import com.example.neighbornet.auth.AuthViewModel
+import com.example.neighbornet.network.RetrofitClient
+import com.example.neighbornet.network.VerificationRequest
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
+
+    private var verificationState by mutableStateOf<VerificationState>(VerificationState.Idle)
+    private val authViewModel: AuthViewModel by viewModels()
+
+    sealed class VerificationState {
+        object Idle : VerificationState()
+        object Loading : VerificationState()
+        data class Success(val message: String) : VerificationState()
+        data class Error(val message: String) : VerificationState()
+    }
+
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         setContent {
             NeighbornetTheme {
+<<<<<<< HEAD
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
@@ -54,8 +75,109 @@ class MainActivity : ComponentActivity() {
                             onNavigateToLogin = { currentScreen = "login" }
                         )
                         "home" -> HomePage()
+=======
+                var currentScreen by remember { mutableStateOf("landing") }
+                val authState by authViewModel.authState.collectAsState()
+                val snackbarHostState = remember { SnackbarHostState() }
+
+                Scaffold(
+                    snackbarHost = { SnackbarHost(snackbarHostState) }
+                ) { padding ->
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(padding)
+                    ) {
+                        LaunchedEffect(authState.signUpSuccess) {
+                            if (authState.signUpSuccess) {
+                                currentScreen = "verification"
+                                authViewModel.clearSignUpSuccess()
+                            }
+                        }
+
+                        LaunchedEffect(authState.verificationSuccess) {
+                            if (authState.verificationSuccess) {
+                                snackbarHostState.showSnackbar("Email verified successfully!")
+                                delay(1000)
+                                currentScreen = "login"
+                            }
+                        }
+
+                        when (currentScreen) {
+                            "landing" -> LandingPage(
+                                onGetStartedClick = { currentScreen = "login" }
+                            )
+                            "login" -> LoginScreen(
+                                onLoginSuccess = { currentScreen = "home" },
+                                onSignUpClick = { currentScreen = "signup" }
+                            )
+                            "signup" -> SignUpScreen(
+                                onSignUpSuccess = { }, // Let LaunchedEffect handle navigation
+                                onGoogleSignUp = { /* TODO */ },
+                                onGithubSignUp = { /* TODO */ },
+                                onNavigateToLogin = { currentScreen = "login" }
+                            )
+                            "verification" -> VerificationScreen(
+                                viewModel = authViewModel,
+                                onVerificationComplete = { currentScreen = "login" }
+                            )
+                            "home" -> HomePage()
+                        }
+
+                        // Show any errors
+                        LaunchedEffect(authState.error) {
+                            authState.error?.let { error ->
+                                snackbarHostState.showSnackbar(error)
+                                authViewModel.clearError()
+                            }
+                        }
+>>>>>>> origin/main
                     }
                 }
+            }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleIntent(intent)
+    }
+
+    private fun handleIntent(intent: Intent) {
+        val uri = intent.data
+        if (uri != null && uri.scheme == "neighbornet" && uri.host == "verify") {
+            val token = uri.getQueryParameter("token")
+            if (token != null) {
+                // Use verifyMobileOTP for mobile verification
+                authViewModel.verifyMobileOTP(token)
+            }
+        }
+    }
+
+    private fun verifyEmail(token: String) {
+        verificationState = VerificationState.Loading
+
+        lifecycleScope.launch {
+            try {
+                val verificationRequest = VerificationRequest(otp = token)
+                val response = RetrofitClient.authService.verifyEmail(verificationRequest)
+
+                if (response.isSuccessful) {
+                    verificationState = VerificationState.Success(
+                        (response.body() ?: "Email verified successfully!").toString()
+                    )
+                    // Maybe navigate to login screen after short delay
+                    delay(1500)
+                    // Update currentScreen or navigate as needed
+                } else {
+                    verificationState = VerificationState.Error(
+                        response.errorBody()?.string() ?: "Verification failed"
+                    )
+                }
+            } catch (e: Exception) {
+                verificationState = VerificationState.Error(
+                    e.message ?: "An error occurred during verification"
+                )
             }
         }
     }

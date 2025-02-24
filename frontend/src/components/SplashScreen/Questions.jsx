@@ -63,34 +63,34 @@ export default function App() {
 
   const developers = [
     {
-      name: "John Smith",
-      role: "Lead Developer",
+      name: "Vaness Leonard Capuras",
+      role: "Full-stack Developer",
       avatar: "https://api.dicebear.com/7.x/personas/svg?seed=john",
       bio: "Full-stack developer with 5 years of experience in React and Node.js",
       links: {
-        github: "https://github.com",
+        github: "https://github.com/Penguinmans32",
         twitter: "https://twitter.com",
         linkedin: "https://linkedin.com"
       }
     },
     {
-      name: "Sarah Johnson",
-      role: "UI/UX Developer",
+      name: "Kyla Dominic Genodiala",
+      role: "UI/UX and Frontend Developer",
       avatar: "https://api.dicebear.com/7.x/personas/svg?seed=sarah",
       bio: "Passionate about creating beautiful and intuitive user interfaces",
       links: {
-        github: "https://github.com",
+        github: "https://github.com/KikayKyla123",
         twitter: "https://twitter.com",
         linkedin: "https://linkedin.com"
       }
     },
     {
-      name: "Mike Chen",
-      role: "Backend Developer",
+      name: "Jes Emmanuel Chavez",
+      role: "Mobile Developer",
       avatar: "https://api.dicebear.com/7.x/personas/svg?seed=mike",
       bio: "Specialized in building scalable backend systems and APIs",
       links: {
-        github: "https://github.com",
+        github: "https://github.com/Cappi-dev",
         twitter: "https://twitter.com",
         linkedin: "https://linkedin.com"
       }
