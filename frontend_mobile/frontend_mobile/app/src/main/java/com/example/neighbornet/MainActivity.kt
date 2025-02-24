@@ -43,42 +43,14 @@ class MainActivity : ComponentActivity() {
         data class Error(val message: String) : VerificationState()
     }
 
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         setContent {
             NeighbornetTheme {
-<<<<<<< HEAD
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    var currentScreen by remember { mutableStateOf("landing") }
-                    
-                    when (currentScreen) {
-                        "landing" -> LandingPage(
-                            onGetStartedClick = { currentScreen = "login" }
-                        )
-                        "login" -> LoginScreen(
-                            onLoginSuccess = { currentScreen = "home" },
-                            onSignUpClick = { currentScreen = "signup" },
-                            onGoogleLogin = { /* TODO */ },
-                            onGithubLogin = { /* TODO */ },
-                            onMicrosoftLogin = { /* TODO */ }
-                        )
-                        "signup" -> SignUpScreen(
-                            onSignUpSuccess = { currentScreen = "login" },
-                            onGoogleSignUp = { /* TODO */ },
-                            onGithubSignUp = { /* TODO */ },
-                            onMicrosoftSignUp = { /* TODO */ },
-                            onNavigateToLogin = { currentScreen = "login" }
-                        )
-                        "home" -> HomePage()
-=======
+                val snackbarHostState = remember { SnackbarHostState() }
                 var currentScreen by remember { mutableStateOf("landing") }
                 val authState by authViewModel.authState.collectAsState()
-                val snackbarHostState = remember { SnackbarHostState() }
 
                 Scaffold(
                     snackbarHost = { SnackbarHost(snackbarHostState) }
@@ -109,12 +81,16 @@ class MainActivity : ComponentActivity() {
                             )
                             "login" -> LoginScreen(
                                 onLoginSuccess = { currentScreen = "home" },
-                                onSignUpClick = { currentScreen = "signup" }
+                                onSignUpClick = { currentScreen = "signup" },
+                                onGoogleLogin = { /* TODO */ },
+                                onGithubLogin = { /* TODO */ },
+                                onMicrosoftLogin = { /* TODO */ }
                             )
                             "signup" -> SignUpScreen(
                                 onSignUpSuccess = { }, // Let LaunchedEffect handle navigation
                                 onGoogleSignUp = { /* TODO */ },
                                 onGithubSignUp = { /* TODO */ },
+                                onMicrosoftSignUp = { /* TODO */ },
                                 onNavigateToLogin = { currentScreen = "login" }
                             )
                             "verification" -> VerificationScreen(
@@ -131,7 +107,6 @@ class MainActivity : ComponentActivity() {
                                 authViewModel.clearError()
                             }
                         }
->>>>>>> origin/main
                     }
                 }
             }
@@ -148,7 +123,6 @@ class MainActivity : ComponentActivity() {
         if (uri != null && uri.scheme == "neighbornet" && uri.host == "verify") {
             val token = uri.getQueryParameter("token")
             if (token != null) {
-                // Use verifyMobileOTP for mobile verification
                 authViewModel.verifyMobileOTP(token)
             }
         }
@@ -166,9 +140,7 @@ class MainActivity : ComponentActivity() {
                     verificationState = VerificationState.Success(
                         (response.body() ?: "Email verified successfully!").toString()
                     )
-                    // Maybe navigate to login screen after short delay
                     delay(1500)
-                    // Update currentScreen or navigate as needed
                 } else {
                     verificationState = VerificationState.Error(
                         response.errorBody()?.string() ?: "Verification failed"
