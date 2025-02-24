@@ -31,6 +31,7 @@ fun LoginScreen(
     onSignUpClick: () -> Unit,
     onGoogleLogin: () -> Unit = {},
     onGithubLogin: () -> Unit = {},
+    onMicrosoftLogin: () -> Unit = {},
     authViewModel: AuthViewModel = viewModel()
 ) {
     var username by remember { mutableStateOf("") }
@@ -174,8 +175,6 @@ fun LoginScreen(
                         contentDescription = "Google",
                         modifier = Modifier.size(24.dp)
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Google")
                 }
 
                 // GitHub Login Button
@@ -191,8 +190,21 @@ fun LoginScreen(
                         contentDescription = "GitHub",
                         modifier = Modifier.size(24.dp)
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("GitHub")
+                }
+
+                // Microsoft Login Button
+                OutlinedButton(
+                    onClick = onMicrosoftLogin,
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(45.dp),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.microsoft_icon),
+                        contentDescription = "Microsoft",
+                        modifier = Modifier.size(24.dp)
+                    )
                 }
             }
 

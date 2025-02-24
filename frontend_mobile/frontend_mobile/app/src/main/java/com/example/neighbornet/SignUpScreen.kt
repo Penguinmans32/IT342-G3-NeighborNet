@@ -30,6 +30,7 @@ fun SignUpScreen(
     onSignUpSuccess: () -> Unit,
     onGoogleSignUp: () -> Unit,
     onGithubSignUp: () -> Unit,
+    onMicrosoftSignUp: () -> Unit,
     onNavigateToLogin: () -> Unit,
     authViewModel: AuthViewModel = viewModel()
 ) {
@@ -211,8 +212,6 @@ fun SignUpScreen(
                         contentDescription = "Google",
                         modifier = Modifier.size(24.dp)
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Google")
                 }
 
                 // GitHub Sign Up Button
@@ -228,8 +227,21 @@ fun SignUpScreen(
                         contentDescription = "GitHub",
                         modifier = Modifier.size(24.dp)
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("GitHub")
+                }
+
+                // Microsoft Sign Up Button
+                OutlinedButton(
+                    onClick = onMicrosoftSignUp,
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(45.dp),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.microsoft_icon),
+                        contentDescription = "Microsoft",
+                        modifier = Modifier.size(24.dp)
+                    )
                 }
             }
 

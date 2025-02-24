@@ -49,6 +49,33 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             NeighbornetTheme {
+<<<<<<< HEAD
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    var currentScreen by remember { mutableStateOf("landing") }
+                    
+                    when (currentScreen) {
+                        "landing" -> LandingPage(
+                            onGetStartedClick = { currentScreen = "login" }
+                        )
+                        "login" -> LoginScreen(
+                            onLoginSuccess = { currentScreen = "home" },
+                            onSignUpClick = { currentScreen = "signup" },
+                            onGoogleLogin = { /* TODO */ },
+                            onGithubLogin = { /* TODO */ },
+                            onMicrosoftLogin = { /* TODO */ }
+                        )
+                        "signup" -> SignUpScreen(
+                            onSignUpSuccess = { currentScreen = "login" },
+                            onGoogleSignUp = { /* TODO */ },
+                            onGithubSignUp = { /* TODO */ },
+                            onMicrosoftSignUp = { /* TODO */ },
+                            onNavigateToLogin = { currentScreen = "login" }
+                        )
+                        "home" -> HomePage()
+=======
                 var currentScreen by remember { mutableStateOf("landing") }
                 val authState by authViewModel.authState.collectAsState()
                 val snackbarHostState = remember { SnackbarHostState() }
@@ -104,6 +131,7 @@ class MainActivity : ComponentActivity() {
                                 authViewModel.clearError()
                             }
                         }
+>>>>>>> origin/main
                     }
                 }
             }
