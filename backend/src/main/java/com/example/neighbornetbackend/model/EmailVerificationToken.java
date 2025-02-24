@@ -18,6 +18,8 @@ public class EmailVerificationToken {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
+    private String otp;
+
     private Instant expiryDate;
 
     private boolean verified = false;
@@ -76,5 +78,13 @@ public class EmailVerificationToken {
 
     public boolean isExpired() {
         return Instant.now().isAfter(this.expiryDate);
+    }
+
+    public String getOtp() {
+        return otp;
+    }
+
+    public void setOtp(String otp) {
+        this.otp = otp;
     }
 }
