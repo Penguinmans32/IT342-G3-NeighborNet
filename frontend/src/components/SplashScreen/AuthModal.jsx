@@ -221,53 +221,43 @@
       setError('');
       setLoading(true);
       console.log('Login attempt with:', loginForm);
-    
+  
       try {
-        await login(loginForm.username, loginForm.password);
-        closeSignInModal();
-        showNotification({
-          type: 'success',
-          title: 'Welcome back!',
-          message: 'You have successfully logged in'
-        });
-        navigate('/homepage')
-      } catch (err) {
-        setError(err.response?.data || 'An error occurred during login');
-        
-        // Special notification for unverified email
-        if (err.response?.data === 'Please verify your email before loggin in.') {
-          showNotification({
-            type: 'warning',
-            title: 'Email Not Verified',
-            message: 'Please check your inbox and verify your email address to continue.',
-            duration: 8000
-          });
+          const userData = await login(loginForm.username, loginForm.password);
+          console.log('Login successful:', userData);
           
-          setTimeout(() => {
-            showNotification({
-              type: 'info',
-              title: "Didn't receive the email?",
-              message: "Check your spam folder or click here to resend verification email",
-              duration: Infinity, // Won't auto-dismiss
-              // You could add a custom action button in your Notification component
-              // action: {
-              //   label: 'Resend Email',
-              //   onClick: () => handleResendVerification(loginForm.username)
-              // }
-            });
-          }, 1000);
-        } else {
+          closeSignInModal();
           showNotification({
-            type: 'error',
-            title: 'Login Failed',
-            message: err.response?.data || 'An error occurred during login',
-            duration: 6000
+              type: 'success',
+              title: 'Welcome back!',
+              message: 'You have successfully logged in'
           });
-        }
+          navigate('/homepage');
+      } catch (err) {
+          console.error('Login error:', err);
+          const errorMessage = err.response?.data?.message || err.message || 'An error occurred during login';
+          
+          setError(errorMessage);
+          
+          if (errorMessage.includes('verify your email')) {
+              showNotification({
+                  type: 'warning',
+                  title: 'Email Not Verified',
+                  message: 'Please check your inbox and verify your email address to continue.',
+                  duration: 8000
+              });
+          } else {
+              showNotification({
+                  type: 'error',
+                  title: 'Login Failed',
+                  message: errorMessage,
+                  duration: 6000
+              });
+          }
       } finally {
-        setLoading(false);
+          setLoading(false);
       }
-    };
+  };
 
     const handleRegisterSubmit = async (e) => {
       e.preventDefault();

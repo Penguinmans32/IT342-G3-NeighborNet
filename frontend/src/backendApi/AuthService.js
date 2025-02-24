@@ -6,20 +6,33 @@ class AuthService {
     async login(username, password) {
         try {
             const response = await axios.post(API_URL + 'login', {
-                username,
+                username: username.trim(),
                 password
+            }, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                }
             });
-            const token = response.data.token || response.data.accessToken;
-            if (token) {
-                localStorage.setItem("user", JSON.stringify(response.data));
-                localStorage.setItem("token", token);
-                axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-
-                const userResponse = await axios.get('http://localhost:8080/api/auth/user');
+    
+            console.log('Login response:', response.data);
+    
+            if (response.data.success) {
+                const authData = response.data.data;
+                // Store the raw token without Bearer prefix
+                localStorage.setItem("user", JSON.stringify(authData));
+                localStorage.setItem("token", authData.token); // Store raw token
+    
+                // Add Bearer prefix when setting axios header
+                axios.defaults.headers.common['Authorization'] = `Bearer ${authData.token}`;
+    
+                const userResponse = await axios.get(`${API_URL}user`);
                 return userResponse.data;
+            } else {
+                throw new Error(response.data.message);
             }
-            return response.data;
         } catch (error) {
+            console.error('Login error:', error);
             throw error;
         }
     }
@@ -30,9 +43,22 @@ class AuthService {
                 username,
                 email,
                 password
+            }, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                }
             });
-            return response.data;
+
+            if (response.data.success) {
+                return response.data.data;
+            } else {
+                throw new Error(response.data.message);
+            }
         } catch (error) {
+            if (error.response?.data?.message) {
+                throw new Error(error.response.data.message);
+            }
             throw error;
         }
     }
@@ -44,14 +70,40 @@ class AuthService {
     }
 
     getCurrentUser() {
-        const userStr = localStorage.getItem("user");
-        if (!userStr) return null;
-        
         try {
-            const user = JSON.parse(userStr);
-            return user;
+            const userStr = localStorage.getItem("user");
+            const token = localStorage.getItem("token");
+            
+            if (!userStr || !token) {
+                return null;
+            }
+    
+            // Add Bearer prefix when setting header
+            axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+            
+            return JSON.parse(userStr);
         } catch (e) {
+            console.error('Error getting current user:', e);
             return null;
+        }
+    }
+
+    async refreshToken(refreshToken) {
+        try {
+            const response = await axios.post(API_URL + 'refreshtoken', {
+                refreshToken: refreshToken
+            });
+            
+            if (response.data.token) {
+                const token = `Bearer ${response.data.token}`;
+                localStorage.setItem("token", token);
+                axios.defaults.headers.common['Authorization'] = token;
+            }
+            return response.data;
+        } catch (error) {
+            console.error('Token refresh failed:', error);
+            this.logout();
+            throw error;
         }
     }
 
