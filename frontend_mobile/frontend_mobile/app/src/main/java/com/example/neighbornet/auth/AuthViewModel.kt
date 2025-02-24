@@ -2,24 +2,25 @@ package com.example.neighbornet.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.neighbornet.network.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 data class AuthState(
     val isLoading: Boolean = false,
     val isLoggedIn: Boolean = false,
     val error: String? = null,
-    val signUpSuccess: Boolean = false
+    val signUpSuccess: Boolean = false,
+    val accessToken: String? = null,
+    val refreshToken: String? = null,
+    val verificationSuccess: Boolean = false,
+    val verificationMessage: String? = null
 )
 
 class AuthViewModel : ViewModel() {
     private val _authState = MutableStateFlow(AuthState())
     val authState: StateFlow<AuthState> = _authState
-
-    // Simulated user storage - in a real app, this would be a database or API
-    private val users = mutableMapOf<String, UserData>()
 
     fun login(username: String, password: String) {
         viewModelScope.launch {
@@ -30,31 +31,40 @@ class AuthViewModel : ViewModel() {
 
             _authState.value = _authState.value.copy(isLoading = true, error = null)
 
-            // Simulate network delay
-            delay(1000)
+            try {
+                val response = RetrofitClient.authService.login(LoginRequest(username, password))
 
-            val userData = users[username]
-            if (userData == null) {
+                if (response.isSuccessful) {
+                    response.body()?.let { apiResponse ->
+                        if (apiResponse.success) {
+                            apiResponse.data?.let { authResponse ->
+                                _authState.value = _authState.value.copy(
+                                    isLoading = false,
+                                    isLoggedIn = true,
+                                    error = null,
+                                    accessToken = authResponse.accessToken,
+                                    refreshToken = authResponse.refreshToken
+                                )
+                            }
+                        } else {
+                            _authState.value = _authState.value.copy(
+                                isLoading = false,
+                                error = apiResponse.message
+                            )
+                        }
+                    }
+                } else {
+                    _authState.value = _authState.value.copy(
+                        isLoading = false,
+                        error = response.errorBody()?.string() ?: "Login failed"
+                    )
+                }
+            } catch (e: Exception) {
                 _authState.value = _authState.value.copy(
                     isLoading = false,
-                    error = "User not found"
+                    error = e.message ?: "Network error occurred"
                 )
-                return@launch
             }
-
-            if (userData.password != password) {
-                _authState.value = _authState.value.copy(
-                    isLoading = false,
-                    error = "Invalid password"
-                )
-                return@launch
-            }
-
-            _authState.value = _authState.value.copy(
-                isLoading = false,
-                isLoggedIn = true,
-                error = null
-            )
         }
     }
 
@@ -81,24 +91,39 @@ class AuthViewModel : ViewModel() {
             }
 
             _authState.value = _authState.value.copy(isLoading = true, error = null)
-            delay(1000)
 
-            if (users.containsKey(username)) {
+            try {
+                val response = RetrofitClient.authService.signup(
+                    SignupRequest(username, email, password)
+                )
+
+                if (response.isSuccessful) {
+                    response.body()?.let { apiResponse ->
+                        if (apiResponse.success) {
+                            _authState.value = _authState.value.copy(
+                                isLoading = false,
+                                signUpSuccess = true,
+                                error = null
+                            )
+                        } else {
+                            _authState.value = _authState.value.copy(
+                                isLoading = false,
+                                error = apiResponse.message
+                            )
+                        }
+                    }
+                } else {
+                    _authState.value = _authState.value.copy(
+                        isLoading = false,
+                        error = response.errorBody()?.string() ?: "Sign up failed"
+                    )
+                }
+            } catch (e: Exception) {
                 _authState.value = _authState.value.copy(
                     isLoading = false,
-                    error = "Username already exists"
+                    error = e.message ?: "Network error occurred"
                 )
-                return@launch
             }
-
-            // Store the new user
-            users[username] = UserData(email, username, password)
-            
-            _authState.value = _authState.value.copy(
-                isLoading = false,
-                signUpSuccess = true,
-                error = null
-            )
         }
     }
 
@@ -114,9 +139,40 @@ class AuthViewModel : ViewModel() {
         _authState.value = _authState.value.copy(signUpSuccess = false)
     }
 
-    private data class UserData(
-        val email: String,
-        val username: String,
-        val password: String
-    )
-} 
+    fun verifyMobileOTP(otp: String) {
+        viewModelScope.launch {
+            if (otp.length != 6) {
+                _authState.value = _authState.value.copy(
+                    error = "Please enter a valid 6-digit code"
+                )
+                return@launch
+            }
+
+            _authState.value = _authState.value.copy(isLoading = true, error = null)
+
+            try {
+                val response = RetrofitClient.authService.verifyEmail(
+                    VerificationRequest(otp = otp)
+                )
+
+                if (response.isSuccessful) {
+                    _authState.value = _authState.value.copy(
+                        isLoading = false,
+                        verificationSuccess = true,
+                        error = null
+                    )
+                } else {
+                    _authState.value = _authState.value.copy(
+                        isLoading = false,
+                        error = response.errorBody()?.string() ?: "Invalid verification code"
+                    )
+                }
+            } catch (e: Exception) {
+                _authState.value = _authState.value.copy(
+                    isLoading = false,
+                    error = e.message ?: "Network error occurred"
+                )
+            }
+        }
+    }
+}
