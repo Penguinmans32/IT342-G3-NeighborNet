@@ -101,6 +101,15 @@ const Profile = () => {
       padding: "20px",
       display: "flex",
     },
+    profileContainer: {
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      padding: '20px',
+      backgroundColor: '#f9f9f9',
+      borderRadius: '8px',
+      boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
+    },
     profileSection: {
       display: "flex",
       flexDirection: "column",
@@ -205,7 +214,7 @@ const Profile = () => {
   return (
     <div style={styles.container}>
        <header className="sticky top-0 z-50 w-full">
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-600/95 via-blue-500/95 to-purple-600/95 overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-gray-700 to-blue-900 via-purple-600">
             <div className="absolute inset-0">
               <div className="floating-elements"></div>
               <div className="floating-elements floating-elements2"></div>
@@ -610,78 +619,81 @@ const Profile = () => {
           </motion.div>
         )}
 
-    <div style={styles.content}>  
-      <div style={styles.profileSection}>
-        <div style={styles.avatar} className="relative group">
+<div style={styles.content}>
+  <div style={styles.profileSection}>
+    <div style={styles.profileContainer}>
+      <div style={styles.avatar} className="relative group">
         <img
-            src={
-              profileData?.imageUrl
-                ? profileData.imageUrl.startsWith('http')
-                  ? profileData.imageUrl
-                  : `http://localhost:8080${profileData.imageUrl}`
-                : "/images/defaultProfile.png"
-            }
-            alt="Profile"
-            className="w-full h-full rounded-full object-cover"
-            onError={(e) => {
-              console.error("Error loading image:", e);
-              e.target.onerror = null;
-              e.target.src = "/images/defaultProfile.png";
-            }}
-          />
-          <div className="absolute inset-0 bg-black/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-            <label className="cursor-pointer">
-              <span className="text-white text-sm">Change Photo</span>
-              <input
-                type="file"
-                className="hidden"
-                accept="image/*"
-                onChange={handleProfilePictureUpdate}
-                disabled={isUpdating}
-              />
-            </label>
-          </div>
-          {/* Loading overlay */}
-          {isUpdating && (
-            <div className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center">
-              <span className="text-white">Updating...</span>
-            </div>
-          )}
+          src={
+            profileData?.imageUrl
+              ? profileData.imageUrl.startsWith('http')
+                ? profileData.imageUrl
+                : `http://localhost:8080${profileData.imageUrl}`
+              : "/images/defaultProfile.png"
+          }
+          alt="Profile"
+          className="w-full h-full rounded-full object-cover"
+          onError={(e) => {
+            console.error("Error loading image:", e);
+            e.target.onerror = null;
+            e.target.src = "/images/defaultProfile.png";
+          }}
+        />
+        <div className="absolute inset-0 bg-black/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+          <label className="cursor-pointer">
+            <span className="text-white text-sm">Change Photo</span>
+            <input
+              type="file"
+              className="hidden"
+              accept="image/*"
+              onChange={handleProfilePictureUpdate}
+              disabled={isUpdating}
+            />
+          </label>
         </div>
-
-        {/* Profile Info */}
-        <h1 style={styles.name}>{profileData?.username || user?.username}</h1>
-        <p style={styles.bio}>
-          {profileData?.email}
-        </p>
-        <button style={styles.editButton} onClick={() => navigate("/edit-profile")}>
-          Edit Profile
-        </button>
-
-        {/* Stats */}
-        <div style={styles.statsContainer}>
-          <div style={styles.stat}>
-            <span style={styles.statLabel}>Followers</span>
-            <span style={styles.statValue}>0</span>
+        {/* Loading overlay */}
+        {isUpdating && (
+          <div className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center">
+            <span className="text-white">Updating...</span>
           </div>
-          <div style={styles.stat}>
-            <span style={styles.statLabel}>Following</span>
-            <span style={styles.statValue}>0</span>
-          </div>
+        )}
+      </div>
+
+      {/* Profile Info */}
+      <h1 style={styles.name}>{profileData?.username || user?.username}</h1>
+      <p style={styles.bio}>
+        {profileData?.email}
+      </p>
+      <button style={styles.editButton} onClick={() => navigate("/edit-profile")}>
+        Edit Profile
+      </button>
+
+      {/* Stats */}
+      <div style={styles.statsContainer}>
+        <div style={styles.stat}>
+          <span style={styles.statLabel}>Followers</span>
+          <span style={styles.statValue}>0</span>
         </div>
-
-        {/* Social Links */}
-        <button style={styles.linkButton} onClick={() => navigate("/link-social-accounts")}>
-          <span>🔗</span>
-          Link social accounts
-        </button>
-
-        {/* Progress Section */}
-        <div style={styles.section}>
-          <h3 style={styles.sectionTitle}>Progress*</h3>
-          <p style={styles.progressNote}>*These stats are only visible to you</p>
+        <div style={styles.stat}>
+          <span style={styles.statLabel}>Following</span>
+          <span style={styles.statValue}>0</span>
         </div>
       </div>
+
+      {/* Social Links */}
+      <button style={styles.linkButton} onClick={() => navigate("/edit-profile")}>
+        <span>🔗</span>
+        Link social accounts
+      </button>
+
+      {/* Progress Section */}
+      <div style={styles.section}>
+        <h3 style={styles.sectionTitle}>Progress*</h3>
+        <p style={styles.progressNote}>*These stats are only visible to you</p>
+      </div>
+    </div>
+  </div>
+
 
       {/* Right side - Tabs and Content */}
       <div className="flex-1 ml-8">
