@@ -41,12 +41,16 @@ class MainActivity : ComponentActivity() {
                         )
                         "login" -> LoginScreen(
                             onLoginSuccess = { currentScreen = "home" },
-                            onSignUpClick = { currentScreen = "signup" }
+                            onSignUpClick = { currentScreen = "signup" },
+                            onGoogleLogin = { /* TODO */ },
+                            onGithubLogin = { /* TODO */ },
+                            onMicrosoftLogin = { /* TODO */ }
                         )
                         "signup" -> SignUpScreen(
                             onSignUpSuccess = { currentScreen = "login" },
                             onGoogleSignUp = { /* TODO */ },
                             onGithubSignUp = { /* TODO */ },
+                            onMicrosoftSignUp = { /* TODO */ },
                             onNavigateToLogin = { currentScreen = "login" }
                         )
                         "home" -> HomePage()
