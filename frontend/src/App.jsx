@@ -13,6 +13,7 @@ import CreateClass from "./components/SplashScreen/CreateClass";
 import YourClasses from "./components/SplashScreen/YourClasses";
 import LessonView from "./components/SplashScreen/LessonView";
 import Profile from "./components/Profile";
+import EditProfile from "./components/EditProfile";
 import { Toaster } from 'react-hot-toast';
 import EditClass from "./components/SplashScreen/EditClass";
 
@@ -91,6 +92,14 @@ function App() {
               <EditClass />
               </ProtectedRoute>
             } 
+            />
+            <Route 
+              path="/edit-profile"
+              element={
+                <ProtectedRoute>
+                  <EditProfile />
+                </ProtectedRoute>
+              } 
             />
           </Routes>
         </AuthProviderWithErrorBoundary>

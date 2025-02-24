@@ -253,165 +253,127 @@ const Homepage = () => {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <header className="sticky top-0 z-50 w-full overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/95 via-blue-500/95 to-purple-600/95">
-          <div className="absolute inset-0">
-            <div className="floating-elements"></div>
-            <div className="floating-elements floating-elements2"></div>
-            <div className="floating-elements floating-elements3"></div>
-          </div>
-        </div>
+  <div className="absolute inset-0 bg-gradient-to-r from-gray-700 to-blue-900 via-purple-600">
+    <div className="absolute inset-0">
+      <div className="floating-elements"></div>
+      <div className="floating-elements floating-elements2"></div>
+      <div className="floating-elements floating-elements3"></div>
+    </div>
+  </div>
 
-        <div className="relative z-10 backdrop-blur-sm transition-all duration-300 hover:backdrop-blur-md">
-          <div className="container mx-auto">
-            <div className="flex h-16 items-center justify-between px-4 relative">
+  <div className="relative z-10 backdrop-blur-sm transition-all duration-300 hover:backdrop-blur-md">
+    <div className="container mx-auto">
+      <div className="flex h-16 items-center justify-between px-4 relative">
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          onClick={() => setMobileMenuOpen(!isMobileMenuOpen)}
+          className="lg:hidden text-white p-2 hover:bg-white/10 rounded-lg transition-colors"
+          aria-label="Toggle menu"
+        >
+          {isMobileMenuOpen ? <MdClose className="text-2xl" /> : <MdMenu className="text-2xl" />}
+        </motion.button>
+
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="flex items-center gap-2 group cursor-pointer"
+        >
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/95 shadow-md
+                        transform group-hover:rotate-12 transition-transform duration-300">
+            <span className="text-xl font-bold text-blue-600">N</span>
+          </div>
+          <span className="text-xl font-semibold text-white hidden sm:block
+                          group-hover:text-blue-100 transition-colors duration-300">
+            Neighbor Net
+          </span>
+        </motion.div>
+
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex-1 max-w-2xl mx-4 hidden md:block"
+        >
+          <div className="relative group">
+            <MdSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-xl" />
+            <input
+              type="search"
+              placeholder="Search Classes, Teachers..."
+              className="w-full h-10 pl-10 pr-4 rounded-full border-2 border-transparent 
+                        bg-white/90 backdrop-blur-sm focus:outline-none focus:ring-2 
+                        focus:ring-purple-400 transition-all shadow-lg hover:bg-white"
+              onFocus={() => setIsSearchFocused(true)}
+              onBlur={() => setIsSearchFocused(false)}
+            />
+            <span className="absolute right-4 top-1/2 transform -translate-y-1/2 
+                          bg-gray-100 px-2 py-1 rounded-md text-xs text-gray-500
+                          opacity-50 group-hover:opacity-100 transition-opacity duration-300">
+              ⌘ K
+            </span>
+          </div>
+        </motion.div>
+
+        <motion.div 
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="flex items-center gap-4"
+        >
+          {!user ? (
+            <div className="flex items-center gap-2">
               <motion.button
                 whileHover={{ scale: 1.05 }}
-                onClick={() => setMobileMenuOpen(!isMobileMenuOpen)}
-                className="lg:hidden text-white p-2 hover:bg-white/10 rounded-lg transition-colors"
-                aria-label="Toggle menu"
+                className="hidden sm:inline-flex text-white hover:bg-white/10 px-6 py-2.5 
+                          rounded-lg transition-colors shimmer-hover relative overflow-hidden"
               >
-                {isMobileMenuOpen ? <MdClose className="text-2xl" /> : <MdMenu className="text-2xl" />}
-              </motion.button>
-
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="flex items-center gap-2 group cursor-pointer"
-              >
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/95 shadow-md
-                              transform group-hover:rotate-12 transition-transform duration-300">
-                  <span className="text-xl font-bold text-blue-600">N</span>
-                </div>
-                <span className="text-xl font-semibold text-white hidden sm:block
-                                group-hover:text-blue-100 transition-colors duration-300">
-                  Neighbor Net
+                Sign In
+                <span className="absolute bottom-0 left-0 w-full h-0.5 bg-white transform 
+                              scale-x-0 group-hover:scale-x-100 transition-transform duration-300">
                 </span>
-              </motion.div>
-
-              <motion.div 
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex-1 max-w-2xl mx-4 hidden md:block"
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                className="relative px-8 py-2.5 bg-black/90 text-white rounded-full 
+                          overflow-hidden group transform hover:-translate-y-0.5 
+                          transition-all duration-300 hover:shadow-xl border border-white/10 shimmer-hover"
               >
-                <div className="relative group">
-                  <MdSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-xl" />
-                  <input
-                    type="search"
-                    placeholder="Search Classes, Teachers..."
-                    className="w-full h-10 pl-10 pr-4 rounded-full border-2 border-transparent 
-                              bg-white/90 backdrop-blur-sm focus:outline-none focus:ring-2 
-                              focus:ring-purple-400 transition-all shadow-lg hover:bg-white"
-                    onFocus={() => setIsSearchFocused(true)}
-                    onBlur={() => setIsSearchFocused(false)}
-                  />
-                  <span className="absolute right-4 top-1/2 transform -translate-y-1/2 
-                                bg-gray-100 px-2 py-1 rounded-md text-xs text-gray-500
-                                opacity-50 group-hover:opacity-100 transition-opacity duration-300">
-                    ⌘ K
-                  </span>
+                <span className="relative z-10">Sign Up</span>
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 
+                              opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                 </div>
-              </motion.div>
+              </motion.button>
+            </div>
+          ) : (
+          <div className="flex items-center gap-3">
+            <span className="text-white hidden lg:block">{user.username}</span>
 
-              <motion.div 
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="flex items-center gap-4"
-              >
-                {!user ? (
-                  <div className="flex items-center gap-2">
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      className="hidden sm:inline-flex text-white hover:bg-white/10 px-6 py-2.5 
-                                rounded-lg transition-colors shimmer-hover relative overflow-hidden"
-                    >
-                      Sign In
-                      <span className="absolute bottom-0 left-0 w-full h-0.5 bg-white transform 
-                                    scale-x-0 group-hover:scale-x-100 transition-transform duration-300">
-                      </span>
-                    </motion.button>
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      className="relative px-8 py-2.5 bg-black/90 text-white rounded-full 
-                                overflow-hidden group transform hover:-translate-y-0.5 
-                                transition-all duration-300 hover:shadow-xl border border-white/10 shimmer-hover"
-                    >
-                      <span className="relative z-10">Sign Up</span>
-                      <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 
-                                    opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                      </div>
-                    </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              onClick={() => setNotificationsOpen(!isNotificationsOpen)}
+              className="relative flex items-center justify-center w-10 h-10 rounded-full hover:bg-white/10 transition-colors"
+            >
+              <div className="relative">
+                <MdNotifications className="text-2xl text-white" />
+                {unreadNotifications > 0 && (
+                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
+                    <span className="text-xs text-white">{unreadNotifications}</span>
                   </div>
-                ) : (
-                <div className="flex items-center gap-3">
-                  <span className="text-white hidden lg:block">{user.username}</span>
-
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    onClick={() => setNotificationsOpen(!isNotificationsOpen)}
-                    className="relative flex items-center justify-center w-10 h-10 rounded-full hover:bg-white/10 transition-colors"
-                  >
-                    <div className="relative">
-                      <MdNotifications className="text-2xl text-white" />
-                      {unreadNotifications > 0 && (
-                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
-                          <span className="text-xs text-white">{unreadNotifications}</span>
-                        </div>
-                      )}
-                    </div>
-                  </motion.button>
-
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    onClick={() => setProfileMenuOpen(!isProfileMenuOpen)}
-                    className="relative flex items-center justify-center w-10 h-10 rounded-full hover:bg-white/10 transition-colors"
-                  >
-                    <MdAccountCircle className="text-2xl text-white" />
-                  </motion.button>
-                </div>
                 )}
-              </motion.div>
-            </div>
-          </div>
-        </div>
+              </div>
+            </motion.button>
 
-        {isMobileMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="lg:hidden bg-white border-t border-gray-100 shadow-lg"
-          >
-            <div className="p-4">
-              <input
-                type="search"
-                placeholder="Search Classes, Teachers..."
-                className="w-full h-10 px-4 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-400"
-              />
-            </div>
-            <nav className="py-2">
-              {[
-                { icon: <MdDashboard />, label: "Dashboard", path: "/dashboard" },
-                { icon: <MdSchool />, label: "Skills", path: "/skills" },
-                { icon: <MdSwapHoriz />, label: "Borrowing", path: "/borrowing" },
-                { icon: <MdChat />, label: "Messages", path: "/messages" },
-                { icon: <MdPeople />, label: "Community", path: "/community" },
-              ].map((item, index) => (
-                <motion.button
-                  key={index}
-                  variants={menuItemVariants}
-                  initial="hidden"
-                  animate="visible"
-                  transition={{ delay: index * 0.1 }}
-                  className="w-full flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-50"
-                  onClick={() => navigate(item.path)}
-                >
-                  <span className="text-blue-500">{item.icon}</span>
-                  {item.label}
-                </motion.button>
-              ))}
-            </nav>
-          </motion.div>
-        )}
-      </header>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              onClick={() => setProfileMenuOpen(!isProfileMenuOpen)}
+              className="relative flex items-center justify-center w-10 h-10 rounded-full hover:bg-white/10 transition-colors"
+            >
+              <MdAccountCircle className="text-2xl text-white" />
+            </motion.button>
+          </div>
+          )}
+        </motion.div>
+      </div>
+    </div>
+  </div>
+</header>
 
       <main className="flex-1 flex min-h-screen bg-gray-50">
         {/* Categories Sidebar */}
