@@ -4,62 +4,91 @@ import com.example.neighbornetbackend.model.EmailVerificationToken;
 import com.example.neighbornetbackend.model.User;
 import com.example.neighbornetbackend.repository.EmailVerificationTokenRepository;
 import com.example.neighbornetbackend.repository.UserRepository;
+import jakarta.mail.MessagingException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Random;
 import java.util.UUID;
 
 @Service
 @Transactional
 public class EmailVerificationService {
 
+    private static final Logger logger = LoggerFactory.getLogger(EmailVerificationService.class);
     private final EmailVerificationTokenRepository tokenRepository;
     private final UserRepository userRepository;
     private final EmailService emailService;
+    private static final int OTP_LENGTH = 6;
 
-    public EmailVerificationService(EmailVerificationTokenRepository tokenRepository, EmailService emailService, UserRepository userRepository) {
+    public EmailVerificationService(EmailVerificationTokenRepository tokenRepository,
+                                    EmailService emailService,
+                                    UserRepository userRepository) {
         this.tokenRepository = tokenRepository;
         this.emailService = emailService;
         this.userRepository = userRepository;
     }
 
+    private String generateOTP() {
+        Random random = new Random();
+        StringBuilder otp = new StringBuilder();
+        for (int i = 0; i < OTP_LENGTH; i++) {
+            otp.append(random.nextInt(10));
+        }
+        return otp.toString();
+    }
+
     @Transactional
-    public String createVerificationToken(User user) {
+    public String createVerificationToken(User user, boolean isMobileRequest) {
+        logger.debug("Creating verification token for user: {} (mobile: {})", user.getEmail(), isMobileRequest);
+
         String token = UUID.randomUUID().toString();
-        EmailVerificationToken verificationToken = new EmailVerificationToken(user, token);
-        tokenRepository.save(verificationToken);
-        return token;
-    }
+        String otp = isMobileRequest ? generateOTP() : null;
 
-    @Transactional(readOnly = true)
-    public EmailVerificationToken getVerificationToken(String token) {
-        return tokenRepository.findByToken(token)
-                .orElseThrow(() -> new RuntimeException("Invalid verification token"));
+        EmailVerificationToken verificationToken = new EmailVerificationToken(user, token);
+        if (isMobileRequest) {
+            verificationToken.setOtp(otp);
+            logger.debug("Generated OTP for mobile user: {}", user.getEmail());
+        }
+
+        tokenRepository.save(verificationToken);
+
+        try {
+            emailService.sendVerificationEmail(user.getEmail(), token, otp, isMobileRequest);
+            logger.debug("Sent verification email to: {} (mobile: {})", user.getEmail(), isMobileRequest);
+        } catch (MessagingException e) {
+            logger.error("Failed to send verification email", e);
+            throw new RuntimeException("Failed to send verification email", e);
+        }
+
+        return isMobileRequest ? otp : token;
     }
 
     @Transactional
-    public void verifyEmail(String token) {
-        System.out.println("Verifying email with token: " + token);
+    public void verifyEmail(String tokenOrOtp, boolean isMobileRequest) {
+        EmailVerificationToken verificationToken;
 
-        EmailVerificationToken verificationToken = getVerificationToken(token);
+        if (isMobileRequest) {
+            verificationToken = tokenRepository.findByOtp(tokenOrOtp)
+                    .orElseThrow(() -> new RuntimeException("Invalid verification code"));
+        } else {
+            verificationToken = tokenRepository.findByToken(tokenOrOtp)
+                    .orElseThrow(() -> new RuntimeException("Invalid verification token"));
+        }
 
         if (verificationToken.isExpired()) {
-            throw new RuntimeException("Token has expired");
+            throw new RuntimeException("Verification code has expired");
         }
 
         User user = verificationToken.getUser();
-        System.out.println("Found user: " + user.getEmail());
-        System.out.println("Current verification status: " + user.isEmailVerified());
-
-        // Update and save user first
         user.setEmailVerified(true);
         User savedUser = userRepository.saveAndFlush(user);
 
-        // Then update and save token
         verificationToken.setVerified(true);
         tokenRepository.save(verificationToken);
 
-        System.out.println("After save - User ID: " + savedUser.getId());
-        System.out.println("After save - Email verified: " + savedUser.isEmailVerified());
+        logger.info("Email verified for user: {}", savedUser.getEmail());
     }
 }

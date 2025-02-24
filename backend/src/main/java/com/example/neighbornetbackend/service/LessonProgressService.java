@@ -2,7 +2,6 @@ package com.example.neighbornetbackend.service;
 
 import com.example.neighbornetbackend.dto.LessonProgressDTO;
 import com.example.neighbornetbackend.dto.UpdateProgressRequest;
-import com.example.neighbornetbackend.model.Class;
 import com.example.neighbornetbackend.model.CourseClass;
 import com.example.neighbornetbackend.model.Lesson;
 import com.example.neighbornetbackend.model.LessonProgress;
