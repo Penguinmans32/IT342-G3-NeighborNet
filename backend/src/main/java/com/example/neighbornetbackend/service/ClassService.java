@@ -3,12 +3,10 @@ package com.example.neighbornetbackend.service;
 import com.example.neighbornetbackend.dto.CreateClassRequest;
 import com.example.neighbornetbackend.dto.ClassResponse;
 import com.example.neighbornetbackend.exception.ResourceNotFoundException;
+import com.example.neighbornetbackend.model.ClassEnrollment;
 import com.example.neighbornetbackend.model.CourseClass;
 import com.example.neighbornetbackend.model.User;
-import com.example.neighbornetbackend.repository.ClassRepository;
-import com.example.neighbornetbackend.repository.LessonProgressRepository;
-import com.example.neighbornetbackend.repository.LessonRepository;
-import com.example.neighbornetbackend.repository.UserRepository;
+import com.example.neighbornetbackend.repository.*;
 import jakarta.annotation.PostConstruct;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +17,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -31,6 +30,7 @@ public class ClassService {
     private final FileStorageService fileStorageService;
     private final LessonRepository lessonRepository;
     private final LessonProgressRepository lessonProgressRepository;
+    private final ClassEnrollmentRepository enrollmentRepository;
 
     private final String THUMBNAIL_DIRECTORY = "thumbnails";
 
@@ -45,12 +45,13 @@ public class ClassService {
 
     public ClassService(ClassRepository classRepository,
                         UserRepository userRepository,
-                        FileStorageService fileStorageService, LessonRepository lessonRepository, LessonProgressRepository lessonProgressRepository) {
+                        FileStorageService fileStorageService, LessonRepository lessonRepository, LessonProgressRepository lessonProgressRepository, ClassEnrollmentRepository enrollmentRepository) {
         this.classRepository = classRepository;
         this.userRepository = userRepository;
         this.fileStorageService = fileStorageService;
         this.lessonRepository = lessonRepository;
         this.lessonProgressRepository = lessonProgressRepository;
+        this.enrollmentRepository = enrollmentRepository;
     }
 
     private String calculateTotalDuration(List<CourseClass.Section> sections) {
@@ -235,5 +236,30 @@ public class ClassService {
 
         CourseClass updatedClass = classRepository.save(existingClass);
         return ClassResponse.fromEntity(updatedClass);
+    }
+
+    @Transactional
+    public ClassResponse startLearning(Long classId, Long userId) {
+        CourseClass courseClass = classRepository.findById(classId)
+                .orElseThrow(() -> new ResourceNotFoundException("Class not found"));
+
+        if (!enrollmentRepository.existsByCourseClassIdAndUserId(classId, userId)) {
+            ClassEnrollment enrollment = new ClassEnrollment();
+            enrollment.setCourseClass(courseClass);
+            enrollment.setUserId(userId);
+            enrollment.setEnrolledAt(LocalDateTime.now());
+            enrollmentRepository.save(enrollment);
+
+            // Update enrolled count
+            long enrolledCount = enrollmentRepository.countByCourseClassId(classId);
+            courseClass.setEnrolledCount((int) enrolledCount);
+            courseClass = classRepository.save(courseClass);
+        }
+
+        return ClassResponse.fromEntity(courseClass);
+    }
+
+    public boolean isUserLearning(Long classId, Long userId) {
+        return enrollmentRepository.existsByCourseClassIdAndUserId(classId, userId);
     }
 }

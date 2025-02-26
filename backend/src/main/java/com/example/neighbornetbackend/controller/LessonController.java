@@ -1,7 +1,12 @@
 package com.example.neighbornetbackend.controller;
 
 import com.example.neighbornetbackend.dto.LessonResponse;
+import com.example.neighbornetbackend.dto.RatingRequest;
+import com.example.neighbornetbackend.dto.RatingResponse;
+import com.example.neighbornetbackend.exception.ResourceNotFoundException;
 import com.example.neighbornetbackend.model.Lesson;
+import com.example.neighbornetbackend.security.CurrentUser;
+import com.example.neighbornetbackend.security.UserPrincipal;
 import com.example.neighbornetbackend.service.LessonService;
 import com.example.neighbornetbackend.service.VideoStorageService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -143,6 +148,31 @@ public class LessonController {
             Map<String, Object> error = new HashMap<>();
             error.put("error", e.getMessage());
             return ResponseEntity.status(500).body(error);
+        }
+    }
+
+    @PostMapping("/{lessonId}/rate")
+    public ResponseEntity<LessonResponse> rateLesson(
+            @PathVariable Long lessonId,
+            @RequestBody RatingRequest ratingRequest,
+            @CurrentUser UserPrincipal currentUser) {
+        try {
+            LessonResponse lesson = lessonService.rateLesson(lessonId, currentUser.getId(), ratingRequest.getRating());
+            return ResponseEntity.ok(lesson);
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @GetMapping("/{lessonId}/rating")
+    public ResponseEntity<RatingResponse> getUserLessonRating(
+            @PathVariable Long lessonId,
+            @CurrentUser UserPrincipal currentUser) {
+        try {
+            RatingResponse rating = lessonService.getUserRating(lessonId, currentUser.getId());
+            return ResponseEntity.ok(rating);
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.notFound().build();
         }
     }
 }

@@ -22,7 +22,7 @@ import { useAuth } from '../../backendApi/AuthContext';
 import toast, { Toaster } from 'react-hot-toast';
 import LessonPlayer from './LessonPlayer';
 import Footer from './Footer';
-import LessonCompletionTracker from './LessonCompletionTracker';
+import StarRating from './StarRating';
 
 const LessonView = () => {
   const { classId, lessonId } = useParams();
@@ -45,6 +45,19 @@ const LessonView = () => {
   const [isLessonCompleted, setIsLessonCompleted] = useState(false);
   const [videoProgress, setVideoProgress] = useState(0);
   const [canMarkComplete, setCanMarkComplete] = useState(false);
+  const [lessonRating, setLessonRating] = useState(0);
+  const [displayRating, setDisplayRating] = useState({
+    average: 0,
+    count: 0
+  });
+
+  const [isOwner, setIsOwner] = useState(false);
+
+  useEffect(() => {
+    if (lesson && user) {
+      setIsOwner(user.id === lesson.creator?.id);
+    }
+  }, [lesson, user]);
 
   const videoRef = useRef(null);
   const [duration, setDuration] = useState(0);
@@ -155,6 +168,62 @@ const LessonView = () => {
     }
   };
 
+  const fetchLessonRating = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+      
+      // Get user's rating if they're authenticated
+      if (isAuthenticated) {
+        const userRatingResponse = await axios.get(
+          `http://localhost:8080/api/classes/${classId}/lessons/${lessonId}/rating`,
+          { headers }
+        );
+        if (userRatingResponse.data && userRatingResponse.data.rating) {
+          setLessonRating(userRatingResponse.data.rating);
+        }
+      }
+      
+      // Set display rating from lesson data
+      setDisplayRating({
+        average: lesson.averageRating || 0,
+        count: lesson.ratingCount || 0
+      });
+    } catch (error) {
+      console.error("Error fetching lesson rating:", error);
+    }
+  };
+
+  const handleRatingUpdate = async (newRating) => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+      
+      await axios.post(
+        `http://localhost:8080/api/classes/${classId}/lessons/${lessonId}/rate`,
+        { rating: newRating },
+        { headers }
+      );
+      
+      const lessonResponse = await axios.get(
+        `http://localhost:8080/api/classes/${classId}/lessons/${lessonId}`,
+        { headers }
+      );
+      
+      setLessonRating(newRating);
+      setLesson(lessonResponse.data);
+      setDisplayRating({
+        average: lessonResponse.data.averageRating || 0,
+        count: lessonResponse.data.ratingCount || 0
+      });
+      
+      toast.success('Rating submitted successfully!');
+    } catch (error) {
+      console.error("Error updating rating:", error);
+      toast.error('Failed to submit rating');
+    }
+  };
+
   
   useEffect(() => {
     const fetchLessonAndProgress = async () => {
@@ -171,6 +240,25 @@ const LessonView = () => {
         ]);
 
         setLesson(lessonResponse.data);
+
+        setDisplayRating({
+          average: lessonResponse.data.averageRating || 0,
+          count: lessonResponse.data.ratingCount || 0
+        });
+
+        if (isAuthenticated) {
+          try {
+            const userRatingResponse = await axios.get(
+              `http://localhost:8080/api/classes/${classId}/lessons/${lessonId}/rating`,
+              { headers }
+            );
+            if (userRatingResponse.data && userRatingResponse.data.rating) {
+              setLessonRating(userRatingResponse.data.rating);
+            }
+          } catch (err) {
+            console.log('No previous rating found for this user');
+          }
+        }
 
         const allLessons = allLessonsResponse.data;
         const currentIndex = allLessons.findIndex(l => l.id.toString() === lessonId);
@@ -387,6 +475,30 @@ const LessonView = () => {
                 <div className="prose prose-blue max-w-none">
                   {lesson?.description}
                 </div>
+
+                {lesson && (
+                  isOwner ? (
+                    <div className="mt-6 border-t pt-6">
+                      <div className="text-sm text-gray-500 italic">
+                        As the creator of this lesson, you cannot rate your own content.
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="mt-6 border-t pt-6">
+                      <h4 className="font-medium text-gray-900 mb-3">Lesson Rating</h4>
+                      <div className="flex items-center gap-4">
+                        <StarRating
+                          initialRating={lessonRating}
+                          onRatingUpdate={handleRatingUpdate}
+                          readOnly={!isAuthenticated}
+                        />
+                        <div className="text-sm text-gray-500">
+                          {displayRating.average.toFixed(1)} ({displayRating.count} ratings)
+                        </div>
+                      </div>
+                    </div>
+                  )
+                )}
                 
                 {/* Learning Objectives */}
                 {lesson?.learningObjectives && (

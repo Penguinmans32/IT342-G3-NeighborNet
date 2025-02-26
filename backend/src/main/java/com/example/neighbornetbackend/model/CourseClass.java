@@ -31,6 +31,12 @@ public class CourseClass {
 
     private String duration;
 
+    @Column(name = "average_rating", nullable = true)
+    private Double averageRating = 0.0;
+
+    @Column(name = "rating_count", nullable = true)
+    private Long ratingCount = 0L;
+
     @Enumerated(EnumType.STRING)
     private DifficultyLevel difficulty;
 
@@ -73,6 +79,9 @@ public class CourseClass {
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @Column(name = "enrolled_count")
+    private int enrolledCount = 0;
 
     @OneToMany(mappedBy = "classEntity", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Lesson> lessons = new ArrayList<>();
@@ -304,5 +313,29 @@ public class CourseClass {
 
     public void setProgressRecords(List<LessonProgress> progressRecords) {
         this.progressRecords = progressRecords;
+    }
+
+    public Double getAverageRating() {
+        return averageRating;
+    }
+
+    public void setAverageRating(Double averageRating) {
+        this.averageRating = averageRating;
+    }
+
+    public Long getRatingCount() {
+        return ratingCount;
+    }
+
+    public void setRatingCount(Long ratingCount) {
+        this.ratingCount = ratingCount;
+    }
+
+    public int getEnrolledCount() {
+        return enrolledCount;
+    }
+
+    public void setEnrolledCount(int enrolledCount) {
+        this.enrolledCount = enrolledCount;
     }
 }
