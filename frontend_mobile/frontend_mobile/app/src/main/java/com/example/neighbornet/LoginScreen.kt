@@ -148,6 +148,22 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Add this button just before the "Or continue with" text
+            Button(
+                onClick = onLoginSuccess,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF4CAF50) // Green color to distinguish it
+                ),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text("Skip to Home (Dev Only)", fontSize = 16.sp)
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             // Or continue with text
             Text(
                 text = "Or continue with",
