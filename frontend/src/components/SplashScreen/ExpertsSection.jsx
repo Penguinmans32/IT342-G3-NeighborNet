@@ -9,7 +9,8 @@ const experts = [
     rating: "4.9",
     courses: "12",
     expertise: ["Tech Reviews", "Video Production", "Storytelling"],
-    image: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-hygeqNFiV09yLifqM53nGleAu2AZB6.png",
+    image: "https://img.youtube.com/vi/NECBCxEFMCo/0.jpg",
+    videoUrl: "https://www.youtube.com/watch?v=NECBCxEFMCo"
   },
   {
     name: "Amelie Satzgar",
@@ -18,7 +19,8 @@ const experts = [
     rating: "4.8",
     courses: "8",
     expertise: ["Tech Reviews", "Video Production", "Storytelling"],
-    image: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-hygeqNFiV09yLifqM53nGleAu2AZB6.png",
+    image: "https://img.youtube.com/vi/TTQeVyZUtmI/0.jpg",
+    videoUrl: "https://www.youtube.com/watch?v=TTQeVyZUtmI"
   },
   {
     name: "Ali Abdaal",
@@ -27,7 +29,8 @@ const experts = [
     rating: "4.9",
     courses: "15",
     expertise: ["Tech Reviews", "Video Production", "Storytelling"],
-    image: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-hygeqNFiV09yLifqM53nGleAu2AZB6.png",
+    image: "https://img.youtube.com/vi/WpJOg7N54Qw/0.jpg",
+    videoUrl: "https://www.youtube.com/watch?v=WpJOg7N54Qw"
   }
 ];
 

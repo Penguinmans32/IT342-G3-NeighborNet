@@ -20,7 +20,7 @@ const ExploreOnlineSection = forwardRef((props, ref) => {
       title: "Procreate for Beginners: Learn the Basics & Sell Your Artwork",
       instructor: "Coquillette",
       students: "23",
-      duration: "1h 50m",
+      duration: "16:08m",
       video: "https://www.youtube.com/embed/Vn8bj0YpZg4",
       thumbnail: "https://img.youtube.com/vi/Vn8bj0YpZg4/0.jpg"
     },
@@ -29,7 +29,7 @@ const ExploreOnlineSection = forwardRef((props, ref) => {
       title: "Find Your Style: Five Exercises to Unlock Your Creative Identity",
       instructor: "Andy J. Pizza",
       students: "74,514",
-      duration: "1h 12m",
+      duration: "15:35m",
       video: "https://youtu.be/kcQsGC1Y7Fw?si=QxD9c8x22ftaaVTq",
       thumbnail: "https://img.youtube.com/vi/kcQsGC1Y7Fw/0.jpg"
     },
@@ -38,7 +38,7 @@ const ExploreOnlineSection = forwardRef((props, ref) => {
       title: "Video for Instagram: Tell an Engaging Story in Less Than a Minute",
       instructor: "Hallease",
       students: "11,525",
-      duration: "1h 15m",
+      duration: "2:57m",
       video: "https://www.youtube.com/watch?v=OrG3kHkLJyo",
       thumbnail: "https://img.youtube.com/vi/OrG3kHkLJyo/0.jpg"
     },
@@ -47,7 +47,7 @@ const ExploreOnlineSection = forwardRef((props, ref) => {
       title: "Music Fundamentals: Explore & Create Your Unique Sound",
       instructor: "Jacob Collier",
       students: "10,024",
-      duration: "1h 16m",
+      duration: "6m",
       video: "https://www.youtube.com/watch?v=AmC_qmSODEk",
       thumbnail: "https://img.youtube.com/vi/AmC_qmSODEk/0.jpg"
     },
@@ -56,7 +56,7 @@ const ExploreOnlineSection = forwardRef((props, ref) => {
       title: "How To Learn Programming for BEGINNERS",
       instructor: "CroatCode",
       students: "90,039",
-      duration: "1h 13m",
+      duration: "4:45m",
       video: "https://youtu.be/bJzb-RuUcMU?si=4nMaa-TCjSNXZwQk",
       thumbnail: "https://img.youtube.com/vi/bJzb-RuUcMU/0.jpg"
     }
@@ -149,6 +149,7 @@ const ExploreOnlineSection = forwardRef((props, ref) => {
                   
                   <motion.button
                     whileHover={{ scale: 1.1 }}
+                    onClick={() => window.open(course.video, "_blank")}
                     className="absolute inset-0 m-auto w-10 h-10 bg-white/10 rounded-full 
                              backdrop-blur-sm flex items-center justify-center
                              opacity-0 group-hover:opacity-100 transition-all duration-500
@@ -218,6 +219,7 @@ const ExploreOnlineSection = forwardRef((props, ref) => {
                 {/* Smaller Play button overlay */}
                 <motion.button
                   whileHover={{ scale: 1.1 }}
+                  onClick={() => window.open(course.video, "_blank")}
                   className="absolute inset-0 m-auto w-12 h-12 bg-white/10 rounded-full 
                            backdrop-blur-sm flex items-center justify-center
                            opacity-0 group-hover:opacity-100 transition-all duration-500
