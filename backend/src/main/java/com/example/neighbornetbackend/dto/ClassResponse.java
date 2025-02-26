@@ -27,6 +27,8 @@ public class ClassResponse {
     private LocalDateTime updatedAt;
     private List<LessonResponse> lessons;
     private CreatorDTO creator;
+    private double averageRating;
+    private long ratingCount;
 
     public static ClassResponse fromEntity(CourseClass classEntity) {
         if (classEntity == null) return null;
@@ -46,6 +48,8 @@ public class ClassResponse {
         response.setSections(classEntity.getSections());
         response.setCreatedAt(classEntity.getCreatedAt());
         response.setUpdatedAt(classEntity.getUpdatedAt());
+        response.setAverageRating(classEntity.getAverageRating());
+        response.setRatingCount(classEntity.getRatingCount());
         if (classEntity.getCreator() != null) {
             try {
                 response.setCreator(new CreatorDTO(
@@ -217,5 +221,21 @@ public class ClassResponse {
 
     public void setCreator(CreatorDTO creator) {
         this.creator = creator;
+    }
+
+    public double getAverageRating() {
+        return averageRating;
+    }
+
+    public void setAverageRating(double averageRating) {
+        this.averageRating = averageRating;
+    }
+
+    public long getRatingCount() {
+        return ratingCount;
+    }
+
+    public void setRatingCount(long ratingCount) {
+        this.ratingCount = ratingCount;
     }
 }

@@ -38,6 +38,12 @@ public class Lesson {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    @Column(name = "average_rating", nullable = false)
+    private double averageRating = 0.0;
+
+    @Column(name = "rating_count", nullable = false)
+    private long ratingCount = 0;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
@@ -112,5 +118,29 @@ public class Lesson {
 
     public void setProgressRecords(List<LessonProgress> progressRecords) {
         this.progressRecords = progressRecords;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    public double getAverageRating() {
+        return averageRating;
+    }
+
+    public void setAverageRating(double averageRating) {
+        this.averageRating = averageRating;
+    }
+
+    public long getRatingCount() {
+        return ratingCount;
+    }
+
+    public void setRatingCount(long ratingCount) {
+        this.ratingCount = ratingCount;
     }
 }

@@ -2,12 +2,15 @@ package com.example.neighbornetbackend.controller;
 
 import com.example.neighbornetbackend.dto.CreateClassRequest;
 import com.example.neighbornetbackend.dto.ClassResponse;
+import com.example.neighbornetbackend.dto.RatingRequest;
+import com.example.neighbornetbackend.dto.RatingResponse;
 import com.example.neighbornetbackend.exception.ResourceNotFoundException;
 import com.example.neighbornetbackend.model.CourseClass;
 import com.example.neighbornetbackend.repository.ClassRepository;
 import com.example.neighbornetbackend.security.CurrentUser;
 import com.example.neighbornetbackend.security.UserPrincipal;
 import com.example.neighbornetbackend.service.ClassService;
+import com.example.neighbornetbackend.service.RatingService;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -28,10 +31,12 @@ import java.util.List;
 public class ClassController {
     private final ClassService classService;
     private final ClassRepository classRepository;
+    private final RatingService ratingService;
 
-    public ClassController(ClassService classService, ClassRepository classRepository) {
+    public ClassController(ClassService classService, ClassRepository classRepository, RatingService ratingService) {
         this.classService = classService;
         this.classRepository = classRepository;
+        this.ratingService = ratingService;
     }
 
     @Operation(summary = "Create a new class")
@@ -157,6 +162,78 @@ public class ClassController {
             return ResponseEntity.notFound().build();
         } catch (SecurityException e) {
             return ResponseEntity.status(403).build();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @PostMapping("/{classId}/rate")
+    public ResponseEntity<RatingResponse> rateClass(
+            @PathVariable Long classId,
+            @RequestBody RatingRequest ratingRequest,
+            @CurrentUser UserPrincipal currentUser) {
+        try {
+            RatingResponse rating = ratingService.rateClass(classId, currentUser.getId(), ratingRequest.getRating());
+            return ResponseEntity.ok(rating);
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @GetMapping("/{classId}/rating")
+    public ResponseEntity<RatingResponse> getUserRating(
+            @PathVariable Long classId,
+            @CurrentUser UserPrincipal currentUser) {
+        try {
+            RatingResponse userRating = ratingService.getUserRating(classId, currentUser.getId());
+            return ResponseEntity.ok(userRating);
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @GetMapping("/{classId}/ratings")
+    public ResponseEntity<List<RatingResponse>> getClassRatings(@PathVariable Long classId) {
+        try {
+            List<RatingResponse> ratings = ratingService.getClassRatings(classId);
+            return ResponseEntity.ok(ratings);
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @PostMapping("/{classId}/start-learning")
+    public ResponseEntity<ClassResponse> startLearning(
+            @PathVariable Long classId,
+            @CurrentUser UserPrincipal currentUser) {
+        try {
+            ClassResponse response = classService.startLearning(classId, currentUser.getId());
+            return ResponseEntity.ok(response);
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @GetMapping("/{classId}/learning-status")
+    public ResponseEntity<Boolean> getLearningStatus(
+            @PathVariable Long classId,
+            @CurrentUser UserPrincipal currentUser) {
+        try {
+            boolean isLearning = classService.isUserLearning(classId, currentUser.getId());
+            return ResponseEntity.ok(isLearning);
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.badRequest().build();

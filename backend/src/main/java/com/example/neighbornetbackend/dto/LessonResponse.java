@@ -14,6 +14,8 @@ public class LessonResponse {
     private Long prevLessonId;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private double averageRating;
+    private long ratingCount;
 
     public static LessonResponse fromEntity(Lesson lesson) {
         LessonResponse response = new LessonResponse();
@@ -21,6 +23,8 @@ public class LessonResponse {
         response.setTitle(lesson.getTitle());
         response.setDescription(lesson.getDescription());
         response.setVideoUrl(lesson.getVideoUrl());
+        response.setAverageRating(lesson.getAverageRating());
+        response.setRatingCount(lesson.getRatingCount());
         response.setClassId(lesson.getClassEntity().getId());
         if (lesson.getParentLesson() != null) {
             response.setParentLessonId(lesson.getParentLesson().getId());
@@ -109,5 +113,21 @@ public class LessonResponse {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public double getAverageRating() {
+        return averageRating;
+    }
+
+    public void setAverageRating(double averageRating) {
+        this.averageRating = averageRating;
+    }
+
+    public long getRatingCount() {
+        return ratingCount;
+    }
+
+    public void setRatingCount(long ratingCount) {
+        this.ratingCount = ratingCount;
     }
 }
