@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../backendApi/AuthContext';
+import Footer from './SplashScreen/Footer';
 import {
   MdAdd,
   MdSearch,
@@ -15,6 +16,7 @@ import {
   MdCalendarToday,
   MdHandshake
 } from 'react-icons/md';
+import { ArrowLeft } from 'lucide-react';
 import axios from 'axios';
 
 const Borrowing = () => {
@@ -63,6 +65,17 @@ const Borrowing = () => {
       {/* Hero Section */}
       <div className="bg-gradient-to-r from-blue-900 to-purple-900 text-white py-16">
         <div className="max-w-7xl mx-auto px-4">
+          <div className="flex items-center justify-between mb-8">
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => navigate('/')}
+              className="flex items-center gap-2 px-4 py-2 bg-white text-blue-900 rounded-lg shadow-md hover:bg-gray-100 transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              Back to Homepage
+            </motion.button>
+          </div>
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-4xl font-bold mb-4">Community Borrowing Hub</h1>
@@ -205,6 +218,7 @@ const Borrowing = () => {
           )}
         </div>
       </div>
+      <Footer />
     </div>
   );
 };
