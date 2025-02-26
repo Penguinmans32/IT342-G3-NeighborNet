@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   MdPlayArrow, MdLock, MdCheck, MdAccessTime, MdPeople, 
-  MdLockOpen, MdStar, MdInfo, MdOutlinePlayCircleFilled,
+  MdLockOpen, MdStar, MdStarBorder, MdStarHalf, MdInfo, MdOutlinePlayCircleFilled,
   MdOutlineLightbulb, MdOutlineTimer, MdOutlinePeople,
   MdArrowForward, MdCheckCircle
 } from 'react-icons/md';
@@ -27,6 +27,128 @@ const FloatingShape = ({ className }) => (
   />
 );
 
+const StarRating = ({ initialRating = 0, classId, onRatingUpdate, readOnly = false }) => {
+  const [rating, setRating] = useState(initialRating);
+  const [hoverRating, setHoverRating] = useState(0);
+  const { isAuthenticated } = useAuth();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  useEffect(() => {
+    setRating(initialRating);
+  }, [initialRating]);
+  
+  const handleStarClick = async (value) => {
+    if (readOnly || !isAuthenticated) {
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    try {
+      const response = await axios.post(
+        `http://localhost:8080/api/classes/${classId}/rate`,
+        { rating: value },
+        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }}
+      );
+      
+      console.log("Rating submitted successfully:", response.data);
+      setRating(value);
+      
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+      const updatedClassResponse = await axios.get(
+        `http://localhost:8080/api/classes/${classId}`, 
+        { headers }
+      );
+      
+      if (onRatingUpdate) {
+        onRatingUpdate(value, updatedClassResponse.data);
+      }
+      
+      toast.success('Rating submitted!', {
+        icon: '⭐',
+        duration: 3000
+      });
+    } catch (error) {
+      console.error("Error submitting rating:", error);
+      toast.error('Failed to submit rating');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+  return (
+    <div className="flex items-center">
+      <div className="flex">
+        {[1, 2, 3, 4, 5].map((value) => (
+          <div 
+            key={value}
+            className={`
+              px-3 py-2 inline-block cursor-pointer select-none
+              ${readOnly || !isAuthenticated ? 'pointer-events-none' : ''}
+            `}
+            style={{ touchAction: 'manipulation' }}
+            onClick={() => !isSubmitting && handleStarClick(value)}
+            onMouseEnter={() => !readOnly && setHoverRating(value)}
+            onMouseLeave={() => !readOnly && setHoverRating(0)}
+          >
+            <MdStar 
+              size={24}
+              className={`
+                ${(hoverRating >= value || rating >= value) ? 'text-yellow-400' : 'text-gray-300'} 
+                transition-colors duration-150
+              `}
+            />
+          </div>
+        ))}
+      </div>
+      
+      {isSubmitting && (
+        <div className="ml-3">
+          <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      )}
+      
+      {!isSubmitting && rating > 0 && (
+        <div className="ml-3 text-sm font-medium text-gray-600">{rating.toFixed(1)}</div>
+      )}
+    </div>
+  );
+};
+
+const ClassRatingDisplay = ({ averageRating, ratingCount }) => {
+  const rating = Number(averageRating) || 0;
+  
+  return (
+    <div className="flex items-center gap-4">
+      <div className="flex">
+        {[1, 2, 3, 4, 5].map((value) => {
+          const fullStar = rating >= value;
+          const halfStar = rating > value - 0.5 && rating < value;
+          
+          return (
+            <div key={value} className="px-1">
+              {fullStar ? (
+                <MdStar size={24} className="text-yellow-400" />
+              ) : halfStar ? (
+                <MdStarHalf size={24} className="text-yellow-400" />
+              ) : (
+                <MdStarBorder size={24} className="text-gray-300" />
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <div className="text-gray-300">
+        <span className="font-medium">{rating.toFixed(1)}</span>
+        <span className="mx-1">•</span>
+        <span>
+          {ratingCount || 0} {ratingCount === 1 ? 'rating' : 'ratings'}
+        </span>
+      </div>
+    </div>
+  );
+};
+
 const ClassDetails = () => {
   const { classId } = useParams();
   const navigate = useNavigate();
@@ -42,14 +164,82 @@ const ClassDetails = () => {
     currentLessonIndex: 0
   });
 
-  const [showUnlockAnimation, setShowUnlockAnimation] = useState(false);
-  const [unlockedLessonId, setUnlockedLessonId] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [selectedVideo, setSelectedVideo] = useState(0);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [hasStartedJourney, setHasStartedJourney] = useState(false);
+  const [userRating, setUserRating] = useState(0);
+  const [isLearning, setIsLearning] = useState(false);
+
+  const checkLearningStatus = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+      
+      const response = await axios.get(
+        `http://localhost:8080/api/classes/${classId}/learning-status`,
+        { headers }
+      );
+      
+      setIsLearning(response.data);
+      setHasStartedJourney(response.data);
+    } catch (error) {
+      console.error("Error checking learning status:", error);
+    }
+  };
+
+  const startLearning = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+      
+      const response = await axios.post(
+        `http://localhost:8080/api/classes/${classId}/start-learning`,
+        {},
+        { headers }
+      );
+      
+      setClassData(response.data);
+      setIsLearning(true);
+      setHasStartedJourney(true);
+      toast.success('Journey unlocked! You can now start learning.');
+    } catch (error) {
+      console.error("Error starting learning:", error);
+      toast.error('Failed to start learning');
+    }
+  };
+
+  const [displayRating, setDisplayRating] = useState({
+    average: 0,
+    count: 0
+  });
 
   const isOwner = user?.id === classData?.creator?.id;
+
+  const fetchLatestClassData = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+      
+      const classResponse = await axios.get(
+        `http://localhost:8080/api/classes/${classId}`, 
+        { headers }
+      );
+      
+      const classData = classResponse.data;
+      console.log('Class Response:', classData);
+      
+      setClassData(classData);
+      setDisplayRating({
+        average: Number(classData.averageRating || 0),
+        count: Number(classData.ratingCount || 0)
+      });
+      
+      return classData;
+    } catch (error) {
+      console.error("Error fetching updated class data:", error);
+      return null;
+    }
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -70,10 +260,17 @@ const ClassDetails = () => {
           axios.get(`http://localhost:8080/api/classes/${classId}/lessons`, { headers })
         ]);
 
+        const classResponseData = classResponse.data;
         setClassData(classResponse.data);
         setLessons(lessonsResponse.data);
 
+        setDisplayRating({
+          average: Number(classResponseData.averageRating || 0),
+          count: Number(classResponseData.ratingCount || 0)
+        });
+
         if (isAuthenticated && user) {
+            await checkLearningStatus();
           try {
             // Fetch latest progress
             const progressResponse = await axios.get(
@@ -85,9 +282,7 @@ const ClassDetails = () => {
             const completedSet = new Set();
             let currentIndex = 0;
 
-            // Process the progress data
             progressResponse.data.forEach(progress => {
-              // Find the correct lesson index
               const lessonIndex = lessonsResponse.data.findIndex(l => l.id === progress.lessonId);
               if (progress.completed) {
                 completedSet.add(lessonIndex);
@@ -107,6 +302,19 @@ const ClassDetails = () => {
               completedLessons: completedSet,
               currentLessonIndex: currentIndex
             });
+            
+            try {
+              const ratingResponse = await axios.get(
+                `http://localhost:8080/api/classes/${classId}/rating`,
+                { headers }
+              );
+              if (ratingResponse.data && ratingResponse.data.rating) {
+                setUserRating(ratingResponse.data.rating);
+              }
+            } catch (err) {
+              console.log('No previous rating found for this user');
+            }
+            
           } catch (error) {
             console.error('Failed to fetch progress:', error);
           }
@@ -149,6 +357,31 @@ const ClassDetails = () => {
     }
   
     navigate(`/your-classes/${classId}/lessons/${lesson.id}`);
+  };
+  
+  const handleRatingUpdate = async (newRating) => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+      
+      // Submit the new rating
+      await axios.post(
+        `http://localhost:8080/api/classes/${classId}/rate`,
+        { rating: newRating },
+        { headers }
+      );
+      
+      // Fetch updated class data
+      const updatedData = await fetchLatestClassData();
+      
+      if (updatedData) {
+        setUserRating(newRating);
+        toast.success('Rating submitted successfully!');
+      }
+    } catch (error) {
+      console.error("Error updating rating:", error);
+      toast.error('Failed to submit rating');
+    }
   };
 
   if (loading) {
@@ -277,6 +510,13 @@ const ClassDetails = () => {
                   {classData?.description}
                 </p>
                 
+                {/* Rating display */}
+                <ClassRatingDisplay 
+                    averageRating={displayRating.average} 
+                    ratingCount={displayRating.count} 
+                    classId={classId}
+                  />
+                
                 <div className="flex flex-wrap gap-4 text-gray-300">
                   <div className="flex items-center gap-2">
                     <MdOutlinePeople className="text-blue-400" />
@@ -305,19 +545,21 @@ const ClassDetails = () => {
                 </div>
               </div>
 
-              {/* CTA Button */}
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => handleLessonClick(lessons[0], 0)}
-                className="px-8 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white
-                         rounded-xl shadow-xl hover:shadow-blue-500/20 transition-all duration-300
-                         flex items-center gap-3 font-medium text-lg group"
-              >
-                <MdOutlinePlayCircleFilled className="text-2xl" />
-                Start Learning Now
-                <MdArrowForward className="transition-transform group-hover:translate-x-1" />
-              </motion.button>
+              {/* CTA Button - Only show if not owner */}
+              {!isOwner && (
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => handleLessonClick(lessons[0], 0)}
+                  className="px-8 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white
+                           rounded-xl shadow-xl hover:shadow-blue-500/20 transition-all duration-300
+                           flex items-center gap-3 font-medium text-lg group"
+                >
+                  <MdOutlinePlayCircleFilled className="text-2xl" />
+                  Start Learning Now
+                  <MdArrowForward className="transition-transform group-hover:translate-x-1" />
+                </motion.button>
+              )}
             </div>
 
             {/* Right Column - Preview */}
@@ -588,6 +830,41 @@ const ClassDetails = () => {
               </div>
             </motion.div>
 
+            {/* User Rating Card */}
+            {!isOwner && isAuthenticated && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6"
+              >
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Rate This Class</h3>
+                <div className="space-y-4">
+                  <p className="text-gray-600 text-sm">
+                    Your feedback helps other students and improves our content.
+                  </p>
+                  
+                  <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl">
+                    <div className="flex flex-col items-center gap-3">
+                      <p className="text-gray-700 font-medium">Your Rating</p>
+                      <StarRating 
+                        initialRating={userRating} 
+                        classId={classId}
+                        onRatingUpdate={handleRatingUpdate}
+                        readOnly={false}
+                      />
+                      {userRating > 0 && (
+                        <div className="flex items-center gap-2 mt-2 text-green-600">
+                          <MdCheckCircle />
+                          <span className="text-sm font-medium">Rating submitted</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
             {/* Quick Actions Card */}
             {!isOwner && ( // Only show if not owner
               <motion.div
@@ -614,30 +891,27 @@ const ClassDetails = () => {
                   <motion.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    onClick={() => {
-                      setHasStartedJourney(true);
-                      toast.success('Journey unlocked! You can now start learning.');
-                    }}
+                    onClick={startLearning}
                     className={`w-full py-3 px-6 bg-white text-blue-600 rounded-xl font-medium
-                              hover:bg-blue-50 transition-colors duration-300 mt-6
-                              flex items-center justify-center gap-2
-                              ${hasStartedJourney ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    disabled={hasStartedJourney}
+                      hover:bg-blue-50 transition-colors duration-300 mt-6
+                      flex items-center justify-center gap-2
+                      ${isLearning ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      disabled={isLearning}
                   >
-                    {hasStartedJourney ? (
-                      <>
-                        <MdCheckCircle className="text-xl" />
-                        Journey Started
-                      </>
-                    ) : (
-                      <>
-                        <MdPlayArrow className="text-xl" />
-                        Begin Your Journey
-                      </>
-                    )}
-                  </motion.button>
-                </div>
-              </motion.div>
+                    {isLearning ? (
+                        <>
+                          <MdCheckCircle className="text-xl" />
+                          Journey Started
+                        </>
+                      ) : (
+                        <>
+                          <MdPlayArrow className="text-xl" />
+                          Begin Your Journey
+                        </>
+                      )}
+                    </motion.button>
+                  </div>
+                </motion.div>
             )}
 
             {/* Progress Card */}
@@ -672,7 +946,6 @@ const ClassDetails = () => {
         </div>
       </div>
 
-      {/* Footer - Keep your existing Footer component */}
       <Footer />
     </div>
   );
