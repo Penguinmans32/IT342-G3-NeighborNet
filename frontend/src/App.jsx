@@ -16,6 +16,7 @@ import Profile from "./components/Profile";
 import EditProfile from "./components/EditProfile";
 import { Toaster } from 'react-hot-toast';
 import EditClass from "./components/SplashScreen/EditClass";
+import Borrowing from "./components/Borrowing";
 
 function App() {
   return (
@@ -98,6 +99,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <EditProfile />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/borrowing"
+              element={
+                <ProtectedRoute>
+                  <Borrowing />
                 </ProtectedRoute>
               } 
             />
