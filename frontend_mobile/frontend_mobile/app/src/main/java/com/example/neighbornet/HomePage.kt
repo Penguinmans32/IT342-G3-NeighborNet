@@ -1,5 +1,6 @@
 package com.example.neighbornet
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -14,6 +15,7 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun HomePage() {
     var selectedTab by remember { mutableStateOf(0) }
+    var selectedCategory by remember { mutableStateOf<String?>(null) }
 
     Scaffold(
         bottomBar = {
@@ -77,11 +79,25 @@ fun HomePage() {
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            when (selectedTab) {
-                0 -> HomeContent()
-                1 -> CategoriesContent()
-                2 -> ChatContent()
-                3 -> SettingsContent()
+            when {
+                selectedCategory != null -> {
+                    CategoryDetailScreen(
+                        category = selectedCategory!!,
+                        onBackClick = { selectedCategory = null }
+                    )
+                }
+                else -> {
+                    when (selectedTab) {
+                        0 -> HomeContent()
+                        1 -> CategoriesContent(
+                            onCategoryClick = { category ->
+                                selectedCategory = category
+                            }
+                        )
+                        2 -> ChatContent()
+                        3 -> SettingsContent()
+                    }
+                }
             }
         }
     }
@@ -93,55 +109,155 @@ fun HomeContent() {
 }
 
 @Composable
-fun CategoriesContent() {
+fun CategoriesContent(
+    onCategoryClick: (String) -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Text(
-            text = "Categories",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold
+        // All Classes category
+        CategoryItem(
+            title = "All Classes",
+            icon = R.drawable.ic_category,
+            backgroundColor = Color(0xFFF3E5F5),  // Light purple background
+            onClick = { onCategoryClick("All Classes") }
         )
-        
-        // Add your category items here
-        CategoryItem("Tools & Equipment")
-        CategoryItem("Skills & Services")
-        CategoryItem("Community Events")
-        CategoryItem("Local Market")
-        CategoryItem("Help Requests")
-        CategoryItem("Educational Resources")
+
+        // Programming category
+        CategoryItem(
+            title = "Programming",
+            icon = R.drawable.ic_code,
+            backgroundColor = Color(0xFFE3F2FD),  // Light blue background
+            onClick = { onCategoryClick("Programming") }
+        )
+
+        // Design category
+        CategoryItem(
+            title = "Design",
+            icon = R.drawable.ic_design,
+            backgroundColor = Color(0xFFE8F5E9),  // Light green background
+            onClick = { onCategoryClick("Design") }
+        )
+
+        // Business category
+        CategoryItem(
+            title = "Business",
+            icon = R.drawable.ic_business,
+            backgroundColor = Color(0xFFFFF3E0),  // Light orange background
+            onClick = { onCategoryClick("Business") }
+        )
+
+        // Marketing category
+        CategoryItem(
+            title = "Marketing",
+            icon = R.drawable.ic_marketing,
+            backgroundColor = Color(0xFFFFEBEE),  // Light red background
+            onClick = { onCategoryClick("Marketing") }
+        )
+
+        // Photography category
+        CategoryItem(
+            title = "Photography",
+            icon = R.drawable.ic_camera,
+            backgroundColor = Color(0xFFE0F7FA),  // Light cyan background
+            onClick = { onCategoryClick("Photography") }
+        )
+
+        // Music category
+        CategoryItem(
+            title = "Music",
+            icon = R.drawable.ic_music,
+            backgroundColor = Color(0xFFF3E5F5),  // Light purple background
+            onClick = { onCategoryClick("Music") }
+        )
+
+        // Writing category
+        CategoryItem(
+            title = "Writing",
+            icon = R.drawable.ic_edit,
+            backgroundColor = Color(0xFFFCE4EC),  // Light pink background
+            onClick = { onCategoryClick("Writing") }
+        )
     }
 }
 
 @Composable
-fun CategoryItem(title: String) {
+fun CategoryItem(
+    title: String,
+    icon: Int,
+    backgroundColor: Color,
+    onClick: () -> Unit
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(80.dp),
+            .height(56.dp)
+            .clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        colors = CardDefaults.cardColors(containerColor = backgroundColor)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+                .padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.Start,
             verticalAlignment = Alignment.CenterVertically
         ) {
+            Icon(
+                painter = painterResource(id = icon),
+                contentDescription = title,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(24.dp)
+            )
+            
+            Spacer(modifier = Modifier.width(16.dp))
+            
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Medium
-            )
-            Icon(
-                painter = painterResource(id = R.drawable.ic_arrow_forward),
-                contentDescription = "View category"
+                color = MaterialTheme.colorScheme.onSurface
             )
         }
+    }
+}
+
+@Composable
+fun CategoryDetailScreen(
+    category: String,
+    onBackClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        // Back button
+        IconButton(
+            onClick = onBackClick,
+            modifier = Modifier.padding(bottom = 16.dp)
+        ) {
+            Icon(
+                painter = painterResource(id = R.drawable.ic_arrow_back),
+                contentDescription = "Back"
+            )
+        }
+
+        // Category title
+        Text(
+            text = category,
+            style = MaterialTheme.typography.headlineMedium,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
+
+        // Placeholder text
+        Text(
+            text = "Coming soon...",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+        )
     }
 }
 
