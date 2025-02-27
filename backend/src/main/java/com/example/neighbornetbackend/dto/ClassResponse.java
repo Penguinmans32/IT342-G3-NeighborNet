@@ -29,6 +29,11 @@ public class ClassResponse {
     private CreatorDTO creator;
     private double averageRating;
     private long ratingCount;
+    private String creator_credentials;
+    private String linkedinUrl;
+    private String portfolioUrl;
+    private String phone_number;
+
 
     public static ClassResponse fromEntity(CourseClass classEntity) {
         if (classEntity == null) return null;
@@ -50,6 +55,11 @@ public class ClassResponse {
         response.setUpdatedAt(classEntity.getUpdatedAt());
         response.setAverageRating(classEntity.getAverageRating());
         response.setRatingCount(classEntity.getRatingCount());
+        response.setEnrolledCount(classEntity.getEnrolledCount());
+        response.setCreator_credentials(classEntity.getCreatorCredentials());
+        response.setLinkedinUrl(classEntity.getLinkedinUrl());
+        response.setPortfolioUrl(classEntity.getPortfolioUrl());
+        response.setPhone_number(classEntity.getCreatorPhone());
         if (classEntity.getCreator() != null) {
             try {
                 response.setCreator(new CreatorDTO(
@@ -237,5 +247,37 @@ public class ClassResponse {
 
     public void setRatingCount(long ratingCount) {
         this.ratingCount = ratingCount;
+    }
+
+    public String getCreator_credentials() {
+        return creator_credentials;
+    }
+
+    public void setCreator_credentials(String creator_credentials) {
+        this.creator_credentials = creator_credentials;
+    }
+
+    public String getLinkedinUrl() {
+        return linkedinUrl;
+    }
+
+    public void setLinkedinUrl(String linkedinUrl) {
+        this.linkedinUrl = linkedinUrl;
+    }
+
+    public String getPortfolioUrl() {
+        return portfolioUrl;
+    }
+
+    public void setPortfolioUrl(String portfolioUrl) {
+        this.portfolioUrl = portfolioUrl;
+    }
+
+    public String getPhone_number() {
+        return phone_number;
+    }
+
+    public void setPhone_number(String phone_number) {
+        this.phone_number = phone_number;
     }
 }
