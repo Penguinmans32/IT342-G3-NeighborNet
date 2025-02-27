@@ -38,7 +38,7 @@ const Borrowing = () => {
   ];
 
   // Fetch items from backend
-  useEffect(() => {
+  /*useEffect(() => {
     const fetchItems = async () => {
       try {
         const response = await axios.get('http://localhost:8080/api/borrowing/items', {
@@ -53,7 +53,7 @@ const Borrowing = () => {
     };
 
     fetchItems();
-  }, []);
+  }, []);*/
 
   // Function to handle adding a new item
   const handleAddItem = () => {
@@ -86,10 +86,12 @@ const Borrowing = () => {
               whileTap={{ scale: 0.95 }}
               onClick={handleAddItem}
               className="px-6 py-3 bg-white text-blue-900 rounded-full font-medium 
-                       flex items-center gap-2 hover:bg-blue-50 transition-colors"
+                      flex items-center gap-2 hover:bg-blue-50 transition-colors shadow-md"
             >
-              <MdAdd className="text-xl" />
-              List an Item
+              <div className="bg-blue-500 text-white p-1 rounded-full">
+                <MdAdd className="text-xl" />
+              </div>
+              <span>List an Item</span>
             </motion.button>
           </div>
         </div>
