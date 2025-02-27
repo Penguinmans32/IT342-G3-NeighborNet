@@ -1,0 +1,44 @@
+.thin-scrollbar::-webkit-scrollbar {
+    width: 4px;
+  }
+  
+  .thin-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .thin-scrollbar::-webkit-scrollbar-thumb {
+    background: #e2e8f0;
+    border-radius: 10px;
+  }
+  
+  .thin-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #cbd5e0;
+  }
+
+  /* Add to Categories.css */
+.thin-scrollbar::-webkit-scrollbar {
+    width: 4px;
+  }
+  
+  .thin-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .thin-scrollbar::-webkit-scrollbar-thumb {
+    background: #e2e8f0;
+    border-radius: 10px;
+  }
+  
+  .thin-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #cbd5e0;
+  }
+  
+  @media (min-height: 800px) {
+    .categories-container {
+      position: fixed;
+      top: 32px;
+      left: 0;
+      bottom: 0;
+      overflow-y: auto;
+    }
+  }

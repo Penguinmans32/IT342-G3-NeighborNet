@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import Footer from './SplashScreen/Footer';
 import '../styles/SignIn.css';
+import '../styles/Categories.css';
 import {
   MdMenu,
   MdAccountCircle,
@@ -28,6 +29,7 @@ import {
   MdCamera,
   MdMusicNote,
   MdEdit,
+  MdFilterList,
   MdPlayArrow,
   MdClose,
 } from "react-icons/md";
@@ -59,6 +61,8 @@ const Homepage = () => {
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState("all");
+
+  const [isCategoriesSidebarOpen, setIsCategoriesSidebarOpen] = useState(false);
 
   const categories = [
     { id: "all", name: "All Classes", icon: <MdApps className="text-blue-500" /> },
@@ -311,190 +315,259 @@ const Homepage = () => {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <header className="sticky top-0 z-50 w-full overflow-hidden">
-  <div className="absolute inset-0 bg-gradient-to-r from-gray-700 to-blue-900 via-purple-600">
-    <div className="absolute inset-0">
-      <div className="floating-elements"></div>
-      <div className="floating-elements floating-elements2"></div>
-      <div className="floating-elements floating-elements3"></div>
-    </div>
-  </div>
-
-  <div className="relative z-10 backdrop-blur-sm transition-all duration-300 hover:backdrop-blur-md">
-    <div className="container mx-auto">
-      <div className="flex h-16 items-center justify-between px-4 relative">
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          onClick={() => setMobileMenuOpen(!isMobileMenuOpen)}
-          className="lg:hidden text-white p-2 hover:bg-white/10 rounded-lg transition-colors"
-          aria-label="Toggle menu"
-        >
-          {isMobileMenuOpen ? <MdClose className="text-2xl" /> : <MdMenu className="text-2xl" />}
-        </motion.button>
-
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="flex items-center gap-2 group cursor-pointer"
-        >
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/95 shadow-md
-                        transform group-hover:rotate-12 transition-transform duration-300">
-            <span className="text-xl font-bold text-blue-600">N</span>
+        <div className="absolute inset-0 bg-gradient-to-r from-gray-700 to-blue-900 via-purple-600">
+          <div className="absolute inset-0">
+            <div className="floating-elements"></div>
+            <div className="floating-elements floating-elements2"></div>
+            <div className="floating-elements floating-elements3"></div>
           </div>
-          <span className="text-xl font-semibold text-white hidden sm:block
-                          group-hover:text-blue-100 transition-colors duration-300">
-            Neighbor Net
-          </span>
-        </motion.div>
-
-        <motion.div 
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex-1 max-w-2xl mx-4 hidden md:block"
-        >
-          <div className="relative group">
-            <MdSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-xl" />
-            <input
-                  type="search"
-                  placeholder="Search Classes, Teachers..."
-                  className="w-full h-10 pl-10 pr-4 rounded-full border-2 border-transparent 
-                            bg-white/90 backdrop-blur-sm focus:outline-none focus:ring-2 
-                            focus:ring-purple-400 transition-all shadow-lg hover:bg-white"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  onKeyDown={handleSearch}
-                  onFocus={() => setIsSearchFocused(true)}
-                  onBlur={() => setTimeout(() => setIsSearchFocused(false), 300)}
-                />
-            <span className="absolute right-4 top-1/2 transform -translate-y-1/2 
-                          bg-gray-100 px-2 py-1 rounded-md text-xs text-gray-500
-                          opacity-50 group-hover:opacity-100 transition-opacity duration-300">
-              ⌘ K
-            </span>
-          </div>
-        </motion.div>
-
-        <motion.div 
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="flex items-center gap-4"
-        >
-          {!user ? (
-            <div className="flex items-center gap-2">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                className="hidden sm:inline-flex text-white hover:bg-white/10 px-6 py-2.5 
-                          rounded-lg transition-colors shimmer-hover relative overflow-hidden"
-              >
-                Sign In
-                <span className="absolute bottom-0 left-0 w-full h-0.5 bg-white transform 
-                              scale-x-0 group-hover:scale-x-100 transition-transform duration-300">
-                </span>
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                className="relative px-8 py-2.5 bg-black/90 text-white rounded-full 
-                          overflow-hidden group transform hover:-translate-y-0.5 
-                          transition-all duration-300 hover:shadow-xl border border-white/10 shimmer-hover"
-              >
-                <span className="relative z-10">Sign Up</span>
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 
-                              opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                </div>
-              </motion.button>
-            </div>
-          ) : (
-          <div className="flex items-center gap-3">
-            <span className="text-white hidden lg:block">{user.username}</span>
-
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              onClick={() => setNotificationsOpen(!isNotificationsOpen)}
-              className="relative flex items-center justify-center w-10 h-10 rounded-full hover:bg-white/10 transition-colors"
-            >
-              <div className="relative">
-                <MdNotifications className="text-2xl text-white" />
-                {unreadNotifications > 0 && (
-                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
-                    <span className="text-xs text-white">{unreadNotifications}</span>
-                  </div>
-                )}
-              </div>
-            </motion.button>
-
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              onClick={() => setProfileMenuOpen(!isProfileMenuOpen)}
-              className="relative flex items-center justify-center w-10 h-10 rounded-full hover:bg-white/10 transition-colors"
-            >
-              <MdAccountCircle className="text-2xl text-white" />
-            </motion.button>
-          </div>
-          )}
-        </motion.div>
-      </div>
-    </div>
-  </div>
-</header>
-
-      <main className="flex-1 flex min-h-screen bg-gray-50">
-        {/* Categories Sidebar */}
-        <div className="fixed left-12 top-32 z-40 w-72">
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="space-y-2"
-          >
-            <h2 className="text-2xl font-bold text-gray-900 mb-8 pl-4 tracking-tight">
-              Categories
-            </h2>
-            {availableCategories.map((category) => (
-              <motion.button
-                key={category.id}
-                onClick={() => setSelectedCategory(category.id)}
-                whileHover={{ x: 8 }}
-                className={`w-full flex items-center gap-4 px-6 py-4 rounded-xl text-left
-                  transition-all duration-300 relative group
-                  ${selectedCategory === category.id 
-                    ? 'text-blue-600 font-semibold'
-                    : 'text-gray-600 hover:text-blue-600'
-                  }`}
-              >
-                {/* Hover Background */}
-                <motion.div
-                  className={`absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100
-                    transition-opacity duration-300
-                    ${selectedCategory === category.id 
-                      ? 'bg-gradient-to-r from-blue-50 to-purple-50'
-                      : 'bg-gray-50'
-                    }`}
-                />
-                
-                {/* Active Indicator */}
-                {selectedCategory === category.id && (
-                  <motion.div
-                    layoutId="activeCategory"
-                    className="absolute left-0 w-1.5 h-full bg-blue-500 rounded-full"
-                  />
-                )}
-
-                {/* Content */}
-                <span className="relative z-10 text-xl">{category.icon}</span>
-                <span className="relative z-10 text-base font-medium tracking-wide">
-                  {category.name}
-                </span>
-                
-                {/* Count */}
-                <span className="relative z-10 ml-auto text-sm font-medium text-gray-400 
-                              opacity-0 group-hover:opacity-100 transition-opacity">
-                  {category.count || 0}
-                </span>
-              </motion.button>
-            ))}
-          </motion.div>
         </div>
 
+        <div className="relative z-10 backdrop-blur-sm transition-all duration-300 hover:backdrop-blur-md">
+          <div className="container mx-auto">
+            <div className="flex h-16 items-center justify-between px-4 relative">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                onClick={() => setMobileMenuOpen(!isMobileMenuOpen)}
+                className="lg:hidden text-white p-2 hover:bg-white/10 rounded-lg transition-colors"
+                aria-label="Toggle menu"
+              >
+                {isMobileMenuOpen ? <MdClose className="text-2xl" /> : <MdMenu className="text-2xl" />}
+              </motion.button>
+
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="flex items-center gap-2 group cursor-pointer"
+              >
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/95 shadow-md
+                              transform group-hover:rotate-12 transition-transform duration-300">
+                  <span className="text-xl font-bold text-blue-600">N</span>
+                </div>
+                <span className="text-xl font-semibold text-white hidden sm:block
+                                group-hover:text-blue-100 transition-colors duration-300">
+                  Neighbor Net
+                </span>
+              </motion.div>
+
+              <motion.div 
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex-1 max-w-2xl mx-4 hidden md:block"
+              >
+                <div className="relative group">
+                  <MdSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-xl" />
+                  <input
+                        type="search"
+                        placeholder="Search Classes, Teachers..."
+                        className="w-full h-10 pl-10 pr-4 rounded-full border-2 border-transparent 
+                                  bg-white/90 backdrop-blur-sm focus:outline-none focus:ring-2 
+                                  focus:ring-purple-400 transition-all shadow-lg hover:bg-white"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        onKeyDown={handleSearch}
+                        onFocus={() => setIsSearchFocused(true)}
+                        onBlur={() => setTimeout(() => setIsSearchFocused(false), 300)}
+                      />
+                  <span className="absolute right-4 top-1/2 transform -translate-y-1/2 
+                                bg-gray-100 px-2 py-1 rounded-md text-xs text-gray-500
+                                opacity-50 group-hover:opacity-100 transition-opacity duration-300">
+                    ⌘ K
+                  </span>
+                </div>
+              </motion.div>
+
+              <motion.div 
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="flex items-center gap-4"
+              >
+                {!user ? (
+                  <div className="flex items-center gap-2">
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      className="hidden sm:inline-flex text-white hover:bg-white/10 px-6 py-2.5 
+                                rounded-lg transition-colors shimmer-hover relative overflow-hidden"
+                    >
+                      Sign In
+                      <span className="absolute bottom-0 left-0 w-full h-0.5 bg-white transform 
+                                    scale-x-0 group-hover:scale-x-100 transition-transform duration-300">
+                      </span>
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      className="relative px-8 py-2.5 bg-black/90 text-white rounded-full 
+                                overflow-hidden group transform hover:-translate-y-0.5 
+                                transition-all duration-300 hover:shadow-xl border border-white/10 shimmer-hover"
+                    >
+                      <span className="relative z-10">Sign Up</span>
+                      <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 
+                                    opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      </div>
+                    </motion.button>
+                  </div>
+                ) : (
+                <div className="flex items-center gap-3">
+                  <span className="text-white hidden lg:block">{user.username}</span>
+
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    onClick={() => setNotificationsOpen(!isNotificationsOpen)}
+                    className="relative flex items-center justify-center w-10 h-10 rounded-full hover:bg-white/10 transition-colors"
+                  >
+                    <div className="relative">
+                      <MdNotifications className="text-2xl text-white" />
+                      {unreadNotifications > 0 && (
+                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
+                          <span className="text-xs text-white">{unreadNotifications}</span>
+                        </div>
+                      )}
+                    </div>
+                  </motion.button>
+
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    onClick={() => setProfileMenuOpen(!isProfileMenuOpen)}
+                    className="relative flex items-center justify-center w-10 h-10 rounded-full hover:bg-white/10 transition-colors"
+                  >
+                    <MdAccountCircle className="text-2xl text-white" />
+                  </motion.button>
+                </div>
+                )}
+              </motion.div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main className="flex-1 flex min-h-screen bg-gray-50">
+        {/* Mobile Categories Toggle Button */}
+          <div className="lg:hidden fixed left-4 bottom-20 z-50">
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              onClick={() => setIsCategoriesSidebarOpen(!isCategoriesSidebarOpen)}
+              className="flex items-center justify-center w-12 h-12 rounded-full bg-blue-600 text-white shadow-lg"
+            >
+              <MdFilterList className="text-2xl" />
+            </motion.button>
+          </div>
+
+          {/* Categories Sidebar - Desktop Version */}
+          <div className="hidden lg:block fixed left-12 top-32 z-40 w-72">
+            <div className="sticky top-32 max-h-[calc(100vh-160px)] overflow-y-auto thin-scrollbar">
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="space-y-2"
+            >
+              <h2 className="text-2xl font-bold text-gray-900 mb-8 pl-4 tracking-tight">
+                Categories
+              </h2>
+              {availableCategories.map((category) => (
+                <motion.button
+                  key={category.id}
+                  onClick={() => setSelectedCategory(category.id)}
+                  whileHover={{ x: 8 }}
+                  className={`w-full flex items-center gap-4 px-6 py-4 rounded-xl text-left
+                    transition-all duration-300 relative group
+                    ${selectedCategory === category.id 
+                      ? 'text-blue-600 font-semibold'
+                      : 'text-gray-600 hover:text-blue-600'
+                    }`}
+                >
+                  {/* Category button content - keep the same */}
+                  <motion.div
+                    className={`absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100
+                      transition-opacity duration-300
+                      ${selectedCategory === category.id 
+                        ? 'bg-gradient-to-r from-blue-50 to-purple-50'
+                        : 'bg-gray-50'
+                      }`}
+                  />
+                  
+                  {/* Active Indicator */}
+                  {selectedCategory === category.id && (
+                    <motion.div
+                      layoutId="activeCategory"
+                      className="absolute left-0 w-1.5 h-full bg-blue-500 rounded-full"
+                    />
+                  )}
+
+                  {/* Content */}
+                  <span className="relative z-10 text-xl">{category.icon}</span>
+                  <span className="relative z-10 text-base font-medium tracking-wide">
+                    {category.name}
+                  </span>
+                  
+                  {/* Count */}
+                  <span className="relative z-10 ml-auto text-sm font-medium text-gray-400 
+                                opacity-0 group-hover:opacity-100 transition-opacity">
+                    {category.count || 0}
+                  </span>
+                </motion.button>
+              ))}
+            </motion.div>
+          </div>
+        </div>
+
+          {/* Mobile Categories Drawer */}
+          <AnimatePresence>
+            {isCategoriesSidebarOpen && (
+              <>
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  onClick={() => setIsCategoriesSidebarOpen(false)}
+                  className="lg:hidden fixed inset-0 bg-black/50 z-40"
+                />
+                <motion.div
+                  initial={{ x: "-100%" }}
+                  animate={{ x: 0 }}
+                  exit={{ x: "-100%" }}
+                  transition={{ type: "tween", duration: 0.3 }}
+                  className="lg:hidden fixed left-0 top-0 h-screen w-64 bg-white shadow-xl z-50 overflow-y-auto"
+                >
+                  <div className="flex items-center justify-between p-4 border-b">
+                    <h2 className="text-xl font-bold text-gray-900">Categories</h2>
+                    <button
+                      onClick={() => setIsCategoriesSidebarOpen(false)}
+                      className="p-2 hover:bg-gray-100 rounded-full"
+                    >
+                      <MdClose />
+                    </button>
+                  </div>
+                  <div className="p-4">
+                    {availableCategories.map((category) => (
+                      <motion.button
+                        key={category.id}
+                        onClick={() => {
+                          setSelectedCategory(category.id);
+                          setIsCategoriesSidebarOpen(false);
+                        }}
+                        className={`w-full flex items-center gap-4 px-4 py-3 rounded-lg text-left mb-2
+                          ${selectedCategory === category.id 
+                            ? 'bg-blue-50 text-blue-600 font-semibold'
+                            : 'text-gray-600 hover:bg-gray-50'
+                          }`}
+                      >
+                        <span className="text-xl">{category.icon}</span>
+                        <span className="text-base font-medium">
+                          {category.name}
+                        </span>
+                        <span className="ml-auto text-sm text-gray-400">
+                          {category.count || 0}
+                        </span>
+                      </motion.button>
+                    ))}
+                  </div>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
+
         {/* Main Content Area */}
-        <div className="flex-1 ml-88 p-6">
+        <div className="flex-1 p-4 md:p-6 lg:ml-72">
           <div className="max-w-6xl mx-auto">
             {/* Featured Classes Section */}
               <section className="mb-12">
@@ -970,7 +1043,6 @@ const Homepage = () => {
             </nav>
           </motion.div>
         )}
-        <Footer />
     </div>
   );
 };
