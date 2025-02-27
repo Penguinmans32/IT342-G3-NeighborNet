@@ -1,15 +1,13 @@
 package com.example.neighbornetbackend.controller;
 
-import com.example.neighbornetbackend.dto.CreateClassRequest;
-import com.example.neighbornetbackend.dto.ClassResponse;
-import com.example.neighbornetbackend.dto.RatingRequest;
-import com.example.neighbornetbackend.dto.RatingResponse;
+import com.example.neighbornetbackend.dto.*;
 import com.example.neighbornetbackend.exception.ResourceNotFoundException;
 import com.example.neighbornetbackend.model.CourseClass;
 import com.example.neighbornetbackend.repository.ClassRepository;
 import com.example.neighbornetbackend.security.CurrentUser;
 import com.example.neighbornetbackend.security.UserPrincipal;
 import com.example.neighbornetbackend.service.ClassService;
+import com.example.neighbornetbackend.service.FeedbackService;
 import com.example.neighbornetbackend.service.RatingService;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.http.MediaType;
@@ -24,6 +22,7 @@ import org.springframework.core.io.UrlResource;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/classes")
@@ -32,11 +31,13 @@ public class ClassController {
     private final ClassService classService;
     private final ClassRepository classRepository;
     private final RatingService ratingService;
+    private final FeedbackService feedbackService;
 
-    public ClassController(ClassService classService, ClassRepository classRepository, RatingService ratingService) {
+    public ClassController(ClassService classService, ClassRepository classRepository, RatingService ratingService, FeedbackService feedbackService) {
         this.classService = classService;
         this.classRepository = classRepository;
         this.ratingService = ratingService;
+        this.feedbackService = feedbackService;
     }
 
     @Operation(summary = "Create a new class")
@@ -234,6 +235,78 @@ public class ClassController {
         try {
             boolean isLearning = classService.isUserLearning(classId, currentUser.getId());
             return ResponseEntity.ok(isLearning);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @PostMapping("/{classId}/feedback")
+    public ResponseEntity<FeedbackResponse> submitFeedback(
+            @PathVariable Long classId,
+            @RequestBody FeedbackRequest feedbackRequest,
+            @CurrentUser UserPrincipal currentUser) {
+        try {
+            FeedbackResponse feedback = feedbackService.createFeedback(
+                    classId,
+                    currentUser.getId(),
+                    feedbackRequest
+            );
+            return ResponseEntity.ok(feedback);
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @GetMapping("/{classId}/feedbacks")
+    public ResponseEntity<List<FeedbackResponse>> getClassFeedbacks(@PathVariable Long classId) {
+        try {
+            List<FeedbackResponse> feedbacks = feedbackService.getClassFeedbacks(classId);
+            return ResponseEntity.ok(feedbacks);
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @GetMapping("/{classId}/user-feedback")
+    public ResponseEntity<FeedbackResponse> getUserFeedback(
+            @PathVariable Long classId,
+            @CurrentUser UserPrincipal currentUser) {
+        try {
+            FeedbackResponse feedback = feedbackService.getUserFeedback(classId, currentUser.getId());
+            if (feedback != null) {
+                return ResponseEntity.ok(feedback);
+            }
+            return ResponseEntity.noContent().build();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @GetMapping("/{classId}/related")
+    public ResponseEntity<List<ClassResponse>> getRelatedClasses(
+            @PathVariable Long classId) {
+        try {
+            CourseClass currentClass = classRepository.findById(classId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Class not found"));
+
+            List<ClassResponse> relatedClasses = classRepository.findByCategoryAndIdNot(
+                            currentClass.getCategory(), classId)
+                    .stream()
+                    .limit(4)
+                    .map(ClassResponse::fromEntity)
+                    .collect(Collectors.toList());
+
+            return ResponseEntity.ok(relatedClasses);
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.notFound().build();
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.badRequest().build();

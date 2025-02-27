@@ -16,6 +16,7 @@ public interface ClassRepository extends JpaRepository<CourseClass, Long> {
     List<CourseClass> findByCategory(String category);
     List<CourseClass> findByDifficulty(CourseClass.DifficultyLevel difficulty);
     boolean existsByTitleAndCreatorId(String title, Long userId);
+    List<CourseClass> findByCategoryAndIdNot(String category, Long id);
 
     @Query("SELECT c FROM CourseClass c LEFT JOIN FETCH c.creator")
     List<CourseClass> findAllWithCreator();

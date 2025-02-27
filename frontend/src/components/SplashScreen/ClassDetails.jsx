@@ -2,15 +2,223 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  MdPlayArrow, MdLock, MdCheck, MdAccessTime, MdPeople, 
-  MdLockOpen, MdStar, MdStarBorder, MdStarHalf, MdInfo, MdOutlinePlayCircleFilled,
-  MdOutlineLightbulb, MdOutlineTimer, MdOutlinePeople,
-  MdArrowForward, MdCheckCircle
+  MdPlayArrow, MdLock, MdAccessTime, MdPeople, 
+  MdStar, MdStarBorder, MdStarHalf, MdInfo, MdOutlinePlayCircleFilled,
+  MdOutlineLightbulb, MdOutlineTimer, MdOutlinePeople, MdOutlineFeedback,
+  MdOutlineChatBubbleOutline, MdThumbUp, MdFlag, MdRateReview, MdSend,
+  MdArrowForward, MdCheckCircle, MdPerson, MdEmail, MdPhone, MdOutlineSchool,
+  MdOutlineLink, MdLanguage, MdCategory, MdSignalCellularAlt, MdAccessAlarm
 } from 'react-icons/md';
 import axios from 'axios';
 import { useAuth } from '../../backendApi/AuthContext';
 import Footer from './Footer';
 import toast from 'react-hot-toast';
+
+const FeedbackItemEnhanced = ({ feedback }) => {
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all duration-300">
+      <div className="p-6">
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-4">
+            {feedback.userImage ? (
+              <img 
+                src={feedback.userImage} 
+                alt={feedback.userName} 
+                className="w-12 h-12 rounded-full object-cover border-2 border-blue-100"
+              />
+            ) : (
+              <div className="w-12 h-12 rounded-full flex items-center justify-center 
+                           bg-gradient-to-br from-blue-400 to-blue-600 text-white font-medium">
+                {feedback.userName?.[0]?.toUpperCase() || 'U'}
+              </div>
+            )}
+            <div>
+              <h4 className="font-semibold text-gray-900">
+                {feedback.userName || 'Anonymous'}
+              </h4>
+              <div className="flex items-center gap-2 mt-1">
+                <div className="flex">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <MdStar 
+                      key={star} 
+                      className={`text-sm ${star <= feedback.rating ? 'text-yellow-400' : 'text-gray-300'}`} 
+                    />
+                  ))}
+                </div>
+                <span className="text-xs text-gray-500 font-medium">
+                  • {new Date(feedback.createdAt).toLocaleDateString(undefined, { 
+                      year: 'numeric', 
+                      month: 'short', 
+                      day: 'numeric'
+                    })}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div className="mt-4 relative">
+          <div className="absolute -left-3 top-0 bottom-0 w-1 bg-blue-100 rounded-full"></div>
+          <div className="pl-4">
+            <p className="text-gray-700 leading-relaxed">
+              {feedback.content}
+            </p>
+          </div>
+        </div>
+        
+        {/* Feedback reactions - Decorative only */}
+        <div className="mt-4 pt-3 border-t border-gray-100 flex items-center gap-4">
+          <button className="flex items-center gap-1 text-sm text-gray-500 hover:text-blue-600 transition-colors">
+            <MdThumbUp className="text-base" />
+            <span>Helpful</span>
+          </button>
+          <div className="text-xs text-gray-400">|</div>
+          <button className="flex items-center gap-1 text-sm text-gray-500 hover:text-blue-600 transition-colors">
+            <MdFlag className="text-base" />
+            <span>Report</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const FeedbackFormEnhanced = ({ onSubmit, value, onChange, isSubmitting, onCancel, rating }) => {
+  const [charCount, setCharCount] = useState(value?.length || 0);
+  
+  const handleChange = (e) => {
+    onChange(e.target.value);
+    setCharCount(e.target.value.length);
+  };
+  
+  return (
+    <form onSubmit={onSubmit} className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
+      <div className="p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+            <MdRateReview className="text-blue-600" />
+            Share Your Experience
+          </h3>
+          <div className="flex">
+            {[1, 2, 3, 4, 5].map((star) => (
+              <MdStar 
+                key={star} 
+                className={`text-xl ${star <= rating ? 'text-yellow-400' : 'text-gray-300'}`} 
+              />
+            ))}
+          </div>
+        </div>
+        
+        <div className="relative mb-2">
+          <textarea
+            value={value}
+            onChange={handleChange}
+            placeholder="Tell others what you thought about this class..."
+            className="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 
+                      transition-all resize-y min-h-[150px] bg-gray-50"
+            disabled={isSubmitting}
+          />
+          
+          <div className={`absolute bottom-3 right-3 text-xs ${
+            charCount > 500 ? 'text-red-500' : 'text-gray-400'
+          }`}>
+            {charCount}/500
+          </div>
+        </div>
+        
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-6">
+          <div className="flex-1 w-full sm:w-auto">
+            <div className="flex items-center gap-2 text-gray-600 text-sm">
+              <MdInfo />
+              <span>Your feedback will be visible to all students</span>
+            </div>
+          </div>
+          
+          <div className="flex gap-3 w-full sm:w-auto">
+            <button
+              type="button"
+              onClick={onCancel}
+              className="flex-1 sm:flex-initial px-6 py-2 border border-gray-300 text-gray-700 
+                        rounded-lg hover:bg-gray-50 transition-colors flex items-center 
+                        justify-center gap-2"
+              disabled={isSubmitting}
+            >
+              Cancel
+            </button>
+            <motion.button
+              type="submit"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="flex-1 sm:flex-initial px-6 py-2 bg-gradient-to-r from-blue-500 
+                        to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white 
+                        rounded-lg transition-all flex items-center justify-center gap-2 
+                        shadow-md hover:shadow-lg"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>Submitting...</span>
+                </>
+              ) : (
+                <>
+                  <MdSend />
+                  <span>Submit Feedback</span>
+                </>
+              )}
+            </motion.button>
+          </div>
+        </div>
+      </div>
+    </form>
+  );
+};
+
+const RelatedClassCard = ({ classItem, onClick }) => {
+  return (
+    <motion.div
+      whileHover={{ y: -5, scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+      onClick={() => onClick(classItem.id)}
+      className="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer border border-gray-200"
+    >
+      <div className="relative aspect-video w-full overflow-hidden">
+        {classItem.thumbnailUrl ? (
+          <img 
+            src={`http://localhost:8080${classItem.thumbnailUrl}`} 
+            alt={classItem.title}
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+          />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-medium">
+            {classItem.title?.[0]?.toUpperCase() || 'C'}
+          </div>
+        )}
+        <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/70 to-transparent">
+          <div className="flex items-center text-white text-sm">
+            <div className="flex items-center gap-1 mr-3">
+              <MdStar className="text-yellow-400" />
+              <span>{Number(classItem.averageRating || 0).toFixed(1)}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <MdPeople className="text-blue-300" />
+              <span>{classItem.enrolledCount || 0}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div className="p-4">
+        <h4 className="font-medium text-gray-900 mb-1 line-clamp-1">{classItem.title}</h4>
+        <p className="text-gray-600 text-sm line-clamp-2 mb-2">{classItem.description}</p>
+        <div className="flex justify-between items-center text-xs text-gray-500 mt-2">
+          <span>{classItem.difficulty}</span>
+          <span>{classItem.duration}</span>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
 
 const FloatingShape = ({ className }) => (
   <motion.div
@@ -169,6 +377,97 @@ const ClassDetails = () => {
   const [hasStartedJourney, setHasStartedJourney] = useState(false);
   const [userRating, setUserRating] = useState(0);
   const [isLearning, setIsLearning] = useState(false);
+  const [showFeedbackForm, setShowFeedbackForm] = useState(false); 
+  const [feedbackText, setFeedbackText] = useState('');
+  const [classFeedbacks, setClassFeedbacks] = useState([]);
+  const [relatedClasses, setRelatedClasses] = useState([]);
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+
+  const fetchClassFeedbacks = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+      
+      const response = await axios.get(
+        `http://localhost:8080/api/classes/${classId}/feedbacks`,
+        { headers }
+      );
+      
+      setClassFeedbacks(response.data);
+    } catch (error) {
+      console.error("Error fetching class feedbacks:", error);
+    }
+  };
+
+  const fetchRelatedClasses = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+      
+      const response = await axios.get(
+        `http://localhost:8080/api/classes/${classId}/related`,
+        { headers }
+      );
+      
+      setRelatedClasses(response.data);
+    } catch (error) {
+      console.error("Error fetching related classes:", error);
+      
+      try {
+        const categoryResponse = await axios.get(
+          `http://localhost:8080/api/classes/all`,
+          { headers }
+        );
+        
+        const classes = categoryResponse.data
+          .filter(c => c.id !== parseInt(classId) && c.category === classData?.category)
+          .slice(0, 4);
+          
+        setRelatedClasses(classes);
+      } catch (fallbackError) {
+        console.error("Error fetching related classes by category:", fallbackError);
+      }
+    }
+  };
+
+  const handleSubmitFeedback = async (e) => {
+    e.preventDefault();
+    
+    if (!feedbackText.trim()) {
+      toast.error('Please enter your feedback');
+      return;
+    }
+    
+    setIsSubmittingFeedback(true);
+    
+    try {
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+      
+      await axios.post(
+        `http://localhost:8080/api/classes/${classId}/feedback`,
+        {
+          content: feedbackText,
+          rating: userRating // Using the existing rating
+        },
+        { headers }
+      );
+      
+      // Refresh feedbacks
+      await fetchClassFeedbacks();
+      
+      // Reset form
+      setFeedbackText('');
+      setShowFeedbackForm(false);
+      
+      toast.success('Feedback submitted successfully!');
+    } catch (error) {
+      console.error("Error submitting feedback:", error);
+      toast.error('Failed to submit feedback');
+    } finally {
+      setIsSubmittingFeedback(false);
+    }
+  };
 
   const checkLearningStatus = async () => {
     try {
@@ -198,9 +497,17 @@ const ClassDetails = () => {
         { headers }
       );
       
-      setClassData(response.data);
       setIsLearning(true);
       setHasStartedJourney(true);
+      
+      const updatedClassData = response.data;
+      setClassData(updatedClassData);
+      
+      setDisplayRating({
+        average: Number(updatedClassData.averageRating || 0),
+        count: Number(updatedClassData.ratingCount || 0)
+      });
+      
       toast.success('Journey unlocked! You can now start learning.');
     } catch (error) {
       console.error("Error starting learning:", error);
@@ -291,12 +598,6 @@ const ClassDetails = () => {
               }
             });
 
-            console.log('Updated progress:', {
-              completed: Array.from(completedSet),
-              unlocked: Array.from(unlockedSet),
-              current: currentIndex
-            });
-
             setProgressData({
               unlockedLessons: unlockedSet,
               completedLessons: completedSet,
@@ -319,6 +620,9 @@ const ClassDetails = () => {
             console.error('Failed to fetch progress:', error);
           }
         }
+
+        fetchClassFeedbacks();
+        fetchRelatedClasses();
 
         setLoading(false);
       } catch (err) {
@@ -377,6 +681,8 @@ const ClassDetails = () => {
       if (updatedData) {
         setUserRating(newRating);
         toast.success('Rating submitted successfully!');
+
+        setShowFeedbackForm(true);
       }
     } catch (error) {
       console.error("Error updating rating:", error);
@@ -781,54 +1087,146 @@ const ClassDetails = () => {
 
           {/* Right Column - Sticky Sidebar */}
           <div className="lg:sticky lg:top-24 space-y-8 h-fit">
-            {/* Class Creator Card */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6"
-            >
-              <div className="flex items-start gap-6">
-                <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600
-                              flex items-center justify-center text-white text-xl font-medium">
-                  {classData?.creatorName?.[0]?.toUpperCase()}
+           {/* Class Creator Card - Enhanced */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden"
+              >
+                {/* Creator Header - with gradient background */}
+                <div className="bg-gradient-to-r from-blue-600 to-blue-800 p-6 text-white">
+                  <h3 className="text-xl font-semibold mb-1 flex items-center gap-2">
+                    <MdPerson className="text-blue-200" /> About the Instructor
+                  </h3>
+                  <p className="text-blue-100 text-sm">Learn from an experienced professional</p>
                 </div>
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-gray-900">{classData?.creatorName}</h3>
-                  <p className="text-blue-600">{classData?.creatorEmail}</p>
-                  
-                  {/* Credentials */}
-                  {classData?.creatorCredentials && (
-                    <div className="mt-4 p-4 bg-gray-50 rounded-xl">
-                      <p className="text-gray-700 text-sm">{classData.creatorCredentials}</p>
+
+                <div className="p-6">
+                  {/* Creator Profile */}
+                  <div className="flex items-center gap-5">
+                    <div className="w-20 h-20 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600
+                                  flex items-center justify-center text-white text-2xl font-bold shadow-lg">
+                      {classData?.creatorName?.[0]?.toUpperCase() || "I"}
+                    </div>
+                    
+                    <div className="flex-1">
+                      <h4 className="text-xl font-semibold text-gray-900">{classData?.creatorName}</h4>
+                      <div className="flex items-center gap-2 mt-1">
+                        <MdEmail className="text-blue-500" />
+                        <a href={`mailto:${classData?.creatorEmail}`} className="text-blue-600 hover:underline">
+                          {classData?.creatorEmail}
+                        </a>
+                      </div>
+                      
+                      {classData?.phone_number && (
+                        <div className="flex items-center gap-2 mt-1">
+                          <MdPhone className="text-blue-500" />
+                          <p className="text-gray-700">{classData.phone_number}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Credentials with styled callout */}
+                  {classData?.creator_credentials && (
+                    <div className="mt-6">
+                      <h5 className="text-sm uppercase tracking-wider text-gray-500 font-medium mb-2 flex items-center gap-2">
+                        <MdOutlineSchool className="text-blue-500" /> 
+                        Credentials & Experience
+                      </h5>
+                      <div className="p-4 bg-blue-50 border-l-4 border-blue-500 rounded-r-lg">
+                        <p className="text-gray-700 leading-relaxed">{classData.creator_credentials}</p>
+                      </div>
                     </div>
                   )}
-                  
-                  {/* Social Links */}
-                  <div className="flex gap-4 mt-4">
-                    {classData?.linkedinUrl && (
-                      <a 
-                        href={classData.linkedinUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:text-blue-700 transition-colors"
-                      >
-                        LinkedIn Profile
-                      </a>
+
+                  {/* Social Links with proper icons */}
+                  {(classData?.linkedinUrl || classData?.portfolioUrl) && (
+                    <div className="mt-6">
+                      <h5 className="text-sm uppercase tracking-wider text-gray-500 font-medium mb-2 flex items-center gap-2">
+                        <MdOutlineLink className="text-blue-500" />
+                        Connect & Learn More
+                      </h5>
+                      <div className="flex flex-wrap gap-3">
+                        {classData?.linkedinUrl && (
+                          <a 
+                            href={classData.linkedinUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 px-4 py-2 bg-[#0077b5] text-white rounded-lg hover:bg-[#00669c] transition-colors"
+                          >
+                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.454C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.225 0z" />
+                            </svg>
+                            LinkedIn Profile
+                          </a>
+                        )}
+                        
+                        {classData?.portfolioUrl && (
+                          <a 
+                            href={classData.portfolioUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-700 hover:to-indigo-700 transition-all"
+                          >
+                            <MdLanguage className="text-lg" />
+                            Portfolio Website
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Teaching Stats */}
+                  <div className="mt-6 flex flex-col sm:flex-row gap-4">
+                    <div className="flex-1 p-4 bg-gray-50 rounded-xl text-center">
+                      <div className="text-2xl font-bold text-blue-600">{classData?.enrolledCount || 0}</div>
+                      <p className="text-gray-600 text-sm">Students</p>
+                    </div>
+                    
+                    <div className="flex-1 p-4 bg-gray-50 rounded-xl text-center">
+                      <div className="text-2xl font-bold text-blue-600">1</div>
+                      <p className="text-gray-600 text-sm">Courses</p>
+                    </div>
+                    
+                    <div className="flex-1 p-4 bg-gray-50 rounded-xl text-center">
+                      <div className="flex justify-center items-center">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <MdStar 
+                            key={star} 
+                            className={`text-lg ${star <= (classData?.averageRating || 0) ? 'text-yellow-400' : 'text-gray-300'}`} 
+                          />
+                        ))}
+                      </div>
+                      <p className="text-gray-600 text-sm">{classData?.ratingCount || 0} Reviews</p>
+                    </div>
+                  </div>
+
+                  {/* Category and Difficulty */}
+                  <div className="mt-6 flex flex-wrap gap-3">
+                    {classData?.category && (
+                      <div className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium flex items-center gap-1">
+                        <MdCategory className="text-blue-600" />
+                        {classData.category}
+                      </div>
                     )}
-                    {classData?.portfolioUrl && (
-                      <a 
-                        href={classData.portfolioUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:text-blue-700 transition-colors"
-                      >
-                        Portfolio
-                      </a>
+                    
+                    {classData?.difficulty && (
+                      <div className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm font-medium flex items-center gap-1">
+                        <MdSignalCellularAlt className="text-purple-600" />
+                        {classData.difficulty}
+                      </div>
+                    )}
+                    
+                    {classData?.duration && (
+                      <div className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium flex items-center gap-1">
+                        <MdAccessAlarm className="text-green-600" />
+                        {classData.duration} duration
+                      </div>
                     )}
                   </div>
                 </div>
-              </div>
-            </motion.div>
+              </motion.div>
 
             {/* User Rating Card */}
             {!isOwner && isAuthenticated && (
@@ -943,6 +1341,194 @@ const ClassDetails = () => {
               </div>
             </motion.div>
           </div>
+        </div>
+      </div>
+
+      {/* Feedback Section */}
+        <section className="py-16 border-t border-gray-100">
+          <div className="max-w-7xl mx-auto px-4">
+            {/* Feedback Header with decorative elements */}
+            <div className="relative mb-12">
+              <div className="absolute -top-6 left-0 w-20 h-1 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"></div>
+              
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <MdOutlineFeedback className="text-2xl text-blue-600" />
+                  </div>
+                  <h2 className="text-3xl font-bold text-gray-900">Student Feedback</h2>
+                </div>
+                
+                {!isOwner && isAuthenticated && userRating > 0 && !showFeedbackForm && (
+                  <motion.button
+                    whileHover={{ scale: 1.05, boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)" }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setShowFeedbackForm(true)}
+                    className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg 
+                            shadow-md transition-all duration-300 flex items-center gap-2 font-medium"
+                  >
+                    <MdRateReview className="text-xl" />
+                    Share Your Experience
+                  </motion.button>
+                )}
+              </div>
+              
+              {/* Rating summary - New addition */}
+              <div className="mt-6 p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow-sm">
+                <div className="flex flex-col md:flex-row md:items-center gap-6">
+                  <div className="text-center">
+                    <div className="text-4xl font-bold text-blue-600">{displayRating.average.toFixed(1)}</div>
+                    <div className="flex justify-center mt-1">
+                      {[1, 2, 3, 4, 5].map((star) => {
+                        const fullStar = displayRating.average >= star;
+                        const halfStar = displayRating.average > star - 0.5 && displayRating.average < star;
+                        
+                        return (
+                          <div key={star} className="px-1">
+                            {fullStar ? (
+                              <MdStar size={20} className="text-yellow-400" />
+                            ) : halfStar ? (
+                              <MdStarHalf size={20} className="text-yellow-400" />
+                            ) : (
+                              <MdStarBorder size={20} className="text-gray-300" />
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="text-sm mt-1 text-gray-600">{displayRating.count} ratings</div>
+                  </div>
+                  
+                  <div className="flex-1">
+                    <div className="space-y-2">
+                      {[5, 4, 3, 2, 1].map((rating) => {
+                        // Calculate percentage (mock data - you can replace with actual data)
+                        const percentage = 
+                          displayRating.count > 0 
+                            ? Math.round((displayRating.average >= rating ? (6-rating)*20 : 0) * 100) / 100
+                            : 0;
+                        
+                        return (
+                          <div key={rating} className="flex items-center gap-2">
+                            <div className="flex items-center w-16">
+                              <span className="text-sm text-gray-600">{rating}</span>
+                              <MdStar className="ml-1 text-yellow-400 text-sm" />
+                            </div>
+                            <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                              <motion.div 
+                                initial={{ width: 0 }}
+                                animate={{ width: `${percentage}%` }}
+                                transition={{ duration: 1, delay: 0.3 + (5-rating)*0.1 }}
+                                className="h-full bg-yellow-400 rounded-full"
+                              />
+                            </div>
+                            <div className="w-10 text-right">
+                              <span className="text-sm text-gray-600">{percentage}%</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Feedback Form - Enhanced */}
+            <AnimatePresence>
+              {showFeedbackForm && (
+                <motion.div
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  className="mb-12"
+                >
+                  <FeedbackFormEnhanced
+                    onSubmit={handleSubmitFeedback}
+                    value={feedbackText}
+                    onChange={setFeedbackText}
+                    isSubmitting={isSubmittingFeedback}
+                    onCancel={() => setShowFeedbackForm(false)}
+                    rating={userRating}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+            
+            {/* Feedback List - Enhanced */}
+            {classFeedbacks.length > 0 ? (
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.5 }}
+                className="grid grid-cols-1 gap-6"
+              >
+                {classFeedbacks.map((feedback, index) => (
+                  <motion.div
+                    key={feedback.id || index}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                  >
+                    <FeedbackItemEnhanced feedback={feedback} />
+                  </motion.div>
+                ))}
+              </motion.div>
+            ) : (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.3 }}
+                className="py-16 text-center"
+              >
+                <div className="inline-block p-5 mb-4 bg-blue-50 rounded-full">
+                  <MdOutlineChatBubbleOutline className="text-4xl text-blue-500" />
+                </div>
+                <p className="text-xl text-gray-600">Be the first to leave feedback for this class!</p>
+                <p className="mt-2 text-gray-500 max-w-lg mx-auto">
+                  Share your experience and help others decide if this class is right for them.
+                </p>
+              </motion.div>
+            )}
+            
+            {/* Pagination - if you have many feedbacks */}
+            {classFeedbacks.length > 5 && (
+              <div className="mt-8 flex justify-center">
+                <div className="inline-flex rounded-md shadow-sm">
+                  <button className="px-3 py-2 border border-gray-300 rounded-l-md bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                    <MdKeyboardArrowLeft />
+                  </button>
+                  <button className="px-3 py-2 border-t border-b border-gray-300 bg-white text-sm font-medium text-blue-600">1</button>
+                  <button className="px-3 py-2 border-t border-b border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">2</button>
+                  <button className="px-3 py-2 border border-gray-300 rounded-r-md bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                    <MdKeyboardArrowRight />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+
+      {/* Related Classes */}
+
+      <div className="bg-gray-50 py-12">
+        <div className="max-w-7xl mx-auto px-4">
+          <h2 className="text-2xl font-bold text-gray-900 mb-8">Related Classes You May Like</h2>
+          {relatedClasses.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {relatedClasses.map(relatedClass => (
+              <RelatedClassCard 
+                key={relatedClass.id} 
+                classItem={relatedClass} 
+                onClick={(id) => navigate(`/class/${id}`)}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="py-8 text-center">
+            <p className="text-gray-500">No related classes found in this category.</p>
+          </div>
+        )}
         </div>
       </div>
 
