@@ -45,6 +45,16 @@ const Homepage = () => {
   const [showOnlyUserClasses, setShowOnlyUserClasses] = useState(false);
 
   const [availableCategories, setAvailableCategories] = useState([]);
+  const [categoryCounts, setCategoryCounts] = useState({});
+  const [totalClassCount, setTotalClassCount] = useState(0);
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [hasSearched, setHasSearched] = useState(false);
+  const [displayedResults, setDisplayedResults] = useState([]);
+
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
 
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -61,22 +71,70 @@ const Homepage = () => {
     { id: "writing", name: "Writing", icon: <MdEdit className="text-cyan-500" /> },
   ];
 
+  const categoryIcons = {
+    programming: <MdCode className="text-purple-500" />,
+    design: <MdBrush className="text-pink-500" />,
+    business: <MdBusinessCenter className="text-green-500" />,
+    marketing: <MdTrendingUp className="text-red-500" />,
+    photography: <MdCamera className="text-yellow-500" />,
+    music: <MdMusicNote className="text-indigo-500" />,
+    writing: <MdEdit className="text-cyan-500" />,
+    all: <MdApps className="text-blue-500" />,
+    default: <MdSchool className="text-gray-500" />
+  };
+
   const categoryVariants = {
     hidden: { opacity: 0, x: -20 },
     visible: { opacity: 1, x: 0 },
     hover: { x: 8 },
   };
 
+  const handleSearch = (e) => {
+    if (e.key === 'Enter' && searchTerm.trim() !== '') {
+      e.preventDefault();
+      setSearchQuery(searchTerm);
+      setHasSearched(true);
+      setIsSearchFocused(false);
+      
+      const lowerCaseSearchTerm = searchTerm.toLowerCase();
+      const filtered = classes.filter(classItem => 
+        (classItem.title?.toLowerCase().includes(lowerCaseSearchTerm)) ||
+        (classItem.category?.toLowerCase().includes(lowerCaseSearchTerm)) ||
+        (classItem.creatorName?.toLowerCase().includes(lowerCaseSearchTerm)) ||
+        (classItem.description?.toLowerCase().includes(lowerCaseSearchTerm))
+      );
+      
+      setDisplayedResults(filtered);
+      
+      // Optionally scroll to results
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
   useEffect(() => {
     if (classes.length > 0) {
-      const uniqueCategories = [...new Set(classes.map(cls => cls.category))];
+      const counts = {};
+      classes.forEach(cls => {
+        const category = cls.category?.toLowerCase() || "uncategorized";
+        counts[category] = (counts[category] || 0) + 1;
+      });
+      setCategoryCounts(counts);
+      setTotalClassCount(classes.length);
+
+      const uniqueCategories = [...new Set(classes.map(cls => cls.category?.toLowerCase() || "uncategorized"))];
       
       const categoryList = [
-        { id: "all", name: "All Classes", icon: <MdApps className="text-blue-500" /> },
+        { 
+          id: "all", 
+          name: "All Classes", 
+          icon: categoryIcons.all,
+          count: classes.length
+        },
         ...uniqueCategories.map(cat => ({
           id: cat,
           name: cat.charAt(0).toUpperCase() + cat.slice(1),
-          icon: getCategoryIcon(cat)
+          icon: getCategoryIcon(cat),
+          count: counts[cat] || 0
         }))
       ];
       
@@ -296,14 +354,17 @@ const Homepage = () => {
           <div className="relative group">
             <MdSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-xl" />
             <input
-              type="search"
-              placeholder="Search Classes, Teachers..."
-              className="w-full h-10 pl-10 pr-4 rounded-full border-2 border-transparent 
-                        bg-white/90 backdrop-blur-sm focus:outline-none focus:ring-2 
-                        focus:ring-purple-400 transition-all shadow-lg hover:bg-white"
-              onFocus={() => setIsSearchFocused(true)}
-              onBlur={() => setIsSearchFocused(false)}
-            />
+                  type="search"
+                  placeholder="Search Classes, Teachers..."
+                  className="w-full h-10 pl-10 pr-4 rounded-full border-2 border-transparent 
+                            bg-white/90 backdrop-blur-sm focus:outline-none focus:ring-2 
+                            focus:ring-purple-400 transition-all shadow-lg hover:bg-white"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onKeyDown={handleSearch}
+                  onFocus={() => setIsSearchFocused(true)}
+                  onBlur={() => setTimeout(() => setIsSearchFocused(false), 300)}
+                />
             <span className="absolute right-4 top-1/2 transform -translate-y-1/2 
                           bg-gray-100 px-2 py-1 rounded-md text-xs text-gray-500
                           opacity-50 group-hover:opacity-100 transition-opacity duration-300">
@@ -425,7 +486,7 @@ const Homepage = () => {
                 {/* Count */}
                 <span className="relative z-10 ml-auto text-sm font-medium text-gray-400 
                               opacity-0 group-hover:opacity-100 transition-opacity">
-                  {Math.floor(Math.random() * 100)}
+                  {category.count || 0}
                 </span>
               </motion.button>
             ))}
@@ -436,155 +497,261 @@ const Homepage = () => {
         <div className="flex-1 ml-88 p-6">
           <div className="max-w-6xl mx-auto">
             {/* Featured Classes Section */}
-            <section className="mb-12">
-              {/* Replace the existing header div with this new one */}
-              <div className="flex items-center justify-between mb-8">
-                <div className="flex items-center gap-4">
-                  <motion.h2 
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="text-2xl font-bold text-gray-900"
-                  >
-                    Featured Classes
-                  </motion.h2>
-                  <div className="flex-1 h-px bg-gradient-to-r from-gray-200 to-transparent" />
+              <section className="mb-12">
+                <div className="flex items-center justify-between mb-8">
+                  <div className="flex items-center gap-4">
+                    <motion.h2 
+                      initial={{ opacity: 0, y: -20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="text-2xl font-bold text-gray-900"
+                    >
+                      {hasSearched ? `Search for: "${searchQuery}"` : "Featured Classes"}
+                    </motion.h2>
+                    <div className="flex-1 h-px bg-gradient-to-r from-gray-200 to-transparent" />
+                  </div>
+                  {hasSearched ? (
+                    <motion.button
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      onClick={() => {
+                        setHasSearched(false);
+                        setSearchQuery('');
+                        setSearchTerm('');
+                      }}
+                      className="px-4 py-2 rounded-lg transition-colors bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    >
+                      Clear Search
+                    </motion.button>
+                  ) : (
+                    <motion.button
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      onClick={() => setShowOnlyUserClasses(!showOnlyUserClasses)}
+                      className={`px-4 py-2 rounded-lg transition-colors ${
+                        showOnlyUserClasses 
+                          ? 'bg-blue-500 text-white hover:bg-blue-600' 
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      {showOnlyUserClasses ? 'Show All Classes' : 'Show My Classes'}
+                    </motion.button>
+                  )}
                 </div>
-                <motion.button
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  onClick={() => setShowOnlyUserClasses(!showOnlyUserClasses)}
-                  className={`px-4 py-2 rounded-lg transition-colors ${
-                    showOnlyUserClasses 
-                      ? 'bg-blue-500 text-white hover:bg-blue-600' 
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  {showOnlyUserClasses ? 'Show All Classes' : 'Show My Classes'}
-                </motion.button>
-              </div>
 
-              {/* Classes Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {loading ? (
-                  [...Array(6)].map((_, i) => (
-                    <div key={i} className="animate-pulse">
-                      <div className="aspect-video rounded-xl bg-gray-200 mb-4" />
-                      <div className="h-4 bg-gray-200 rounded w-3/4 mb-2" />
-                      <div className="h-4 bg-gray-200 rounded w-1/2" />
-                    </div>
-                  ))
-                ) : (
-                  classes
-                    .filter(classItem => {
-                      const categoryMatch = selectedCategory === "all" ? true : classItem.category === selectedCategory;
-                      const userClassMatch = showOnlyUserClasses 
-                        ? userClasses.some(userClass => userClass.id === classItem.id)
-                        : true;
-                      return categoryMatch && userClassMatch;
-                    })
-                    .map((classItem) => (
-                      <motion.div
-                        key={classItem.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        whileHover={{ y: -5 }}
-                        className="group relative bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300"
-                      >
-                        <div className="aspect-video relative overflow-hidden">
-                          <img
-                            src={getFullThumbnailUrl(classItem.thumbnailUrl)}
-                            alt={classItem.title}
-                            className="object-cover w-full h-full group-hover:scale-110 transition-transform duration-300"
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                          
-                          <motion.div
-                            initial={false}
-                            animate={{ scale: [0.9, 1], opacity: [0, 1] }}
-                            className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                          >
-                            <motion.button
-                              whileHover={{ scale: 1.1 }}
-                              className="w-14 h-14 flex items-center justify-center rounded-full bg-white/90 text-blue-600"
-                            >
-                              <MdPlayArrow className="text-3xl" />
-                            </motion.button>
-                          </motion.div>
-                        </div>
-
-                        <div className="p-6">
-                          <div className="flex items-center gap-2 mb-3">
-                            <span className="px-3 py-1 bg-blue-50 text-blue-600 text-xs font-medium rounded-full">
-                              {classItem.category || "Uncategorized"}
-                            </span>
-                            <span className="text-gray-400 text-sm">
-                              {classItem.duration || "1h 30m"}
-                            </span>
-                          </div>
-                          <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-1">
-                            {classItem.title}
-                          </h3>
-                          <p className="text-gray-500 text-sm mb-4 line-clamp-2">
-                            {classItem.description}
-                          </p>
-                          
-                          <div className="flex items-center gap-3">
-                          <img
-                              src={classItem.creator?.imageUrl 
-                                ? getFullProfileImageUrl(classItem.creator.imageUrl)
-                                : "/images/defaultProfile.png"
-                              }
-                              alt={classItem.creator?.username || "Creator"}
-                              className="w-8 h-8 rounded-full object-cover"
+                {/* Classes Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {loading ? (
+                    [...Array(6)].map((_, i) => (
+                      <div key={i} className="animate-pulse">
+                        <div className="aspect-video rounded-xl bg-gray-200 mb-4" />
+                        <div className="h-4 bg-gray-200 rounded w-3/4 mb-2" />
+                        <div className="h-4 bg-gray-200 rounded w-1/2" />
+                      </div>
+                    ))
+                  ) : hasSearched ? (
+                    displayedResults.length > 0 ? (
+                      displayedResults.map((classItem) => (
+                        <motion.div
+                          key={classItem.id}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          whileHover={{ y: -5 }}
+                          className="group relative bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300"
+                        >
+                          <div className="aspect-video relative overflow-hidden">
+                            <img
+                              src={getFullThumbnailUrl(classItem.thumbnailUrl)}
+                              alt={classItem.title}
+                              className="object-cover w-full h-full group-hover:scale-110 transition-transform duration-300"
                             />
-                            <div>
-                              <h4 className="text-sm font-medium text-gray-900">
-                                {classItem.creatorName}
-                              </h4>
-                              <p className="text-xs text-gray-500">
-                                {classItem.sections?.length || 0} sections
-                              </p>
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                            
+                            <motion.div
+                              initial={false}
+                              animate={{ scale: [0.9, 1], opacity: [0, 1] }}
+                              className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                            >
+                              <motion.button
+                                whileHover={{ scale: 1.1 }}
+                                className="w-14 h-14 flex items-center justify-center rounded-full bg-white/90 text-blue-600"
+                              >
+                                <MdPlayArrow className="text-3xl" />
+                              </motion.button>
+                            </motion.div>
+                          </div>
+
+                          <div className="p-6">
+                            <div className="flex items-center gap-2 mb-3">
+                              <span className="px-3 py-1 bg-blue-50 text-blue-600 text-xs font-medium rounded-full">
+                                {classItem.category || "Uncategorized"}
+                              </span>
+                              <span className="text-gray-400 text-sm">
+                                {classItem.duration || "1h 30m"}
+                              </span>
+                            </div>
+                            <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-1">
+                              {classItem.title}
+                            </h3>
+                            <p className="text-gray-500 text-sm mb-4 line-clamp-2">
+                              {classItem.description}
+                            </p>
+                            
+                            <div className="flex items-center gap-3">
+                            <img
+                                src={classItem.creator?.imageUrl 
+                                  ? getFullProfileImageUrl(classItem.creator.imageUrl)
+                                  : "/images/defaultProfile.png"
+                                }
+                                alt={classItem.creator?.username || "Creator"}
+                                className="w-8 h-8 rounded-full object-cover"
+                              />
+                              <div>
+                                <h4 className="text-sm font-medium text-gray-900">
+                                  {classItem.creatorName}
+                                </h4>
+                                <p className="text-xs text-gray-500">
+                                  {classItem.sections?.length || 0} sections
+                                </p>
+                              </div>
                             </div>
                           </div>
-                        </div>
 
-                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                          <div className="space-x-4">
-                            <motion.button
-                              whileHover={{ scale: 1.1 }}
-                              className="px-6 py-2 bg-white text-blue-600 rounded-full font-medium"
-                              onClick={() => navigate(`/class/${classItem.id}`)}
-                            >
-                              View Class
-                            </motion.button>
+                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                            <div className="space-x-4">
+                              <motion.button
+                                whileHover={{ scale: 1.1 }}
+                                className="px-6 py-2 bg-white text-blue-600 rounded-full font-medium"
+                                onClick={() => navigate(`/class/${classItem.id}`)}
+                              >
+                                View Class
+                              </motion.button>
+                            </div>
                           </div>
-                        </div>
-                      </motion.div>
-                    ))
-                )}
-              </div>
-            </section>
+                        </motion.div>
+                      ))
+                    ) : (
+                      <div className="col-span-3 py-12 text-center text-gray-500">
+                        <MdSearch className="text-5xl mx-auto mb-4 text-gray-300" />
+                        <h3 className="text-xl font-medium mb-2">No results found</h3>
+                        <p>We couldn't find any classes matching "{searchQuery}"</p>
+                      </div>
+                    )
+                  ) : (
+                    classes
+                      .filter(classItem => {
+                        const categoryMatch = selectedCategory === "all" ? true : classItem.category === selectedCategory;
+                        const userClassMatch = showOnlyUserClasses 
+                          ? userClasses.some(userClass => userClass.id === classItem.id)
+                          : true;
+                        return categoryMatch && userClassMatch;
+                      })
+                      .map((classItem) => (
+                        <motion.div
+                          key={classItem.id}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          whileHover={{ y: -5 }}
+                          className="group relative bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300"
+                        >
+                          <div className="aspect-video relative overflow-hidden">
+                            <img
+                              src={getFullThumbnailUrl(classItem.thumbnailUrl)}
+                              alt={classItem.title}
+                              className="object-cover w-full h-full group-hover:scale-110 transition-transform duration-300"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                            
+                            <motion.div
+                              initial={false}
+                              animate={{ scale: [0.9, 1], opacity: [0, 1] }}
+                              className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                            >
+                              <motion.button
+                                whileHover={{ scale: 1.1 }}
+                                className="w-14 h-14 flex items-center justify-center rounded-full bg-white/90 text-blue-600"
+                              >
+                                <MdPlayArrow className="text-3xl" />
+                              </motion.button>
+                            </motion.div>
+                          </div>
+
+                          <div className="p-6">
+                            <div className="flex items-center gap-2 mb-3">
+                              <span className="px-3 py-1 bg-blue-50 text-blue-600 text-xs font-medium rounded-full">
+                                {classItem.category || "Uncategorized"}
+                              </span>
+                              <span className="text-gray-400 text-sm">
+                                {classItem.duration || "1h 30m"}
+                              </span>
+                            </div>
+                            <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-1">
+                              {classItem.title}
+                            </h3>
+                            <p className="text-gray-500 text-sm mb-4 line-clamp-2">
+                              {classItem.description}
+                            </p>
+                            
+                            <div className="flex items-center gap-3">
+                            <img
+                                src={classItem.creator?.imageUrl 
+                                  ? getFullProfileImageUrl(classItem.creator.imageUrl)
+                                  : "/images/defaultProfile.png"
+                                }
+                                alt={classItem.creator?.username || "Creator"}
+                                className="w-8 h-8 rounded-full object-cover"
+                              />
+                              <div>
+                                <h4 className="text-sm font-medium text-gray-900">
+                                  {classItem.creatorName}
+                                </h4>
+                                <p className="text-xs text-gray-500">
+                                  {classItem.sections?.length || 0} sections
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                            <div className="space-x-4">
+                              <motion.button
+                                whileHover={{ scale: 1.1 }}
+                                className="px-6 py-2 bg-white text-blue-600 rounded-full font-medium"
+                                onClick={() => navigate(`/class/${classItem.id}`)}
+                              >
+                                View Class
+                              </motion.button>
+                            </div>
+                          </div>
+                        </motion.div>
+                      ))
+                  )}
+                </div>
+              </section>
 
             {/* Popular Categories Section */}
             <section className="mb-12">
               <h2 className="text-2xl font-bold text-gray-900 mb-6">Popular Categories</h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {categories.slice(1, 5).map((category) => (
-                  <motion.div
-                    key={category.id}
-                    whileHover={{ scale: 1.02 }}
-                    className="p-6 bg-white rounded-xl shadow-sm hover:shadow-md transition-all cursor-pointer"
-                    onClick={() => setSelectedCategory(category.id)}
-                  >
-                    <div className="w-12 h-12 rounded-full bg-gray-50 flex items-center justify-center mb-4">
-                      {category.icon}
-                    </div>
-                    <h3 className="font-medium text-gray-900">{category.name}</h3>
-                    <p className="text-sm text-gray-500">
-                      {Math.floor(Math.random() * 100)} classes
-                    </p>
-                  </motion.div>
-                ))}
+                {availableCategories
+                  .filter(category => category.id !== "all")
+                  .sort((a, b) => b.count - a.count) // Sort by count in descending order
+                  .slice(0, 4) // Get top 4 categories
+                  .map((category) => (
+                    <motion.div
+                      key={category.id}
+                      whileHover={{ scale: 1.02 }}
+                      className="p-6 bg-white rounded-xl shadow-sm hover:shadow-md transition-all cursor-pointer"
+                      onClick={() => setSelectedCategory(category.id)}
+                    >
+                      <div className="w-12 h-12 rounded-full bg-gray-50 flex items-center justify-center mb-4">
+                        {category.icon}
+                      </div>
+                      <h3 className="font-medium text-gray-900">{category.name}</h3>
+                      <p className="text-sm text-gray-500">
+                        {category.count} classes
+                      </p>
+                    </motion.div>
+                  ))}
               </div>
             </section>
           </div>
