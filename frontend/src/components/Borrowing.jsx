@@ -153,16 +153,41 @@ const Borrowing = () => {
     images: [],
     currentIndex: 0
   });
+  const [availableCategories, setAvailableCategories] = useState([]);
 
-  // Categories for borrowing items
-  const categories = [
-    { id: 'all', name: 'All Items', icon: <MdCategory className="text-blue-500" /> },
-    { id: 'tools', name: 'Tools', icon: <MdHandshake className="text-orange-500" /> },
-    { id: 'electronics', name: 'Electronics', icon: <MdAccessTime className="text-purple-500" /> },
-    { id: 'sports', name: 'Sports Equipment', icon: <MdStar className="text-green-500" /> },
-    { id: 'books', name: 'Books', icon: <MdPerson className="text-red-500" /> },
-    // Add more categories as needed
-  ];
+  const extractCategories = (items) => {
+    // Get unique categories
+    const uniqueCategories = [...new Set(items.map(item => item.category))];
+    
+    // Create category objects with icons
+    const categoryIcons = {
+      'tools': <MdHandshake className="text-orange-500" />,
+      'electronics': <MdAccessTime className="text-purple-500" />,
+      'sports': <MdStar className="text-green-500" />,
+      'books': <MdPerson className="text-red-500" />,
+      'garden': <MdCategory className="text-green-600" />,
+      'kitchen': <MdCategory className="text-yellow-500" />,
+      // Add more category icons as needed
+    };
+  
+    // Create categories array with "All Items" at the beginning
+    const allCategories = [
+      { 
+        id: 'all', 
+        name: 'All Items', 
+        icon: <MdCategory className="text-blue-500" />,
+        count: items.length
+      },
+      ...uniqueCategories.map(category => ({
+        id: category,
+        name: category.charAt(0).toUpperCase() + category.slice(1), // Capitalize first letter
+        icon: categoryIcons[category.toLowerCase()] || <MdCategory className="text-gray-500" />,
+        count: items.filter(item => item.category === category).length
+      }))
+    ];
+  
+    return allCategories;
+  };
 
   useEffect(() => {
     const fetchItems = async () => {
@@ -177,9 +202,17 @@ const Borrowing = () => {
         }));
         
         setItems(itemsWithDefaultImages);
+        // Set available categories based on items
+        setAvailableCategories(extractCategories(itemsWithDefaultImages));
       } catch (error) {
         console.error('Error fetching items:', error);
         setItems([]); 
+        setAvailableCategories([{ 
+          id: 'all', 
+          name: 'All Items', 
+          icon: <MdCategory className="text-blue-500" />,
+          count: 0
+        }]);
       } finally {
         setLoading(false);
       }
@@ -248,25 +281,29 @@ const Borrowing = () => {
         </div>
 
         {/* Categories Section */}
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold mb-4">Categories</h2>
-          <div className="flex gap-4 overflow-x-auto pb-4">
-            {categories.map((category) => (
-              <motion.button
-                key={category.id}
-                whileHover={{ scale: 1.05 }}
-                onClick={() => setSelectedCategory(category.id)}
-                className={`px-6 py-3 rounded-xl flex items-center gap-2 min-w-max
-                          ${selectedCategory === category.id 
-                            ? 'bg-blue-500 text-white' 
-                            : 'bg-white text-gray-700 hover:bg-gray-50'}`}
-              >
-                {category.icon}
-                {category.name}
-              </motion.button>
-            ))}
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold mb-4">Categories</h2>
+            <div className="flex gap-4 overflow-x-auto pb-4">
+              {availableCategories.map((category) => (
+                <motion.button
+                  key={category.id}
+                  whileHover={{ scale: 1.05 }}
+                  onClick={() => setSelectedCategory(category.id)}
+                  className={`px-6 py-3 rounded-xl flex items-center gap-2 min-w-max
+                            ${selectedCategory === category.id 
+                              ? 'bg-blue-500 text-white' 
+                              : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+                >
+                  {category.icon}
+                  <span>{category.name}</span>
+                  <span className="ml-2 px-2 py-0.5 bg-gray-100 rounded-full text-xs font-medium
+                                text-gray-600">
+                    {category.count}
+                  </span>
+                </motion.button>
+              ))}
+            </div>
           </div>
-        </div>
 
         {/* Items Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -360,7 +397,7 @@ const Borrowing = () => {
                               onClick={() => navigate(`/borrowing/item/${item.id}`)}
                               className="px-4 py-2 bg-blue-500 text-white rounded-full font-medium"
                             >
-                              View Details
+                              {item.owner?.id === user?.id ? 'Manage Item' : 'View Details'}
                             </motion.button>
                           </div>
                         </div>
@@ -398,15 +435,17 @@ const Borrowing = () => {
                             <p className="text-gray-500">{item.availabilityPeriod}</p>
                           </div>
                         </div>
-                        <motion.button
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          onClick={() => {/* Add message functionality */}}
-                          className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium
-                                    hover:bg-blue-600 transition-colors"
-                        >
-                          Message
-                        </motion.button>
+                        {item.owner?.id !== user?.id && ( 
+                            <motion.button
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
+                              onClick={() => {/* Add message functionality */}}
+                              className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium
+                                        hover:bg-blue-600 transition-colors"
+                            >
+                              Message
+                            </motion.button>
+                          )}
                       </div>
 
                       {/* Availability Dates */}

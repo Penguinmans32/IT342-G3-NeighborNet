@@ -18,6 +18,7 @@ import { Toaster } from 'react-hot-toast';
 import EditClass from "./components/SplashScreen/EditClass";
 import Borrowing from "./components/Borrowing";
 import AddBorrowingItem from "./components/AddBorrowingItem";
+import ItemDetail from "./components/ItemDetail";
 
 function App() {
   return (
@@ -116,6 +117,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <AddBorrowingItem />
+                </ProtectedRoute>
+              } 
+            />
+             <Route 
+              path="/borrowing/item/:id"
+              element={
+                <ProtectedRoute>
+                  <ItemDetail />
                 </ProtectedRoute>
               } 
             />

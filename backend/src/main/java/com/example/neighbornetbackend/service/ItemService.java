@@ -1,5 +1,6 @@
 package com.example.neighbornetbackend.service;
 
+import com.example.neighbornetbackend.dto.BorrowRequestDTO;
 import com.example.neighbornetbackend.dto.CreatorDTO;
 import com.example.neighbornetbackend.dto.ItemDTO;
 import com.example.neighbornetbackend.model.Item;
@@ -84,5 +85,11 @@ public class ItemService {
         }
 
         return dto;
+    }
+
+    public ItemDTO getItemById(Long id) {
+        Item item = itemRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Item not found"));
+        return convertToDTO(item);
     }
 }
