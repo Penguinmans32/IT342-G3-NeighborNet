@@ -5,8 +5,10 @@ import com.example.neighbornetbackend.service.CustomOAuth2UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.orm.jpa.support.OpenEntityManagerInViewFilter;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -81,6 +83,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/classes/*/lessons/video/*").permitAll()
                         .requestMatchers("/api/classes/lessons/video/*").permitAll()
+                        .requestMatchers("/api/borrowing/items/*").permitAll()
+                        .requestMatchers("/api/borrowing/items").permitAll()
+                        .requestMatchers("/api/borrowing/items/images/**").permitAll()
                         .requestMatchers("/api/users/profile-pictures/*").permitAll()
                         .requestMatchers("/api/classes/**").permitAll()
                         .requestMatchers("/videos/*").permitAll()
@@ -161,5 +166,13 @@ public class SecurityConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
+    }
+
+    @Bean
+    public FilterRegistrationBean<OpenEntityManagerInViewFilter> openEntityManagerInViewFilter() {
+        FilterRegistrationBean<OpenEntityManagerInViewFilter> filterRegistrationBean = new FilterRegistrationBean<>();
+        filterRegistrationBean.setFilter(new OpenEntityManagerInViewFilter());
+        filterRegistrationBean.setOrder(5);
+        return filterRegistrationBean;
     }
 }
