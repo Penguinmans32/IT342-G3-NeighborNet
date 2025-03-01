@@ -1,5 +1,6 @@
 package com.example.neighbornetbackend.controller;
 
+import com.example.neighbornetbackend.dto.BorrowRequestDTO;
 import com.example.neighbornetbackend.dto.ItemDTO;
 import com.example.neighbornetbackend.model.Item;
 import com.example.neighbornetbackend.service.ItemImageStorageService;
@@ -90,4 +91,34 @@ public class ItemController {
             return ResponseEntity.internalServerError().build();
         }
     }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<ItemDTO> getItemById(@PathVariable Long id) {
+        try {
+            logger.debug("Getting item with id: {}", id);
+            ItemDTO item = itemService.getItemById(id);
+            if (item != null) {
+                return ResponseEntity.ok(item);
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        } catch (Exception e) {
+            logger.error("Error getting item with id: " + id, e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+   /* @PostMapping("/requests")
+    public ResponseEntity<?> createBorrowRequest(
+            @RequestBody BorrowRequestDTO request,
+            @CurrentUser UserPrincipal currentUser) {
+        try {
+            logger.debug("Creating borrow request for item: {}", request.getItemId());
+            BorrowRequestDTO createdRequest = itemService.createBorrowRequest(request, currentUser.getId());
+            return ResponseEntity.ok(createdRequest);
+        } catch (Exception e) {
+            logger.error("Error creating borrow request", e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }*/
 }
