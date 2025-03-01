@@ -4,6 +4,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../backendApi/AuthContext';
 import axios from 'axios';
+import { useNotification } from '../backendApi/NotificationContext';
+import webSocketService from '../backendApi/websocketService';
 import {
   MdArrowBack,
   MdLocationOn,
@@ -27,11 +29,62 @@ const ItemDetail = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showContactInfo, setShowContactInfo] = useState(false);
   const [showBorrowForm, setShowBorrowForm] = useState(false);
+  const { showNotification } = useNotification();
+
+  useEffect(() => {
+    let mounted = true;
+
+    const connectWebSocket = async () => {
+        if (user && mounted) {
+            try {
+                await webSocketService.connect(user.id, (notification) => {
+                    if (mounted) {
+                        showNotification({
+                            type: 'info',
+                            title: notification.title,
+                            message: notification.message,
+                        });
+                    }
+                });
+            } catch (error) {
+                console.error('WebSocket connection failed:', error);
+                if (mounted) {
+                    showNotification({
+                        type: 'error',
+                        title: 'Connection Error',
+                        message: 'Failed to connect to notification service',
+                    });
+                }
+            }
+        }
+    };
+
+    connectWebSocket();
+
+    return () => {
+        mounted = false;
+        webSocketService.disconnect();
+    };
+}, [user, showNotification]);
+
+
   const [borrowRequest, setBorrowRequest] = useState({
     startDate: '',
     endDate: '',
     message: '',
   });
+
+  const formatDateForInput = (dateString) => {
+    const date = new Date(dateString);
+    return date.toISOString().split('T')[0];
+};
+
+const isDateInRange = (date, startDate, endDate) => {
+    const checkDate = new Date(date);
+    const availableFrom = new Date(startDate);
+    const availableUntil = new Date(endDate);
+    return checkDate >= availableFrom && checkDate <= availableUntil;
+};
 
   useEffect(() => {
     const fetchItemDetails = async () => {
@@ -53,20 +106,54 @@ const ItemDetail = () => {
   const handleBorrowSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios.post(`http://localhost:8080/api/borrowing/requests`, {
-        itemId: id,
-        ...borrowRequest
-      }, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
-      // Show success message and close form
-      setShowBorrowForm(false);
-      // You can add a toast notification here
+        // Format dates to ISO string format
+        const formattedRequest = {
+            itemId: parseInt(id),
+            startDate: new Date(borrowRequest.startDate).toISOString().split('T')[0],
+            endDate: new Date(borrowRequest.endDate).toISOString().split('T')[0],
+            message: borrowRequest.message,
+            itemName: item.name
+        };
+
+        console.log('Sending request:', formattedRequest); // For debugging
+
+        const response = await axios.post(
+            `http://localhost:8080/api/borrowing/requests`,
+            formattedRequest,
+            {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                    'Content-Type': 'application/json'
+                }
+            }
+        );
+
+        if (response.status === 200 || response.status === 201) {
+            setShowBorrowForm(false);
+            showNotification({
+                type: 'success',
+                title: 'Request Sent',
+                message: 'Your borrow request has been sent to the owner.',
+            });
+        }
     } catch (error) {
-      console.error('Error submitting borrow request:', error);
-      // Show error message
+        console.error('Borrow request error:', error);
+        const errorMessage = error.response?.data?.message || 
+                           'Failed to send borrow request. Please try again.';
+        showNotification({
+            type: 'error',
+            title: 'Error',
+            message: errorMessage
+        });
     }
-  };
+};
+
+
+  const suggestedMessages = [
+    "Hi! I'm interested in borrowing this item. Is it still available?",
+    "Hello! I'd like to borrow this. Can you confirm if it's in good condition?",
+    "I'd love to borrow this item. I'll take good care of it!",
+  ];
 
   if (loading) {
     return (
@@ -303,55 +390,79 @@ const ItemDetail = () => {
             </div>
             
             <form onSubmit={handleBorrowSubmit} className="space-y-4">
-              <div>
+            <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Start Date
+                    Start Date
+                    <span className="text-xs text-gray-500 ml-2">
+                        (Available: {new Date(item.availableFrom).toLocaleDateString()} - 
+                        {new Date(item.availableUntil).toLocaleDateString()})
+                    </span>
                 </label>
                 <input
-                  type="date"
-                  value={borrowRequest.startDate}
-                  onChange={(e) => setBorrowRequest({
-                    ...borrowRequest,
-                    startDate: e.target.value
-                  })}
-                  min={new Date().toISOString().split('T')[0]}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                  required
+                    type="date"
+                    value={borrowRequest.startDate}
+                    onChange={(e) => setBorrowRequest({
+                        ...borrowRequest,
+                        startDate: e.target.value,
+                        // Reset end date if it's before new start date
+                        endDate: new Date(e.target.value) > new Date(borrowRequest.endDate) 
+                            ? e.target.value 
+                            : borrowRequest.endDate
+                    })}
+                    min={formatDateForInput(item.availableFrom)}
+                    max={formatDateForInput(item.availableUntil)}
+                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                    required
                 />
-              </div>
+            </div>
+
+            <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                    End Date
+                </label>
+                <input
+                    type="date"
+                    value={borrowRequest.endDate}
+                    onChange={(e) => setBorrowRequest({
+                        ...borrowRequest,
+                        endDate: e.target.value
+                    })}
+                    min={borrowRequest.startDate || formatDateForInput(item.availableFrom)}
+                    max={formatDateForInput(item.availableUntil)}
+                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                    required
+                />
+            </div>
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  End Date
+                    Message to Owner
                 </label>
-                <input
-                  type="date"
-                  value={borrowRequest.endDate}
-                  onChange={(e) => setBorrowRequest({
-                    ...borrowRequest,
-                    endDate: e.target.value
-                  })}
-                  min={borrowRequest.startDate}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Message to Owner
-                </label>
+                <div className="mb-2 flex flex-wrap gap-2">
+                    {suggestedMessages.map((msg, index) => (
+                    <button
+                        key={index}
+                        type="button"
+                        onClick={() => setBorrowRequest(prev => ({ ...prev, message: msg }))}
+                        className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 
+                                rounded-full text-gray-700 transition-colors"
+                    >
+                        {msg}
+                    </button>
+                    ))}
+                </div>
                 <textarea
-                  value={borrowRequest.message}
-                  onChange={(e) => setBorrowRequest({
+                    value={borrowRequest.message}
+                    onChange={(e) => setBorrowRequest({
                     ...borrowRequest,
                     message: e.target.value
-                  })}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 h-32"
-                  placeholder="Explain why you'd like to borrow this item..."
-                  required
+                    })}
+                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 
+                            focus:ring-blue-500 h-32"
+                    placeholder="Explain why you'd like to borrow this item..."
+                    required
                 />
-              </div>
+                </div>
               
               <button
                 type="submit"

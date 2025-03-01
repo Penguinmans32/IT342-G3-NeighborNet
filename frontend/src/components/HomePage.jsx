@@ -2,6 +2,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../backendApi/AuthContext";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
+import { NotificationProvider, useNotification } from '../backendApi/NotificationContext';
 import Footer from './SplashScreen/Footer';
 import '../styles/SignIn.css';
 import '../styles/Categories.css';
@@ -213,25 +214,14 @@ const Homepage = () => {
   }, [user]);
 
   const [isNotificationsOpen, setNotificationsOpen] = useState(false);
-  const [unreadNotifications, setUnreadNotifications] = useState(2);
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      type: 'message',
-      title: 'New Message',
-      message: 'You have a new message from John Doe.',
-      time: '5 minutes ago',
-      unread: true,
-    },
-    {
-      id: 2,
-      type: 'alert',
-      title: 'Class Remainder',
-      message: 'Your next class starts in 30 minutes.',
-      time: '10 minutes ago',
-      unread: true,
+  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotification();
+
+  const handleNotificationClick = (notification) => {
+    if (notification.unread) {
+        markAsRead(notification.id);
     }
-  ])
+    // Handle notification click (e.g., navigate to relevant page)
+};
 
   const location = useLocation();
   const isProfilePage = location.pathname === '/profile';
@@ -417,9 +407,9 @@ const Homepage = () => {
                   >
                     <div className="relative">
                       <MdNotifications className="text-2xl text-white" />
-                      {unreadNotifications > 0 && (
+                      {unreadCount > 0 && (
                         <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
-                          <span className="text-xs text-white">{unreadNotifications}</span>
+                          <span className="text-xs text-white">{unreadCount}</span>
                         </div>
                       )}
                     </div>
@@ -832,79 +822,95 @@ const Homepage = () => {
       </main>
 
       <AnimatePresence>
-            {isNotificationsOpen && (
+          {isNotificationsOpen && (
               <>
-                {/* Overlay */}
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  onClick={() => setNotificationsOpen(false)}
-                  className="fixed inset-0 bg-black/50 z-40"
-                />
-                
-                <motion.div
-                  initial={{ x: "100%" }}
-                  animate={{ x: 0 }}
-                  exit={{ x: "100%" }}
-                  transition={{ type: "tween", duration: 0.3 }}
-                  className="fixed right-0 top-0 h-screen w-80 bg-white shadow-xl z-50"
-                >
-                  <div className="p-4 border-b border-gray-100">
-                    <div className="flex items-center justify-between">
-                      <h2 className="text-lg font-semibold">Notifications</h2>
-                      <button
-                        onClick={() => setNotificationsOpen(false)}
-                        className="p-2 hover:bg-gray-100 rounded-full"
-                      >
-                        <MdClose className="text-xl" />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="overflow-y-auto h-[calc(100vh-64px)]">
-                    {notifications.map((notification, index) => (
-                      <motion.div
-                        key={notification.id}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.1 }}
-                        className={`p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer
-                                  ${notification.unread ? 'bg-blue-50/50' : ''}`}
-                      >
-                        <div className="flex gap-3">
-                          <div className="flex-shrink-0">
-                            <span className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                              {notification.type === 'message' && <MdChat className="text-blue-500" />}
-                              {notification.type === 'alert' && <MdNotificationsActive className="text-red-500" />}
-                              {notification.type === 'update' && <MdInfo className="text-green-500" />}
-                            </span>
+                  {/* Overlay */}
+                  <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      onClick={() => setNotificationsOpen(false)}
+                      className="fixed inset-0 bg-black/50 z-40"
+                  />
+                  
+                  {/* Notifications Panel */}
+                  <motion.div
+                      initial={{ x: "100%" }}
+                      animate={{ x: 0 }}
+                      exit={{ x: "100%" }}
+                      transition={{ type: "tween", duration: 0.3 }}
+                      className="fixed right-0 top-0 h-screen w-80 bg-white shadow-xl z-50"
+                  >
+                      {/* Header */}
+                      <div className="p-4 border-b border-gray-100">
+                          <div className="flex items-center justify-between">
+                              <h2 className="text-lg font-semibold">Notifications</h2>
+                              <div className="flex items-center gap-4">
+                                  {unreadCount > 0 && (
+                                      <button
+                                          onClick={markAllAsRead}
+                                          className="text-sm text-blue-600 hover:text-blue-800"
+                                      >
+                                          Mark all as read
+                                      </button>
+                                  )}
+                                  <button
+                                      onClick={() => setNotificationsOpen(false)}
+                                      className="p-2 hover:bg-gray-100 rounded-full"
+                                  >
+                                      <MdClose className="text-xl" />
+                                  </button>
+                              </div>
                           </div>
-                          <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-900">{notification.title}</p>
-                            <p className="text-sm text-gray-500">{notification.message}</p>
-                            <p className="text-xs text-gray-400 mt-1">
-                              {notification.time}
-                            </p>
-                          </div>
-                          {notification.unread && (
-                            <div className="w-2 h-2 rounded-full bg-blue-500 self-center" />
-                          )}
-                        </div>
-                      </motion.div>
-                    ))}
-
-                    {notifications.length === 0 && (
-                      <div className="flex flex-col items-center justify-center h-full p-8 text-center text-gray-500">
-                        <MdNotificationsOff className="text-4xl mb-2" />
-                        <p>No notifications yet</p>
                       </div>
-                    )}
-                  </div>
-                </motion.div>
+
+                      {/* Notifications List */}
+                      <div className="overflow-y-auto h-[calc(100vh-64px)]">
+                          {notifications.length > 0 ? (
+                              notifications.map((notification, index) => (
+                                  <motion.div
+                                      key={notification.id}
+                                      initial={{ opacity: 0, x: -20 }}
+                                      animate={{ opacity: 1, x: 0 }}
+                                      transition={{ delay: index * 0.1 }}
+                                      onClick={() => handleNotificationClick(notification)}
+                                      className={`p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer
+                                                ${notification.unread ? 'bg-blue-50/50' : ''}`}
+                                  >
+                                      <div className="flex gap-3">
+                                          <div className="flex-shrink-0">
+                                              <span className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                                                  {notification.type === 'message' && <MdChat className="text-blue-500" />}
+                                                  {notification.type === 'alert' && <MdNotificationsActive className="text-red-500" />}
+                                                  {notification.type === 'update' && <MdInfo className="text-green-500" />}
+                                              </span>
+                                          </div>
+                                          <div className="flex-1">
+                                              <div className="flex justify-between items-start">
+                                                  <p className="text-sm font-medium text-gray-900">{notification.title}</p>
+                                                  <span className="text-xs text-gray-500">
+                                                      {formatTime(notification.time)}
+                                                  </span>
+                                              </div>
+                                              <p className="text-sm text-gray-500 mt-1">{notification.message}</p>
+                                          </div>
+                                          {notification.unread && (
+                                              <div className="w-2 h-2 rounded-full bg-blue-500 self-center" />
+                                          )}
+                                      </div>
+                                  </motion.div>
+                              ))
+                          ) : (
+                              <div className="flex flex-col items-center justify-center h-full p-8 text-center text-gray-500">
+                                  <MdNotificationsOff className="text-4xl mb-2" />
+                                  <p>No notifications yet</p>
+                              </div>
+                          )}
+                      </div>
+                  </motion.div>
               </>
-            )}
-          </AnimatePresence>
+          )}
+      </AnimatePresence>
 
       {isProfileMenuOpen && (
           <motion.div
