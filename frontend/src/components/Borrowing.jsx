@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../backendApi/AuthContext';
 import Footer from './SplashScreen/Footer';
+import { MdClose, MdImage } from 'react-icons/md';
 import {
   MdAdd,
   MdSearch,
@@ -19,6 +20,127 @@ import {
 import { ArrowLeft } from 'lucide-react';
 import axios from 'axios';
 
+const ImageGalleryModal = ({ images = [], isOpen, onClose, currentIndex = 0 }) => {
+  const [activeIndex, setActiveIndex] = useState(currentIndex);
+
+  // Handle keyboard navigation
+  useEffect(() => {
+    const handleKeydown = (e) => {
+      if (!isOpen) return;
+      
+      switch (e.key) {
+        case 'ArrowLeft':
+          setActiveIndex((prev) => (prev > 0 ? prev - 1 : images.length - 1));
+          break;
+        case 'ArrowRight':
+          setActiveIndex((prev) => (prev < images.length - 1 ? prev + 1 : 0));
+          break;
+        case 'Escape':
+          onClose();
+          break;
+        default:
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeydown);
+    return () => window.removeEventListener('keydown', handleKeydown);
+  }, [isOpen, images.length, onClose]);
+
+  if (!isOpen) return null;
+
+  const handlePrevious = () => {
+    setActiveIndex((prev) => (prev > 0 ? prev - 1 : images.length - 1));
+  };
+
+  const handleNext = () => {
+    setActiveIndex((prev) => (prev < images.length - 1 ? prev + 1 : 0));
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4">
+      <div className="relative w-full max-w-4xl mx-auto">
+        {/* Close button */}
+        <button
+          onClick={onClose}
+          className="absolute -top-2 -right-2 z-10 p-2 bg-white rounded-full shadow-lg
+                    hover:bg-gray-100 transition-colors"
+        >
+          <MdClose className="text-2xl text-gray-700" />
+        </button>
+
+        {/* Navigation arrows */}
+        <div className="absolute inset-y-0 left-0 flex items-center">
+          <button
+            onClick={handlePrevious}
+            className="p-2 bg-white/10 hover:bg-white/20 rounded-r-xl transition-colors
+                     text-white transform -translate-x-2 focus:outline-none"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="absolute inset-y-0 right-0 flex items-center">
+          <button
+            onClick={handleNext}
+            className="p-2 bg-white/10 hover:bg-white/20 rounded-l-xl transition-colors
+                     text-white transform translate-x-2 focus:outline-none"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Main image */}
+        <div className="relative aspect-[4/3] bg-black rounded-lg overflow-hidden">
+          <img
+            src={images[activeIndex]}
+            alt={`Gallery item ${activeIndex + 1}`}
+            className="w-full h-full object-contain"
+            onError={(e) => {
+              e.target.onerror = null;
+              e.target.src = 'https://via.placeholder.com/800x600?text=Image+Not+Available';
+            }}
+          />
+          
+          {/* Image counter */}
+          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 
+                        bg-black/50 text-white px-3 py-1 rounded-full text-sm">
+            {activeIndex + 1} / {images.length}
+          </div>
+        </div>
+
+        {/* Thumbnails */}
+        {images.length > 1 && (
+          <div className="flex gap-2 mt-4 justify-center overflow-x-auto py-2">
+            {images.map((image, index) => (
+              <button
+                key={index}
+                onClick={() => setActiveIndex(index)}
+                className={`w-16 h-16 rounded-lg overflow-hidden border-2 transition-all flex-shrink-0
+                          ${index === activeIndex ? 'border-blue-500 scale-110' : 'border-transparent'}`}
+              >
+                <img
+                  src={image}
+                  alt={`Thumbnail ${index + 1}`}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = 'https://via.placeholder.com/150?text=No+Image';
+                  }}
+                />
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const Borrowing = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -26,6 +148,11 @@ const Borrowing = () => {
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [galleryModal, setGalleryModal] = useState({
+    isOpen: false,
+    images: [],
+    currentIndex: 0
+  });
 
   // Categories for borrowing items
   const categories = [
@@ -37,25 +164,30 @@ const Borrowing = () => {
     // Add more categories as needed
   ];
 
-  // Fetch items from backend
-  /*useEffect(() => {
+  useEffect(() => {
     const fetchItems = async () => {
       try {
         const response = await axios.get('http://localhost:8080/api/borrowing/items', {
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
         });
-        setItems(response.data);
+        
+        const itemsWithDefaultImages = response.data.map(item => ({
+          ...item,
+          imageUrls: item.imageUrls || []
+        }));
+        
+        setItems(itemsWithDefaultImages);
       } catch (error) {
         console.error('Error fetching items:', error);
+        setItems([]); 
       } finally {
         setLoading(false);
       }
     };
-
+  
     fetchItems();
-  }, []);*/
+  }, []);
 
-  // Function to handle adding a new item
   const handleAddItem = () => {
     navigate('/borrowing/add-item');
   };
@@ -137,89 +269,167 @@ const Borrowing = () => {
         </div>
 
         {/* Items Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {loading ? (
-            // Loading skeletons
-            [...Array(6)].map((_, i) => (
-              <div key={i} className="animate-pulse">
-                <div className="bg-gray-200 rounded-xl aspect-video mb-4" />
-                <div className="h-4 bg-gray-200 rounded w-3/4 mb-2" />
-                <div className="h-4 bg-gray-200 rounded w-1/2" />
-              </div>
-            ))
-          ) : (
-            // Actual items
-            items
-              .filter(item => 
-                (selectedCategory === 'all' || item.category === selectedCategory) &&
-                (item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                 item.description.toLowerCase().includes(searchTerm.toLowerCase()))
-              )
-              .map(item => (
-                <motion.div
-                  key={item.id}
-                  whileHover={{ y: -5 }}
-                  className="bg-white rounded-xl shadow-sm overflow-hidden group"
-                >
-                  <div className="aspect-video relative">
-                    <img
-                      src={item.imageUrl || '/default-item-image.jpg'}
-                      alt={item.name}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 
-                                  transition-opacity flex items-center justify-center">
-                      <motion.button
-                        whileHover={{ scale: 1.1 }}
-                        onClick={() => navigate(`/borrowing/item/${item.id}`)}
-                        className="px-6 py-2 bg-white text-blue-600 rounded-full font-medium"
-                      >
-                        View Details
-                      </motion.button>
-                    </div>
-                  </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {loading ? (
+              // Loading skeletons
+              [...Array(6)].map((_, i) => (
+                <div key={i} className="animate-pulse">
+                  <div className="bg-gray-200 rounded-xl aspect-video mb-4" />
+                  <div className="h-4 bg-gray-200 rounded w-3/4 mb-2" />
+                  <div className="h-4 bg-gray-200 rounded w-1/2" />
+                </div>
+              ))
+            ) : (
+              // Actual items
+              items
+                .filter(item => 
+                  (selectedCategory === 'all' || item.category === selectedCategory) &&
+                  (item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                  item.description.toLowerCase().includes(searchTerm.toLowerCase()))
+                )
+                .map(item => (
+                  <motion.div
+                    key={item.id}
+                    whileHover={{ y: -5 }}
+                    className="bg-white rounded-xl shadow-sm overflow-hidden group"
+                  >
+                    {/* Image Gallery */}
+                      <div className="aspect-[4/3] relative overflow-hidden bg-gray-100">
+                        {item.imageUrls && item.imageUrls.length > 0 ? (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 p-2 h-full">
+                            {/* Main Image */}
+                            <div className="col-span-2 h-48 relative rounded-lg overflow-hidden">
+                              <img
+                                src={item.imageUrls[0]}
+                                alt={`${item.name} - Main`}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  e.target.onerror = null;
+                                  e.target.src = 'https://via.placeholder.com/400x300?text=No+Image';
+                                }}
+                              />
+                            </div>
+                            
+                            {/* Thumbnail Images */}
+                            {item.imageUrls.length > 1 && (
+                              <div className="grid grid-cols-3 gap-2 col-span-2">
+                                {item.imageUrls.slice(1, 4).map((url, index) => (
+                                  <div key={index} className="aspect-square relative rounded-lg overflow-hidden">
+                                    <img
+                                      src={url}
+                                      alt={`${item.name} - ${index + 2}`}
+                                      className="w-full h-full object-cover"
+                                      onError={(e) => {
+                                        e.target.onerror = null;
+                                        e.target.src = 'https://via.placeholder.com/150?text=No+Image';
+                                      }}
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center h-full p-4">
+                            <MdImage className="text-4xl text-gray-400 mb-2" />
+                            <p className="text-gray-500 text-sm text-center">No images available</p>
+                          </div>
+                        )}
 
-                  <div className="p-6">
-                    <div className="flex items-center gap-2 mb-3">
-                      <span className="px-3 py-1 bg-blue-50 text-blue-600 text-xs font-medium rounded-full">
-                        {item.category}
-                      </span>
-                      <span className="text-sm text-gray-500 flex items-center gap-1">
-                        <MdLocationOn />
-                        {item.location}
-                      </span>
-                    </div>
-
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                      {item.name}
-                    </h3>
-                    <p className="text-gray-600 text-sm mb-4">
-                      {item.description}
-                    </p>
-
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <img
-                          src={item.owner.avatarUrl || '/default-avatar.jpg'}
-                          alt={item.owner.name}
-                          className="w-8 h-8 rounded-full"
-                        />
-                        <div className="text-sm">
-                          <p className="font-medium text-gray-900">{item.owner.name}</p>
-                          <p className="text-gray-500">{item.availabilityPeriod}</p>
+                        {/* Hover Overlay */}
+                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 
+                                        transition-opacity flex items-center justify-center">
+                          <div className="flex gap-2">
+                            {item.imageUrls && item.imageUrls.length > 0 && (
+                              <motion.button
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() => setGalleryModal({
+                                  isOpen: true,
+                                  images: item.imageUrls,
+                                  currentIndex: 0
+                                })}
+                                className="px-4 py-2 bg-white text-blue-600 rounded-full font-medium"
+                              >
+                                View Images
+                              </motion.button>
+                            )}
+                            <motion.button
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
+                              onClick={() => navigate(`/borrowing/item/${item.id}`)}
+                              className="px-4 py-2 bg-blue-500 text-white rounded-full font-medium"
+                            >
+                              View Details
+                            </motion.button>
+                          </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <MdStar className="text-yellow-400" />
-                        <span className="text-sm font-medium">{item.rating}</span>
+
+                    {/* Item Details */}
+                    <div className="p-6">
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="px-3 py-1 bg-blue-50 text-blue-600 text-xs font-medium rounded-full">
+                          {item.category}
+                        </span>
+                        <span className="text-sm text-gray-500 flex items-center gap-1">
+                          <MdLocationOn />
+                          {item.location}
+                        </span>
+                      </div>
+
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                        {item.name}
+                      </h3>
+                      <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                        {item.description}
+                      </p>
+
+                      {/* Owner Info and Contact Button */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
+                            <MdPerson className="text-gray-500 text-xl" />
+                          </div>
+                          <div className="text-sm">
+                            <p className="font-medium text-gray-900">
+                              {item.owner?.username || "Anonymous"}
+                            </p>
+                            <p className="text-gray-500">{item.availabilityPeriod}</p>
+                          </div>
+                        </div>
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => {/* Add message functionality */}}
+                          className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium
+                                    hover:bg-blue-600 transition-colors"
+                        >
+                          Message
+                        </motion.button>
+                      </div>
+
+                      {/* Availability Dates */}
+                      <div className="mt-4 flex items-center gap-2 text-sm text-gray-500">
+                        <MdCalendarToday className="text-blue-500" />
+                        <span>
+                          {new Date(item.availableFrom).toLocaleDateString()} - 
+                          {new Date(item.availableUntil).toLocaleDateString()}
+                        </span>
                       </div>
                     </div>
-                  </div>
-                </motion.div>
-              ))
-          )}
-        </div>
+                  </motion.div>
+                ))
+            )}
+          </div>
       </div>
+
+      <ImageGalleryModal
+        isOpen={galleryModal.isOpen}
+        images={galleryModal.images}
+        currentIndex={galleryModal.currentIndex}
+        onClose={() => setGalleryModal({ isOpen: false, images: [], currentIndex: 0 })}
+      />
       <Footer />
     </div>
   );
