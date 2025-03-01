@@ -1,10 +1,47 @@
 package com.example.neighbornetbackend.dto;
 
+import java.time.LocalDate;
+
 public class BorrowRequestDTO {
+    private Long id;
     private Long itemId;
-    private String startDate;
-    private String endDate;
+    private String itemName;
+    private Long borrowerId;
+    private String borrowerName;
+    private Long ownerId;
+    private LocalDate startDate;
+    private LocalDate endDate;
     private String message;
+    private String status;
+
+    // Default constructor
+    public BorrowRequestDTO() {
+    }
+
+    // Constructor with fields
+    public BorrowRequestDTO(Long id, Long itemId, String itemName, Long borrowerId,
+                            String borrowerName, Long ownerId, LocalDate startDate,
+                            LocalDate endDate, String message, String status) {
+        this.id = id;
+        this.itemId = itemId;
+        this.itemName = itemName;
+        this.borrowerId = borrowerId;
+        this.borrowerName = borrowerName;
+        this.ownerId = ownerId;
+        this.startDate = startDate;
+        this.endDate = endDate;
+        this.message = message;
+        this.status = status;
+    }
+
+    // Getters and Setters
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
 
     public Long getItemId() {
         return itemId;
@@ -14,19 +51,51 @@ public class BorrowRequestDTO {
         this.itemId = itemId;
     }
 
-    public String getStartDate() {
+    public String getItemName() {
+        return itemName;
+    }
+
+    public void setItemName(String itemName) {
+        this.itemName = itemName;
+    }
+
+    public Long getBorrowerId() {
+        return borrowerId;
+    }
+
+    public void setBorrowerId(Long borrowerId) {
+        this.borrowerId = borrowerId;
+    }
+
+    public String getBorrowerName() {
+        return borrowerName;
+    }
+
+    public void setBorrowerName(String borrowerName) {
+        this.borrowerName = borrowerName;
+    }
+
+    public Long getOwnerId() {
+        return ownerId;
+    }
+
+    public void setOwnerId(Long ownerId) {
+        this.ownerId = ownerId;
+    }
+
+    public LocalDate getStartDate() {
         return startDate;
     }
 
-    public void setStartDate(String startDate) {
+    public void setStartDate(LocalDate startDate) {
         this.startDate = startDate;
     }
 
-    public String getEndDate() {
+    public LocalDate getEndDate() {
         return endDate;
     }
 
-    public void setEndDate(String endDate) {
+    public void setEndDate(LocalDate endDate) {
         this.endDate = endDate;
     }
 
@@ -36,5 +105,13 @@ public class BorrowRequestDTO {
 
     public void setMessage(String message) {
         this.message = message;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
     }
 }
