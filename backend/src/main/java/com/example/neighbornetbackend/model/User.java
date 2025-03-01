@@ -3,6 +3,9 @@ package com.example.neighbornetbackend.model;
 
 import jakarta.persistence.*;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Entity
 @Table(name = "users")
 
@@ -19,6 +22,9 @@ public class User {
 
     @Column(nullable = false)
     private String password;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Notification> notifications = new ArrayList<>();
 
     @Column(name = "email_verified")
     private boolean emailVerified = false;
@@ -107,4 +113,22 @@ public class User {
         this.emailVerified = emailVerified;
     }
 
+    public List<Notification> getNotifications() {
+        return notifications;
+    }
+
+    public void setNotifications(List<Notification> notifications) {
+        this.notifications = notifications;
+    }
+
+    // Add helper method to add notification
+    public void addNotification(Notification notification) {
+        notifications.add(notification);
+        notification.setUser(this);
+    }
+
+    public void removeNotification(Notification notification) {
+        notifications.remove(notification);
+        notification.setUser(null);
+    }
 }
