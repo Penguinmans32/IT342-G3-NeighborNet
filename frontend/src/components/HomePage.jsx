@@ -46,6 +46,7 @@ const Homepage = () => {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [profileData, setProfileData] = useState(null);
   const [showOnlyUserClasses, setShowOnlyUserClasses] = useState(false);
+  const { notifications, unreadCount, markAsRead, markAllAsRead, fetchNotifications } = useNotification();
 
   const [availableCategories, setAvailableCategories] = useState([]);
   const [categoryCounts, setCategoryCounts] = useState({});
@@ -115,6 +116,28 @@ const Homepage = () => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
+
+  const handleNotificationBellClick = async () => {
+    console.log("Notification bell clicked");
+    if (!isNotificationsOpen) {
+      try {
+        console.log("Fetching notifications...");
+        console.log("Current user:", user); // Add this debug log
+        console.log("Current token:", localStorage.getItem('token')); // Add this debug log
+        const notifs = await fetchNotifications();
+        console.log("Fetched notifications:", notifs);
+      } catch (error) {
+        console.error("Error fetching notifications:", error);
+      }
+    }
+    setNotificationsOpen(prev => !prev);
+  };
+
+  useEffect(() => {
+    if (user) {
+      fetchNotifications();
+    }
+  }, [user, fetchNotifications]);
 
   useEffect(() => {
     if (classes.length > 0) {
@@ -214,7 +237,6 @@ const Homepage = () => {
   }, [user]);
 
   const [isNotificationsOpen, setNotificationsOpen] = useState(false);
-  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotification();
 
   const handleNotificationClick = (notification) => {
     if (notification.unread) {
@@ -402,7 +424,7 @@ const Homepage = () => {
 
                   <motion.button
                     whileHover={{ scale: 1.05 }}
-                    onClick={() => setNotificationsOpen(!isNotificationsOpen)}
+                    onClick={handleNotificationBellClick} 
                     className="relative flex items-center justify-center w-10 h-10 rounded-full hover:bg-white/10 transition-colors"
                   >
                     <div className="relative">
@@ -866,47 +888,52 @@ const Homepage = () => {
 
                       {/* Notifications List */}
                       <div className="overflow-y-auto h-[calc(100vh-64px)]">
-                          {notifications.length > 0 ? (
-                              notifications.map((notification, index) => (
-                                  <motion.div
-                                      key={notification.id}
-                                      initial={{ opacity: 0, x: -20 }}
-                                      animate={{ opacity: 1, x: 0 }}
-                                      transition={{ delay: index * 0.1 }}
-                                      onClick={() => handleNotificationClick(notification)}
-                                      className={`p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer
-                                                ${notification.unread ? 'bg-blue-50/50' : ''}`}
-                                  >
-                                      <div className="flex gap-3">
-                                          <div className="flex-shrink-0">
-                                              <span className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                                                  {notification.type === 'message' && <MdChat className="text-blue-500" />}
-                                                  {notification.type === 'alert' && <MdNotificationsActive className="text-red-500" />}
-                                                  {notification.type === 'update' && <MdInfo className="text-green-500" />}
-                                              </span>
-                                          </div>
-                                          <div className="flex-1">
-                                              <div className="flex justify-between items-start">
-                                                  <p className="text-sm font-medium text-gray-900">{notification.title}</p>
-                                                  <span className="text-xs text-gray-500">
-                                                      {formatTime(notification.time)}
-                                                  </span>
-                                              </div>
-                                              <p className="text-sm text-gray-500 mt-1">{notification.message}</p>
-                                          </div>
-                                          {notification.unread && (
-                                              <div className="w-2 h-2 rounded-full bg-blue-500 self-center" />
-                                          )}
-                                      </div>
-                                  </motion.div>
-                              ))
-                          ) : (
-                              <div className="flex flex-col items-center justify-center h-full p-8 text-center text-gray-500">
-                                  <MdNotificationsOff className="text-4xl mb-2" />
-                                  <p>No notifications yet</p>
-                              </div>
-                          )}
-                      </div>
+                        {console.log("Current notifications:", notifications)}
+                        {notifications && notifications.length > 0 ? (
+                            notifications.map((notification, index) => {
+                                console.log("Rendering notification:", notification);
+                                return (
+                                    <motion.div
+                                        key={notification.id}
+                                        initial={{ opacity: 0, x: -20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ delay: index * 0.1 }}
+                                        onClick={() => handleNotificationClick(notification)}
+                                        className={`p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer
+                                                  ${!notification.is_read ? 'bg-blue-50/50' : ''}`}
+                                    >
+                                        <div className="flex gap-3">
+                                            <div className="flex-shrink-0">
+                                                <span className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                                                    {notification.type === 'REQUEST' && <MdNotificationsActive className="text-blue-500" />}
+                                                    {notification.type === 'ALERT' && <MdNotificationsActive className="text-red-500" />}
+                                                    {notification.type === 'UPDATE' && <MdInfo className="text-green-500" />}
+                                                </span>
+                                            </div>
+                                            <div className="flex-1">
+                                                <div className="flex justify-between items-start">
+                                                    <p className="text-sm font-medium text-gray-900">{notification.title}</p>
+                                                    <span className="text-xs text-gray-500">
+                                                        {new Date(notification.createdAt).toLocaleString()}
+                                                    </span>
+                                                </div>
+                                                <p className="text-sm text-gray-500 mt-1">{notification.message}</p>
+                                            </div>
+                                            {!notification.is_read && (
+                                                <div className="w-2 h-2 rounded-full bg-blue-500 self-center" />
+                                            )}
+                                        </div>
+                                    </motion.div>
+                                );
+                            })
+                        ) : (
+                            <div className="flex flex-col items-center justify-center h-full p-8 text-center text-gray-500">
+                                {console.log("No notifications to display")}
+                                <MdNotificationsOff className="text-4xl mb-2" />
+                                <p>No notifications yet</p>
+                            </div>
+                        )}
+                    </div>
                   </motion.div>
               </>
           )}
