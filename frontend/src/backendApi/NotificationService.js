@@ -30,7 +30,11 @@ class NotificationService {
             },
             onError: (error) => {
                 console.error('Notification service error:', error);
-                this.connected = false;
+                setTimeout(() => {
+                    if (!this.connected) {
+                        this.connect(userId, token);
+                    }
+                }, 5000);
             }
         });
 

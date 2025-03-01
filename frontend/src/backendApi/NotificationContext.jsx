@@ -3,6 +3,7 @@ import { AnimatePresence } from 'framer-motion';
 import { notificationService } from './NotificationService';
 import { useAuth } from './AuthContext';
 import Notification from '../components/Notification';
+import axios from 'axios';
 
 const NotificationContext = createContext();
 
@@ -19,23 +20,61 @@ export const NotificationProvider = ({ children }) => {
     const { user } = useAuth();
     const [unreadCount, setUnreadCount] = useState(0);
 
-    useEffect(() => {
-        if (user) {
-            // Connect to WebSocket when user is logged in
-            const token = localStorage.getItem('token');
-            notificationService.connect(user.id, token);
+    const fetchNotifications = useCallback(async () => {
+      if (user) {
+          try {
+              console.log("Fetching notifications for user:", user);
+              const response = await axios.get('http://localhost:8080/api/notifications', {
+                  headers: {
+                      Authorization: `Bearer ${localStorage.getItem('token')}`
+                  }
+              });
+              console.log("Raw response:", response);
+              
+              if (response.data) {
+                  console.log("Setting notifications:", response.data);
+                  setNotifications(response.data);
+                  const unreadCount = response.data.filter(n => !n.is_read).length;
+                  setUnreadCount(unreadCount);
+                  return response.data;
+              } else {
+                  console.log("No notifications data in response");
+                  return [];
+              }
+          } catch (error) {
+              console.error('Error fetching notifications:', error);
+              if (error.response) {
+                  console.error('Error response:', error.response);
+              }
+              return [];
+          }
+      }
+      return [];
+  }, [user]);
 
-            // Subscribe to notifications
-            const unsubscribe = notificationService.subscribe((notification) => {
-                addNotification(notification);
-            });
+  useEffect(() => {
+    if (user) {
+        fetchNotifications();
+    }
+}, [user, fetchNotifications]);
 
-            return () => {
-                unsubscribe();
-                notificationService.disconnect();
-            };
-        }
-    }, [user]);
+useEffect(() => {
+  if (user) {
+      const token = localStorage.getItem('token');
+      notificationService.connect(user.id, token);
+
+      const unsubscribe = notificationService.subscribe((notification) => {
+          console.log("New notification received:", notification);
+          // When a new notification is received, fetch all notifications again
+          fetchNotifications();
+      });
+
+      return () => {
+          unsubscribe();
+          notificationService.disconnect();
+      };
+  }
+}, [user, fetchNotifications]);
 
     const addNotification = useCallback((notification) => {
         const newNotification = {
@@ -57,23 +96,42 @@ export const NotificationProvider = ({ children }) => {
         setNotifications(prev => [...prev, { id, type, title, message, duration }]);
     }, []);
 
-    const markAsRead = useCallback((notificationId) => {
-        setNotifications(prev =>
-            prev.map(notification =>
-                notification.id === notificationId
-                    ? { ...notification, unread: false }
-                    : notification
-            )
-        );
-        setUnreadCount(count => Math.max(0, count - 1));
-    }, []);
+    const markAsRead = useCallback(async (notificationId) => {
+      try {
+          await axios.put(`http://localhost:8080/api/notifications/${notificationId}/read`, null, {
+              headers: {
+                  Authorization: `Bearer ${localStorage.getItem('token')}`
+              }
+          });
+          // Update local state
+          setNotifications(prev =>
+              prev.map(notification =>
+                  notification.id === notificationId
+                      ? { ...notification, is_read: true }
+                      : notification
+              )
+          );
+          setUnreadCount(prev => Math.max(0, prev - 1));
+      } catch (error) {
+          console.error('Error marking notification as read:', error);
+      }
+  }, []);
 
-    const markAllAsRead = useCallback(() => {
+  const markAllAsRead = useCallback(async () => {
+    try {
+        await axios.put('http://localhost:8080/api/notifications/mark-all-read', null, {
+            headers: {
+                Authorization: `Bearer ${localStorage.getItem('token')}`
+            }
+        });
         setNotifications(prev =>
-            prev.map(notification => ({ ...notification, unread: false }))
+            prev.map(notification => ({ ...notification, is_read: true }))
         );
         setUnreadCount(0);
-    }, []);
+    } catch (error) {
+        console.error('Error marking all notifications as read:', error);
+    }
+}, []);
 
     const deleteNotification = useCallback((notificationId) => {
         setNotifications(prev => {
@@ -92,26 +150,29 @@ export const NotificationProvider = ({ children }) => {
         markAsRead,
         markAllAsRead,
         deleteNotification,
+        fetchNotifications,
     };
 
     return (
-        <NotificationContext.Provider value={value}>
-            {children}
-            <div className="fixed inset-0 pointer-events-none flex flex-col items-end gap-2 p-4 z-50">
-                <AnimatePresence>
-                    {notifications
-                        .filter(n => n.duration) // Only show toast notifications
-                        .map(({ id, ...props }) => (
-                            <div key={id} className="pointer-events-auto">
-                                <Notification
-                                    {...props}
-                                    show={true}
-                                    onClose={() => deleteNotification(id)}
-                                />
-                            </div>
-                        ))}
-                </AnimatePresence>
-            </div>
-        </NotificationContext.Provider>
-    );
+      <NotificationContext.Provider value={value}>
+          {children}
+          <div className="fixed inset-0 pointer-events-none flex flex-col items-end gap-2 p-4 z-50">
+              <AnimatePresence>
+                  {notifications
+                      .filter(n => !n.is_read) // Show only unread notifications as toasts
+                      .map((notification) => (
+                          <div key={notification.id} className="pointer-events-auto">
+                              <Notification
+                                  title={notification.title}
+                                  message={notification.message}
+                                  type={notification.type}
+                                  show={true}
+                                  onClose={() => markAsRead(notification.id)}
+                              />
+                          </div>
+                      ))}
+              </AnimatePresence>
+          </div>
+      </NotificationContext.Provider>
+  );
 };

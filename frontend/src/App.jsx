@@ -23,8 +23,8 @@ import ItemDetail from "./components/ItemDetail";
 function App() {
   return (
     <Router>
-      <NotificationProvider>
         <AuthProviderWithErrorBoundary>
+          <NotificationProvider>
           <ScrollToTop />
           <Toaster
               position="top-center"
@@ -129,8 +129,8 @@ function App() {
               } 
             />
           </Routes>
+          </NotificationProvider>
         </AuthProviderWithErrorBoundary>
-      </NotificationProvider>
     </Router>
   );
 }
