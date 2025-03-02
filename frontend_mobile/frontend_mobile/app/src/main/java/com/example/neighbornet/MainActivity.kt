@@ -5,6 +5,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -30,6 +31,7 @@ import com.example.neighbornet.auth.AuthViewModel
 import com.example.neighbornet.network.RetrofitClient
 import com.example.neighbornet.network.VerificationRequest
 import kotlinx.coroutines.launch
+import androidx.compose.ui.res.painterResource
 
 class MainActivity : ComponentActivity() {
 
@@ -160,11 +162,9 @@ fun LandingPage(
     isPreview: Boolean = false,
     onGetStartedClick: () -> Unit = {}
 ) {
-    // For preview, we'll show everything immediately
     var isVisible by remember { mutableStateOf(isPreview) }
     var isDescriptionVisible by remember { mutableStateOf(isPreview) }
 
-    // Only trigger animations if not in preview
     if (!isPreview) {
         LaunchedEffect(Unit) {
             delay(300)
@@ -176,126 +176,71 @@ fun LandingPage(
 
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = Color(0xFFFFFFFF) // Explicit white background
+        color = Color(0xFFFFFFFF)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(24.dp)
+            verticalArrangement = Arrangement.Center
         ) {
-            Spacer(modifier = Modifier.height(48.dp))
-
-            // Logo
             if (isPreview || isVisible) {
-                LogoContainer()
+                Image(
+                    painter = painterResource(id = R.drawable.logo),
+                    contentDescription = "App Logo",
+                    modifier = Modifier
+                        .size(180.dp)
+                        .padding(bottom = 24.dp)
+                )
+
+                Text(
+                    text = "NeighborNet",
+                    fontSize = 36.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = Color(0xFF1976D2),
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
             }
 
-            // Title
-            if (isPreview || isVisible) {
-                BrandTitle()
-            }
-
-            // Description
             if (isPreview || isDescriptionVisible) {
-                Description()
-            }
+                Text(
+                    text = "Connect with your neighbors, share resources, and build a stronger community together",
+                    fontSize = 16.sp,
+                    textAlign = TextAlign.Center,
+                    color = Color(0xFF757575),
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    lineHeight = 24.sp,
+                    fontWeight = FontWeight.Medium
+                )
 
-            Spacer(modifier = Modifier.weight(1f))
+                Spacer(modifier = Modifier.height(32.dp))
 
-            // Button
-            if (isPreview || isDescriptionVisible) {
-                ContinueButton(onClick = onGetStartedClick)
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
-        }
-    }
-}
-
-@Composable
-fun LogoContainer() {
-    Surface(
-        modifier = Modifier.size(200.dp),
-        shape = RoundedCornerShape(28.dp),
-        color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 8.dp
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.linearGradient(
-                        listOf(
-                            Color(0xFF6200EE),
-                            Color(0xFF3700B3)
-                        )
+                Button(
+                    onClick = onGetStartedClick,
+                    modifier = Modifier
+                        .fillMaxWidth(0.85f)
+                        .height(56.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF2196F3)
+                    ),
+                    shape = RoundedCornerShape(28.dp),
+                    elevation = ButtonDefaults.buttonElevation(
+                        defaultElevation = 4.dp,
+                        pressedElevation = 8.dp
                     )
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            // Placeholder text for preview
-            Text(
-                text = "LOGO",
-                color = Color.White,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold
-            )
+                ) {
+                    Text(
+                        text = "Get Started",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White,
+                        letterSpacing = 0.5.sp
+                    )
+                }
+            }
         }
-    }
-}
-
-@Composable
-fun BrandTitle() {
-    Text(
-        text = "NeighborNet",
-        fontSize = 40.sp,
-        fontWeight = FontWeight.ExtraBold,
-        color = Color.Black,
-        style = MaterialTheme.typography.headlineLarge.copy(
-            letterSpacing = (-1).sp
-        )
-    )
-}
-
-@Composable
-fun Description() {
-    Text(
-        text = "Connect with your neighbors, share resources, and build a stronger community together",
-        fontSize = 18.sp,
-        textAlign = TextAlign.Center,
-        color = Color.Black.copy(alpha = 0.8f),
-        modifier = Modifier.padding(horizontal = 16.dp),
-        style = MaterialTheme.typography.bodyLarge,
-        lineHeight = 28.sp,
-        fontWeight = FontWeight.Medium
-    )
-}
-
-@Composable
-fun ContinueButton(onClick: () -> Unit) {
-    Button(
-        onClick = onClick,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(60.dp)
-            .clip(RoundedCornerShape(16.dp)),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = Color(0xFF6200EE),
-            contentColor = Color.White
-        ),
-        elevation = ButtonDefaults.buttonElevation(
-            defaultElevation = 4.dp,
-            pressedElevation = 8.dp,
-            hoveredElevation = 6.dp
-        )
-    ) {
-        Text(
-            text = "Get Started",
-            fontSize = 20.sp,
-            fontWeight = FontWeight.SemiBold
-        )
     }
 }
 

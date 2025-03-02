@@ -65,11 +65,11 @@ fun HomePage() {
                     onClick = { selectedTab = 3 },
                     icon = {
                         Icon(
-                            painter = painterResource(id = R.drawable.ic_settings),
-                            contentDescription = "Settings"
+                            painter = painterResource(id = R.drawable.ic_profile),
+                            contentDescription = "Profile"
                         )
                     },
-                    label = { Text("Settings") }
+                    label = { Text("Profile") }
                 )
             }
         }
@@ -95,7 +95,7 @@ fun HomePage() {
                             }
                         )
                         2 -> ChatContent()
-                        3 -> SettingsContent()
+                        3 -> ProfileContent()
                     }
                 }
             }
@@ -267,6 +267,18 @@ fun ChatContent() {
 }
 
 @Composable
-fun SettingsContent() {
-    // TODO: Implement settings content
+fun ProfileContent() {
+    // TODO: Implement profile content
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(
+            text = "Profile Coming Soon",
+            style = MaterialTheme.typography.headlineMedium
+        )
+    }
 } 
