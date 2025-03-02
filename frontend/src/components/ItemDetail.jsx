@@ -1,11 +1,12 @@
-// ItemDetail.jsx
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { useAuth } from '../backendApi/AuthContext';
-import axios from 'axios';
-import { useNotification } from '../backendApi/NotificationContext';
-import webSocketService from '../backendApi/websocketService';
+import { useState, useEffect } from "react"
+import { useParams, useNavigate } from "react-router-dom"
+import { motion, AnimatePresence } from "framer-motion"
+import styled from "styled-components"
+import { useAuth } from "../backendApi/AuthContext"
+import axios from "axios"
+import { useNotification } from "../backendApi/NotificationContext"
+import webSocketService from "../backendApi/websocketService"
+import Footer from './SplashScreen/Footer';
 import {
   MdArrowBack,
   MdLocationOn,
@@ -18,527 +19,1035 @@ import {
   MdChevronLeft,
   MdChevronRight,
   MdClose,
-} from 'react-icons/md';
+} from "react-icons/md"
+
+
+// Styled Components
+const Container = styled.div`
+  min-height: 100vh;
+  background: linear-gradient(to bottom right, rgba(64, 75, 92, 0.1), rgba(42, 81, 143, 0.1), rgba(147, 51, 234, 0.1));
+`
+
+const NavBar = styled.div`
+  background: linear-gradient(to right,rgb(97, 120, 155),rgb(42, 81, 143), #9333ea);
+  box-shadow: 0 2px 4px rgba(248, 239, 239, 0.05);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+`
+
+const NavContent = styled.div`
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+`
+
+const BackButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color:rgb(251, 251, 252);
+  background: none;
+  border: none;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  padding: 0.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+
+  &:hover {
+    color:rgb(207, 211, 231);
+    background-color:rgb(138, 165, 192);
+  }
+`
+
+const MainContent = styled.div`
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+`
+
+const Grid = styled.div`
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+
+  @media (min-width: 768px) {
+    grid-template-columns: 1fr 1fr;
+  }
+`
+
+const ImageGallery = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+`
+
+const MainImageContainer = styled.div`
+  position: relative;
+  aspect-ratio: 4/3;
+  background-color: #f1f3f5;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+`
+
+const MainImage = styled.img`
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+`
+
+const ImageNavButton = styled.button`
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  ${(props) => (props.direction === "prev" ? "left: 1rem;" : "right: 1rem;")}
+  background-color: rgba(255, 255, 255, 0.8);
+  border: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+
+  &:hover {
+    background-color: white;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+`
+
+const ThumbnailsContainer = styled.div`
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+
+  &::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: #f1f3f5;
+    border-radius: 9999px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #dee2e6;
+    border-radius: 9999px;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: #ced4da;
+  }
+`
+
+const ThumbnailButton = styled.button`
+  flex-shrink: 0;
+  width: 80px;
+  height: 80px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 2px solid ${(props) => (props.active ? "#4361ee" : "transparent")};
+  transition: all 0.3s ease;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+  box-shadow: ${(props) => (props.active ? "0 0 0 2px rgba(67, 97, 238, 0.3)" : "none")};
+`
+
+const ThumbnailImage = styled.img`
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+`
+
+const ItemDetails = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  animation: slideUp 0.5s ease-out;
+
+  @keyframes slideUp {
+    from {
+      transform: translateY(20px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+`
+
+const ItemTitle = styled.h1`
+  font-size: 2rem;
+  font-weight: 700;
+  color: transparent;
+  background: linear-gradient(135deg, #4361ee, #7209b7);
+  -webkit-background-clip: text;
+  background-clip: text;
+  margin-bottom: 0.5rem;
+  display: inline-block;
+
+  @media (max-width: 767px) {
+    font-size: 1.5rem;
+  }
+`
+
+const ItemMeta = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+`
+
+const Category = styled.span`
+  padding: 0.5rem 1rem;
+  background-color: white; /* Change background color to white */
+  color: #4361ee; /* Keep the text color as it is */
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border: 1px solid #4361ee; /* Optional: Add a border to make it more visible */
+`
+
+const Location = styled.span`
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: #6c757d;
+  font-size: 0.875rem;
+`
+
+const Description = styled.div`
+  color: #6c757d;
+  line-height: 1.6;
+  background-color: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  border-left: 4px solid #4361ee;
+`
+
+const SectionTitle = styled.h3`
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #343a40;
+  margin-bottom: 1rem;
+  position: relative;
+  padding-left: 1rem;
+
+  &::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: linear-gradient(135deg, #4361ee, #7209b7);
+    border-radius: 9999px;
+  }
+
+  @media (max-width: 767px) {
+    font-size: 1.125rem;
+  }
+`
+
+const AvailabilityGrid = styled.div`
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+
+  @media (min-width: 480px) {
+    grid-template-columns: 1fr 1fr;
+  }
+`
+
+const Card = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem;
+  background-color: ${(props) => (props.variant === "owner" ? "rgba(114, 9, 183, 0.05)" : "rgba(67, 97, 238, 0.05)")};
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  border: 1px solid ${(props) => (props.variant === "owner" ? "rgba(114, 9, 183, 0.1)" : "rgba(67, 97, 238, 0.1)")};
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    background-color: ${(props) => (props.variant === "owner" ? "rgba(114, 9, 183, 0.08)" : "rgba(67, 97, 238, 0.08)")};
+  }
+`
+
+const IconContainer = styled.div`
+  font-size: 1.5rem;
+  color: ${(props) => (props.variant === "owner" ? "#7209b7" : "#4361ee")};
+  background-color: ${(props) => (props.variant === "owner" ? "rgba(114, 9, 183, 0.1)" : "rgba(67, 97, 238, 0.1)")};
+  padding: 0.75rem;
+  border-radius: 50%;
+`
+
+const CardContent = styled.div`
+  flex: 1;
+`
+
+const CardLabel = styled.p`
+  font-size: 0.75rem;
+  color: #6c757d;
+  margin-bottom: 0.25rem;
+`
+
+const CardValue = styled.p`
+  font-weight: 500;
+  color: #343a40;
+`
+
+const ActionButtons = styled.div`
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+  flex-direction: column;
+
+  @media (min-width: 480px) {
+    flex-direction: row;
+  }
+`
+
+const Button = styled(motion.button)`
+  padding: 0.875rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  flex: 1;
+  text-align: center;
+  cursor: pointer;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+
+  ${(props) => {
+    if (props.variant === "primary") {
+      return `
+        background: linear-gradient(135deg, #4361ee, #7209b7);
+        color: white;
+        border: none;
+
+        &:hover {
+          box-shadow: 0 6px 15px rgba(67, 97, 238, 0.4);
+        }
+      `
+    } else if (props.variant === "secondary") {
+      return `
+        background-color: white;
+        color: #4361ee;
+        border: 2px solid #4361ee;
+
+        &:hover {
+          background-color: rgba(67, 97, 238, 0.05);
+          box-shadow: 0 6px 15px rgba(67, 97, 238, 0.2);
+        }
+      `
+    } else if (props.variant === "delete") {
+      return `
+        background-color: white;
+        color: #e63946;
+        border: 2px solid #e63946;
+
+        &:hover {
+          background-color: rgba(230, 57, 70, 0.05);
+          box-shadow: 0 6px 15px rgba(230, 57, 70, 0.2);
+        }
+      `
+    }
+  }}
+`
+
+const Modal = styled(motion.div)`
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 50;
+`
+
+const ModalContent = styled(motion.div)`
+  background-color: white;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 500px;
+  box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+`
+
+const ModalHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem;
+  border-bottom: 1px solid #e9ecef;
+
+  h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #343a40;
+  }
+`
+
+const CloseButton = styled.button`
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  color: #adb5bd;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+  cursor: pointer;
+
+  &:hover {
+    background-color: #f1f3f5;
+    color: #495057;
+  }
+`
+
+const Form = styled.form`
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+`
+
+const FormGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+`
+
+const Label = styled.label`
+  font-weight: 500;
+  color: #495057;
+  font-size: 0.875rem;
+`
+
+const DateRange = styled.span`
+  font-size: 0.75rem;
+  color: #6c757d;
+  font-weight: normal;
+  margin-top: 0.25rem;
+`
+
+const Input = styled.input`
+  padding: 0.75rem;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+
+  &:focus {
+    border-color: #4361ee;
+    box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
+    outline: none;
+  }
+`
+
+const Textarea = styled.textarea`
+  padding: 0.75rem;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  font-size: 1rem;
+  min-height: 120px;
+  resize: vertical;
+  font-family: inherit;
+  transition: all 0.3s ease;
+
+  &:focus {
+    border-color: #4361ee;
+    box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
+    outline: none;
+  }
+`
+
+const SuggestedMessages = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+`
+
+const SuggestedMessageButton = styled.button`
+  padding: 0.5rem 0.75rem;
+  background-color: rgba(67, 97, 238, 0.1);
+  color: #4361ee;
+  border: none;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  transition: all 0.3s ease;
+  cursor: pointer;
+
+  &:hover {
+    background-color: rgba(67, 97, 238, 0.2);
+  }
+`
+
+const ContactInfo = styled.div`
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+`
+
+const ContactNote = styled.div`
+  margin-top: 0.5rem;
+  padding: 1rem;
+  background-color: rgba(67, 97, 238, 0.05);
+  border-radius: 8px;
+  border-left: 4px solid #4361ee;
+
+  p {
+    font-size: 0.875rem;
+    color: #4361ee;
+  }
+`
+
+const LoadingSpinner = styled.div`
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  border: 4px solid rgba(67, 97, 238, 0.1);
+  border-top-color: #4361ee;
+  animation: spin 1s infinite linear;
+  box-shadow: 0 4px 10px rgba(67, 97, 238, 0.2);
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+`
+
+const LoadingContainer = styled.div`
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f8f9fa;
+`
+
+const NotFoundContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background: linear-gradient(to right, blue, purple);
+  color: white;
+  text-align: center;
+
+  h2 {
+    font-size: 2rem;
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 1.5rem;
+  }
+`
 
 const ItemDetail = () => {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const { user } = useAuth();
-  const [item, setItem] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [showContactInfo, setShowContactInfo] = useState(false);
-  const [showBorrowForm, setShowBorrowForm] = useState(false);
-  const { showNotification } = useNotification();
+  const { id } = useParams()
+  const navigate = useNavigate()
+  const { user } = useAuth()
+  const [item, setItem] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [currentImageIndex, setCurrentImageIndex] = useState(0)
+  const [showContactInfo, setShowContactInfo] = useState(false)
+  const [showBorrowForm, setShowBorrowForm] = useState(false)
+  const { showNotification } = useNotification()
 
   useEffect(() => {
-    let mounted = true;
+    let mounted = true
 
     const connectWebSocket = async () => {
-        if (user && mounted) {
-            try {
-                await webSocketService.connect(user.id, (notification) => {
-                    if (mounted) {
-                        showNotification({
-                            type: 'info',
-                            title: notification.title,
-                            message: notification.message,
-                        });
-                    }
-                });
-            } catch (error) {
-                console.error('WebSocket connection failed:', error);
-                if (mounted) {
-                    showNotification({
-                        type: 'error',
-                        title: 'Connection Error',
-                        message: 'Failed to connect to notification service',
-                    });
-                }
+      if (user && mounted) {
+        try {
+          await webSocketService.connect(user.id, (notification) => {
+            if (mounted) {
+              showNotification({
+                type: "info",
+                title: notification.title,
+                message: notification.message,
+              })
             }
+          })
+        } catch (error) {
+          console.error("WebSocket connection failed:", error)
+          if (mounted) {
+            showNotification({
+              type: "error",
+              title: "Connection Error",
+              message: "Failed to connect to notification service",
+            })
+          }
         }
-    };
+      }
+    }
 
-    connectWebSocket();
+    connectWebSocket()
 
     return () => {
-        mounted = false;
-        webSocketService.disconnect();
-    };
-}, [user, showNotification]);
-
+      mounted = false
+      webSocketService.disconnect()
+    }
+  }, [user, showNotification])
 
   const [borrowRequest, setBorrowRequest] = useState({
-    startDate: '',
-    endDate: '',
-    message: '',
-  });
+    startDate: "",
+    endDate: "",
+    message: "",
+  })
 
   const formatDateForInput = (dateString) => {
-    const date = new Date(dateString);
-    return date.toISOString().split('T')[0];
-};
+    const date = new Date(dateString)
+    return date.toISOString().split("T")[0]
+  }
 
-const isDateInRange = (date, startDate, endDate) => {
-    const checkDate = new Date(date);
-    const availableFrom = new Date(startDate);
-    const availableUntil = new Date(endDate);
-    return checkDate >= availableFrom && checkDate <= availableUntil;
-};
+  const isDateInRange = (date, startDate, endDate) => {
+    const checkDate = new Date(date)
+    const availableFrom = new Date(startDate)
+    const availableUntil = new Date(endDate)
+    return checkDate >= availableFrom && checkDate <= availableUntil
+  }
 
   useEffect(() => {
     const fetchItemDetails = async () => {
       try {
         const response = await axios.get(`http://localhost:8080/api/borrowing/items/${id}`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        });
-        setItem(response.data);
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        })
+        setItem(response.data)
       } catch (error) {
-        console.error('Error fetching item details:', error);
+        console.error("Error fetching item details:", error)
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    };
+    }
 
-    fetchItemDetails();
-  }, [id]);
+    fetchItemDetails()
+  }, [id])
 
   const handleBorrowSubmit = async (e) => {
-    e.preventDefault();
+    e.preventDefault()
     try {
-        // Format dates to ISO string format
-        const formattedRequest = {
-            itemId: parseInt(id),
-            startDate: new Date(borrowRequest.startDate).toISOString().split('T')[0],
-            endDate: new Date(borrowRequest.endDate).toISOString().split('T')[0],
-            message: borrowRequest.message,
-            itemName: item.name
-        };
+      // Format dates to ISO string format
+      const formattedRequest = {
+        itemId: Number.parseInt(id),
+        startDate: new Date(borrowRequest.startDate).toISOString().split("T")[0],
+        endDate: new Date(borrowRequest.endDate).toISOString().split("T")[0],
+        message: borrowRequest.message,
+        itemName: item.name,
+      }
 
-        console.log('Sending request:', formattedRequest); // For debugging
+      console.log("Sending request:", formattedRequest) // For debugging
 
-        const response = await axios.post(
-            `http://localhost:8080/api/borrowing/requests`,
-            formattedRequest,
-            {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                    'Content-Type': 'application/json'
-                }
-            }
-        );
+      const response = await axios.post(`http://localhost:8080/api/borrowing/requests`, formattedRequest, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          "Content-Type": "application/json",
+        },
+      })
 
-        if (response.status === 200 || response.status === 201) {
-            setShowBorrowForm(false);
-            showNotification({
-                type: 'success',
-                title: 'Request Sent',
-                message: 'Your borrow request has been sent to the owner.',
-            });
-        }
-    } catch (error) {
-        console.error('Borrow request error:', error);
-        const errorMessage = error.response?.data?.message || 
-                           'Failed to send borrow request. Please try again.';
+      if (response.status === 200 || response.status === 201) {
+        setShowBorrowForm(false)
         showNotification({
-            type: 'error',
-            title: 'Error',
-            message: errorMessage
-        });
+          type: "success",
+          title: "Request Sent",
+          message: "Your borrow request has been sent to the owner.",
+        })
+      }
+    } catch (error) {
+      console.error("Borrow request error:", error)
+      const errorMessage = error.response?.data?.message || "Failed to send borrow request. Please try again."
+      showNotification({
+        type: "error",
+        title: "Error",
+        message: errorMessage,
+      })
     }
-};
-
+  }
 
   const suggestedMessages = [
     "Hi! I'm interested in borrowing this item. Is it still available?",
     "Hello! I'd like to borrow this. Can you confirm if it's in good condition?",
     "I'd love to borrow this item. I'll take good care of it!",
-  ];
+  ]
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
-      </div>
-    );
+      <LoadingContainer>
+        <LoadingSpinner />
+      </LoadingContainer>
+    )
   }
 
   if (!item) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center">
-        <h2 className="text-2xl font-semibold text-gray-700">Item not found</h2>
-        <button
-          onClick={() => navigate('/borrowing')}
-          className="mt-4 px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
-        >
+      <NotFoundContainer>
+        <h2>Item not found</h2>
+        <Button variant="primary" onClick={() => navigate("/borrowing")}>
           Back to Items
-        </button>
-      </div>
-    );
+        </Button>
+      </NotFoundContainer>
+    )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Navigation Bar */}
-      <div className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <button
-            onClick={() => navigate('/borrowing')}
-            className="flex items-center gap-2 text-gray-600 hover:text-blue-600"
-          >
-            <MdArrowBack className="text-xl" />
+    <Container>
+      <NavBar>
+        <NavContent>
+          <BackButton onClick={() => navigate("/borrowing")}>
+            <MdArrowBack />
             <span>Back to Items</span>
-          </button>
-        </div>
-      </div>
+          </BackButton>
+        </NavContent>
+      </NavBar>
 
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* Image Gallery */}
-          <div className="space-y-4">
-            <div className="relative aspect-[4/3] bg-gray-100 rounded-xl overflow-hidden">
+      <MainContent>
+        <Grid>
+          <ImageGallery>
+            <MainImageContainer>
               {item.imageUrls && item.imageUrls.length > 0 ? (
                 <>
-                  <img
-                    src={item.imageUrls[currentImageIndex]}
-                    alt={item.name}
-                    className="w-full h-full object-cover"
-                  />
+                  <MainImage src={item.imageUrls[currentImageIndex] || "/placeholder.svg"} alt={item.name} />
                   {item.imageUrls.length > 1 && (
                     <>
-                      <button
-                        onClick={() => setCurrentImageIndex(prev => 
-                          prev === 0 ? item.imageUrls.length - 1 : prev - 1
-                        )}
-                        className="absolute left-4 top-1/2 transform -translate-y-1/2
-                                 bg-white/80 p-2 rounded-full hover:bg-white"
+                      <ImageNavButton
+                        direction="prev"
+                        onClick={() =>
+                          setCurrentImageIndex((prev) => (prev === 0 ? item.imageUrls.length - 1 : prev - 1))
+                        }
                       >
-                        <MdChevronLeft className="text-2xl" />
-                      </button>
-                      <button
-                        onClick={() => setCurrentImageIndex(prev => 
-                          prev === item.imageUrls.length - 1 ? 0 : prev + 1
-                        )}
-                        className="absolute right-4 top-1/2 transform -translate-y-1/2
-                                 bg-white/80 p-2 rounded-full hover:bg-white"
+                        <MdChevronLeft />
+                      </ImageNavButton>
+                      <ImageNavButton
+                        direction="next"
+                        onClick={() =>
+                          setCurrentImageIndex((prev) => (prev === item.imageUrls.length - 1 ? 0 : prev + 1))
+                        }
                       >
-                        <MdChevronRight className="text-2xl" />
-                      </button>
+                        <MdChevronRight />
+                      </ImageNavButton>
                     </>
                   )}
                 </>
               ) : (
                 <div className="flex items-center justify-center h-full">
-                  <p className="text-gray-500">No images available</p>
+                  <p>No images available</p>
                 </div>
               )}
-            </div>
-            
-            {/* Thumbnails */}
+            </MainImageContainer>
+
             {item.imageUrls && item.imageUrls.length > 1 && (
-              <div className="flex gap-2 overflow-x-auto pb-2">
+              <ThumbnailsContainer>
                 {item.imageUrls.map((url, index) => (
-                  <button
+                  <ThumbnailButton
                     key={index}
+                    active={currentImageIndex === index}
                     onClick={() => setCurrentImageIndex(index)}
                     className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2
                               ${currentImageIndex === index ? 'border-blue-500' : 'border-transparent'}`}
                   >
-                    <img
-                      src={url}
-                      alt={`${item.name} thumbnail ${index + 1}`}
-                      className="w-full h-full object-cover"
-                    />
-                  </button>
+                    <ThumbnailImage src={url} alt={`${item.name} thumbnail ${index + 1}`} />
+                  </ThumbnailButton>
                 ))}
-              </div>
+              </ThumbnailsContainer>
             )}
-          </div>
+          </ImageGallery>
 
-          {/* Item Details */}
-          <div className="space-y-6">
+          <ItemDetails>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">{item.name}</h1>
-              <div className="flex items-center gap-4 mt-2">
-                <span className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-sm font-medium">
-                  {item.category}
-                </span>
-                <span className="flex items-center gap-1 text-gray-500">
+              <ItemTitle>{item.name}</ItemTitle>
+              <ItemMeta>
+                <Category>{item.category}</Category>
+                <Location>
                   <MdLocationOn />
                   {item.location}
-                </span>
-              </div>
+                </Location>
+              </ItemMeta>
             </div>
 
-            <div className="prose max-w-none">
-              <p className="text-gray-600">{item.description}</p>
+            <Description>
+              <p>{item.description}</p>
+            </Description>
+
+            <div>
+              <SectionTitle>Availability</SectionTitle>
+              <AvailabilityGrid>
+                <Card>
+                  <IconContainer>
+                    <MdCalendarToday />
+                  </IconContainer>
+                  <CardContent>
+                    <CardLabel>Available From</CardLabel>
+                    <CardValue>{new Date(item.availableFrom).toLocaleDateString()}</CardValue>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <IconContainer>
+                    <MdCalendarToday />
+                  </IconContainer>
+                  <CardContent>
+                    <CardLabel>Available Until</CardLabel>
+                    <CardValue>{new Date(item.availableUntil).toLocaleDateString()}</CardValue>
+                  </CardContent>
+                </Card>
+              </AvailabilityGrid>
             </div>
 
-            <div className="space-y-4">
-              <h3 className="text-xl font-semibold">Availability</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex items-center gap-2 p-4 bg-gray-50 rounded-lg">
-                  <MdCalendarToday className="text-blue-500 text-xl" />
-                  <div>
-                    <p className="text-sm text-gray-500">Available From</p>
-                    <p className="font-medium">
-                      {new Date(item.availableFrom).toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 p-4 bg-gray-50 rounded-lg">
-                  <MdCalendarToday className="text-blue-500 text-xl" />
-                  <div>
-                    <p className="text-sm text-gray-500">Available Until</p>
-                    <p className="font-medium">
-                      {new Date(item.availableUntil).toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <h3 className="text-xl font-semibold">Owner</h3>
-              <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
-                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                  <MdPerson className="text-2xl text-blue-500" />
-                </div>
-                <div>
-                  <p className="font-medium">{item.owner?.username || "Anonymous"}</p>
-                  <p className="text-sm text-gray-500">{item.availabilityPeriod}</p>
-                </div>
-              </div>
+            <div>
+              <SectionTitle>Owner</SectionTitle>
+              <Card variant="owner">
+                <IconContainer variant="owner">
+                  <MdPerson />
+                </IconContainer>
+                <CardContent>
+                  <CardValue>{item.owner?.username || "Anonymous"}</CardValue>
+                  <CardLabel>{item.availabilityPeriod}</CardLabel>
+                </CardContent>
+              </Card>
             </div>
 
             {/* Terms and Conditions */}
             {item.terms && (
-              <div className="space-y-2">
-                <h3 className="text-xl font-semibold">Terms and Conditions</h3>
-                <div className="p-4 bg-gray-50 rounded-lg">
-                  <p className="text-gray-600">{item.terms}</p>
-                </div>
+              <div>
+                <SectionTitle>Terms and Conditions</SectionTitle>
+                <Description>
+                  <p>{item.terms}</p>
+                </Description>
               </div>
             )}
 
-            {/* Action Buttons */}
-            {item.owner?.id !== user?.id ? (
-            // Show borrow and contact buttons for non-owners
-            <div className="flex gap-4 pt-4">
-                <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => setShowBorrowForm(true)}
-                className="flex-1 px-6 py-3 bg-blue-500 text-white rounded-lg font-medium
-                            hover:bg-blue-600 transition-colors"
-                >
-                Request to Borrow
-                </motion.button>
-                <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => setShowContactInfo(true)}
-                className="flex-1 px-6 py-3 bg-white text-blue-500 rounded-lg font-medium
-                            border-2 border-blue-500 hover:bg-blue-50 transition-colors"
-                >
-                Contact Owner
-                </motion.button>
-            </div>
-            ) : (
-            // Show management buttons for owners
-            <div className="flex gap-4 pt-4">
-                <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => navigate(`/borrowing/edit/${item.id}`)}
-                className="flex-1 px-6 py-3 bg-blue-500 text-white rounded-lg font-medium
-                            hover:bg-blue-600 transition-colors"
-                >
-                Edit Item
-                </motion.button>
-                <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => {/* Add delete functionality */}}
-                className="flex-1 px-6 py-3 bg-white text-red-500 rounded-lg font-medium
-                            border-2 border-red-500 hover:bg-red-50 transition-colors"
-                >
-                Delete Item
-                </motion.button>
-            </div>
-            )}
-          </div>
-        </div>
-      </div>
+            <ActionButtons>
+              {item.owner?.id !== user?.id ? (
+                <>
+                  <Button
+                    variant="primary"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setShowBorrowForm(true)}
+                  >
+                    Request to Borrow
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setShowContactInfo(true)}
+                  >
+                    Contact Owner
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    variant="primary"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => navigate(`/borrowing/edit/${item.id}`)}
+                  >
+                    Edit Item
+                  </Button>
+                  <Button
+                    variant="delete"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => {
+                      /* Add delete functionality */
+                    }}
+                  >
+                    Delete Item
+                  </Button>
+                </>
+              )}
+            </ActionButtons>
+          </ItemDetails>
+        </Grid>
+      </MainContent>
 
-      {/* Borrow Request Modal */}
-      {showBorrowForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="bg-white rounded-xl p-6 max-w-md w-full"
-          >
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-semibold">Request to Borrow</h3>
-              <button
-                onClick={() => setShowBorrowForm(false)}
-                className="p-2 hover:bg-gray-100 rounded-full"
-              >
-                <MdClose />
-              </button>
-            </div>
-            
-            <form onSubmit={handleBorrowSubmit} className="space-y-4">
-            <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+      <AnimatePresence>
+        {showBorrowForm && (
+          <Modal initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <ModalContent
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+            >
+              <ModalHeader>
+                <h3>Request to Borrow</h3>
+                <CloseButton onClick={() => setShowBorrowForm(false)}>
+                  <MdClose />
+                </CloseButton>
+              </ModalHeader>
+
+              <Form onSubmit={handleBorrowSubmit}>
+                <FormGroup>
+                  <Label>
                     Start Date
-                    <span className="text-xs text-gray-500 ml-2">
-                        (Available: {new Date(item.availableFrom).toLocaleDateString()} - 
-                        {new Date(item.availableUntil).toLocaleDateString()})
-                    </span>
-                </label>
-                <input
+                    <DateRange>
+                      (Available: {new Date(item.availableFrom).toLocaleDateString()} -
+                      {new Date(item.availableUntil).toLocaleDateString()})
+                    </DateRange>
+                  </Label>
+                  <Input
                     type="date"
                     value={borrowRequest.startDate}
-                    onChange={(e) => setBorrowRequest({
+                    onChange={(e) =>
+                      setBorrowRequest({
                         ...borrowRequest,
                         startDate: e.target.value,
-                        // Reset end date if it's before new start date
-                        endDate: new Date(e.target.value) > new Date(borrowRequest.endDate) 
-                            ? e.target.value 
-                            : borrowRequest.endDate
-                    })}
+                        endDate:
+                          new Date(e.target.value) > new Date(borrowRequest.endDate)
+                            ? e.target.value
+                            : borrowRequest.endDate,
+                      })
+                    }
                     min={formatDateForInput(item.availableFrom)}
                     max={formatDateForInput(item.availableUntil)}
                     className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                     required
-                />
-            </div>
+                  />
+                </FormGroup>
 
-            <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                    End Date
-                </label>
-                <input
+                <FormGroup>
+                  <Label>End Date</Label>
+                  <Input
                     type="date"
                     value={borrowRequest.endDate}
-                    onChange={(e) => setBorrowRequest({
+                    onChange={(e) =>
+                      setBorrowRequest({
                         ...borrowRequest,
-                        endDate: e.target.value
-                    })}
+                        endDate: e.target.value,
+                      })
+                    }
                     min={borrowRequest.startDate || formatDateForInput(item.availableFrom)}
                     max={formatDateForInput(item.availableUntil)}
                     className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                     required
-                />
-            </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Message to Owner
-                </label>
-                <div className="mb-2 flex flex-wrap gap-2">
+                  />
+                </FormGroup>
+
+                <FormGroup>
+                  <Label>Message to Owner</Label>
+                  <SuggestedMessages>
                     {suggestedMessages.map((msg, index) => (
-                    <button
+                      <SuggestedMessageButton
                         key={index}
                         type="button"
-                        onClick={() => setBorrowRequest(prev => ({ ...prev, message: msg }))}
-                        className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 
-                                rounded-full text-gray-700 transition-colors"
-                    >
+                        onClick={() =>
+                          setBorrowRequest((prev) => ({
+                            ...prev,
+                            message: msg,
+                          }))
+                        }
+                      >
                         {msg}
-                    </button>
+                      </SuggestedMessageButton>
                     ))}
-                </div>
-                <textarea
+                  </SuggestedMessages>
+                  <Textarea
                     value={borrowRequest.message}
-                    onChange={(e) => setBorrowRequest({
-                    ...borrowRequest,
-                    message: e.target.value
-                    })}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 
-                            focus:ring-blue-500 h-32"
+                    onChange={(e) =>
+                      setBorrowRequest({
+                        ...borrowRequest,
+                        message: e.target.value,
+                      })
+                    }
                     placeholder="Explain why you'd like to borrow this item..."
                     required
-                />
-                </div>
-              
-              <button
-                type="submit"
-                className="w-full px-6 py-3 bg-blue-500 text-white rounded-lg font-medium
-                          hover:bg-blue-600 transition-colors"
-              >
-                Submit Request
-              </button>
-            </form>
-          </motion.div>
-        </div>
-      )}
+                  />
+                </FormGroup>
 
-      {/* Contact Info Modal */}
-      {showContactInfo && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="bg-white rounded-xl p-6 max-w-md w-full"
-          >
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-semibold">Contact Information</h3>
-              <button
-                onClick={() => setShowContactInfo(false)}
-                className="p-2 hover:bg-gray-100 rounded-full"
-              >
-                <MdClose />
-              </button>
-            </div>
-            
-            <div className="space-y-4">
-              {item.email && (
-                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                  <MdEmail className="text-xl text-blue-500" />
-                  <div>
-                    <p className="text-sm text-gray-500">Email</p>
-                    <p className="font-medium">{item.email}</p>
-                  </div>
-                </div>
-              )}
-              
-              {item.phone && (
-                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                  <MdPhone className="text-xl text-blue-500" />
-                  <div>
-                    <p className="text-sm text-gray-500">Phone</p>
-                    <p className="font-medium">{item.phone}</p>
-                  </div>
-                </div>
-              )}
+                <Button type="submit" variant="primary">
+                  Submit Request
+                </Button>
+              </Form>
+            </ModalContent>
+          </Modal>
+        )}
 
-              {/* Preferred Contact Method */}
-              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                <MdInfo className="text-xl text-blue-500" />
-                <div>
-                  <p className="text-sm text-gray-500">Preferred Contact Method</p>
-                  <p className="font-medium">{item.contactPreference}</p>
-                </div>
-              </div>
+        {showContactInfo && (
+          <Modal initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <ModalContent
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+            >
+              <ModalHeader>
+                <h3>Contact Information</h3>
+                <CloseButton onClick={() => setShowContactInfo(false)}>
+                  <MdClose />
+                </CloseButton>
+              </ModalHeader>
 
-              {/* Contact Note */}
-              <div className="mt-4 p-4 bg-blue-50 rounded-lg">
-                <p className="text-sm text-blue-700">
-                  Please respect the owner's preferred contact method and contact during reasonable hours.
-                </p>
-              </div>
-            </div>
-          </motion.div>
-        </div>
-      )}
+              <ContactInfo>
+                {item.email && (
+                  <Card variant="owner">
+                    <IconContainer variant="owner">
+                      <MdEmail />
+                    </IconContainer>
+                    <CardContent>
+                      <CardLabel>Email</CardLabel>
+                      <CardValue>{item.email}</CardValue>
+                    </CardContent>
+                  </Card>
+                )}
 
-      {/* Success Toast Notification */}
-      {/* You can add a toast notification system here */}
-    </div>
-  );
-};
+                {item.phone && (
+                  <Card variant="owner">
+                    <IconContainer variant="owner">
+                      <MdPhone />
+                    </IconContainer>
+                    <CardContent>
+                      <CardLabel>Phone</CardLabel>
+                      <CardValue>{item.phone}</CardValue>
+                    </CardContent>
+                  </Card>
+                )}
+
+                <Card variant="owner">
+                  <IconContainer variant="owner">
+                    <MdInfo />
+                  </IconContainer>
+                  <CardContent>
+                    <CardLabel>Preferred Contact Method</CardLabel>
+                    <CardValue>{item.contactPreference}</CardValue>
+                  </CardContent>
+                </Card>
+
+                <ContactNote>
+                  <p>Please respect the owner's preferred contact method and contact during reasonable hours.</p>
+                </ContactNote>
+              </ContactInfo>
+            </ModalContent>
+          </Modal>
+        )}
+        <Footer />
+      </AnimatePresence>
+    </Container>
+  )
+}
 
 export default ItemDetail;

@@ -1076,6 +1076,7 @@ const Homepage = () => {
             </nav>
           </motion.div>
         )}
+        <Footer />
     </div>
   );
 };
