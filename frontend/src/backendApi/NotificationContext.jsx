@@ -23,16 +23,16 @@ export const NotificationProvider = ({ children }) => {
     const fetchNotifications = useCallback(async () => {
       if (user) {
           try {
-              console.log("Fetching notifications for user:", user);
+              //console.log("Fetching notifications for user:", user);
               const response = await axios.get('http://localhost:8080/api/notifications', {
                   headers: {
                       Authorization: `Bearer ${localStorage.getItem('token')}`
                   }
               });
-              console.log("Raw response:", response);
+              //console.log("Raw response:", response);
               
               if (response.data) {
-                  console.log("Setting notifications:", response.data);
+                  //console.log("Setting notifications:", response.data);
                   setNotifications(response.data);
                   const unreadCount = response.data.filter(n => !n.is_read).length;
                   setUnreadCount(unreadCount);

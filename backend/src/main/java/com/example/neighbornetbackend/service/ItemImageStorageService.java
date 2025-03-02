@@ -52,4 +52,15 @@ public class ItemImageStorageService {
     public Path getItemImagePath(String filename) {
         return itemImagesLocation.resolve(filename);
     }
+
+    public void deleteItemImage(String imageUrl) throws IOException {
+        String filename = imageUrl.substring(imageUrl.lastIndexOf('/') + 1);
+        Path imagePath = itemImagesLocation.resolve(filename);
+
+        if (Files.exists(imagePath)) {
+            Files.delete(imagePath);
+        } else {
+            throw new IOException("Image file not found: " + filename);
+        }
+    }
 }
