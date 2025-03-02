@@ -7,6 +7,7 @@ import axios from "axios"
 import { useNotification } from "../backendApi/NotificationContext"
 import webSocketService from "../backendApi/websocketService"
 import Footer from './SplashScreen/Footer';
+import toast from 'react-hot-toast';
 import {
   MdArrowBack,
   MdLocationOn,
@@ -156,13 +157,13 @@ const ThumbnailButton = styled.button`
   height: 80px;
   border-radius: 8px;
   overflow: hidden;
-  border: 2px solid ${(props) => (props.active ? "#4361ee" : "transparent")};
+  border: 2px solid ${(props) => (props.$active ? "#4361ee" : "transparent")};
   transition: all 0.3s ease;
   padding: 0;
   background: none;
   cursor: pointer;
-  box-shadow: ${(props) => (props.active ? "0 0 0 2px rgba(67, 97, 238, 0.3)" : "none")};
-`
+  box-shadow: ${(props) => (props.$active ? "0 0 0 2px rgba(67, 97, 238, 0.3)" : "none")};
+`;
 
 const ThumbnailImage = styled.img`
   width: 100%;
@@ -278,25 +279,25 @@ const Card = styled.div`
   align-items: center;
   gap: 1rem;
   padding: 1.25rem;
-  background-color: ${(props) => (props.variant === "owner" ? "rgba(114, 9, 183, 0.05)" : "rgba(67, 97, 238, 0.05)")};
+  background-color: ${(props) => (props.$variant === "owner" ? "rgba(114, 9, 183, 0.05)" : "rgba(67, 97, 238, 0.05)")};
   border-radius: 12px;
   transition: all 0.3s ease;
-  border: 1px solid ${(props) => (props.variant === "owner" ? "rgba(114, 9, 183, 0.1)" : "rgba(67, 97, 238, 0.1)")};
+  border: 1px solid ${(props) => (props.$variant === "owner" ? "rgba(114, 9, 183, 0.1)" : "rgba(67, 97, 238, 0.1)")};
 
   &:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    background-color: ${(props) => (props.variant === "owner" ? "rgba(114, 9, 183, 0.08)" : "rgba(67, 97, 238, 0.08)")};
+    background-color: ${(props) => (props.$variant === "owner" ? "rgba(114, 9, 183, 0.08)" : "rgba(67, 97, 238, 0.08)")};
   }
-`
+`;
 
 const IconContainer = styled.div`
   font-size: 1.5rem;
-  color: ${(props) => (props.variant === "owner" ? "#7209b7" : "#4361ee")};
-  background-color: ${(props) => (props.variant === "owner" ? "rgba(114, 9, 183, 0.1)" : "rgba(67, 97, 238, 0.1)")};
+  color: ${(props) => (props.$variant === "owner" ? "#7209b7" : "#4361ee")};
+  background-color: ${(props) => (props.$variant === "owner" ? "rgba(114, 9, 183, 0.1)" : "rgba(67, 97, 238, 0.1)")};
   padding: 0.75rem;
   border-radius: 50%;
-`
+`;
 
 const CardContent = styled.div`
   flex: 1;
@@ -335,8 +336,8 @@ const Button = styled(motion.button)`
   cursor: pointer;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 
-  ${(props) => {
-    if (props.variant === "primary") {
+   ${(props) => {
+    if (props.$variant === "primary") {
       return `
         background: linear-gradient(135deg, #4361ee, #7209b7);
         color: white;
@@ -345,8 +346,8 @@ const Button = styled(motion.button)`
         &:hover {
           box-shadow: 0 6px 15px rgba(67, 97, 238, 0.4);
         }
-      `
-    } else if (props.variant === "secondary") {
+      `;
+    } else if (props.$variant === "secondary") {
       return `
         background-color: white;
         color: #4361ee;
@@ -356,8 +357,8 @@ const Button = styled(motion.button)`
           background-color: rgba(67, 97, 238, 0.05);
           box-shadow: 0 6px 15px rgba(67, 97, 238, 0.2);
         }
-      `
-    } else if (props.variant === "delete") {
+      `;
+    } else if (props.$variant === "delete") {
       return `
         background-color: white;
         color: #e63946;
@@ -367,10 +368,10 @@ const Button = styled(motion.button)`
           background-color: rgba(230, 57, 70, 0.05);
           box-shadow: 0 6px 15px rgba(230, 57, 70, 0.2);
         }
-      `
+      `;
     }
   }}
-`
+`;
 
 const Modal = styled(motion.div)`
   position: fixed;
@@ -383,6 +384,8 @@ const Modal = styled(motion.div)`
   padding: 1rem;
   z-index: 50;
 `
+
+
 
 const ModalContent = styled(motion.div)`
   background-color: white;
@@ -577,6 +580,18 @@ const ItemDetail = () => {
   const [showContactInfo, setShowContactInfo] = useState(false)
   const [showBorrowForm, setShowBorrowForm] = useState(false)
   const { showNotification } = useNotification()
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedItem, setEditedItem] = useState(null);
+
+  useEffect(() => {
+    if (item && !editedItem) {
+      setEditedItem({
+        ...item,
+        availableFrom: formatDateForInput(item.availableFrom),
+        availableUntil: formatDateForInput(item.availableUntil),
+      });
+    }
+  }, [item]);
 
   useEffect(() => {
     let mounted = true
@@ -586,25 +601,19 @@ const ItemDetail = () => {
         try {
           await webSocketService.connect(user.id, (notification) => {
             if (mounted) {
-              showNotification({
-                type: "info",
-                title: notification.title,
-                message: notification.message,
-              })
+              toast(notification.message, {
+                icon: '🔔',
+              });
             }
           })
         } catch (error) {
           console.error("WebSocket connection failed:", error)
           if (mounted) {
-            showNotification({
-              type: "error",
-              title: "Connection Error",
-              message: "Failed to connect to notification service",
-            })
+            toast.error("Failed to connect to notification service");
           }
         }
       }
-    }
+    };
 
     connectWebSocket()
 
@@ -625,12 +634,51 @@ const ItemDetail = () => {
     return date.toISOString().split("T")[0]
   }
 
-  const isDateInRange = (date, startDate, endDate) => {
-    const checkDate = new Date(date)
-    const availableFrom = new Date(startDate)
-    const availableUntil = new Date(endDate)
-    return checkDate >= availableFrom && checkDate <= availableUntil
-  }
+  const handleDelete = async () => {
+    if (window.confirm('Are you sure you want to delete this item? This will also delete all associated borrow requests.')) {
+      try {
+        await axios.delete(`http://localhost:8080/api/borrowing/items/${id}`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+        });
+        
+        toast.success('The item and all associated borrow requests have been successfully deleted.');
+        navigate('/borrowing');
+      } catch (error) {
+        console.error("Error deleting item:", error);
+        toast.error(error.response?.data?.message || "Failed to delete the item. Please try again.");
+      }
+    }
+  };
+
+  const handleUpdate = async () => {
+    try {
+      const response = await axios.put(
+        `http://localhost:8080/api/borrowing/items/${id}`,
+        editedItem,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+  
+      setItem(response.data);
+      setIsEditing(false);
+      toast.success('Your item has been successfully updated.');
+    } catch (error) {
+      console.error("Error updating item:", error);
+      toast.error(error.response?.data?.message || "Failed to update the item");
+    }
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setEditedItem(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
 
   useEffect(() => {
     const fetchItemDetails = async () => {
@@ -639,6 +687,7 @@ const ItemDetail = () => {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         })
         setItem(response.data)
+        //console.log("Item details:", response.data)
       } catch (error) {
         console.error("Error fetching item details:", error)
       } finally {
@@ -652,7 +701,6 @@ const ItemDetail = () => {
   const handleBorrowSubmit = async (e) => {
     e.preventDefault()
     try {
-      // Format dates to ISO string format
       const formattedRequest = {
         itemId: Number.parseInt(id),
         startDate: new Date(borrowRequest.startDate).toISOString().split("T")[0],
@@ -660,34 +708,24 @@ const ItemDetail = () => {
         message: borrowRequest.message,
         itemName: item.name,
       }
-
-      console.log("Sending request:", formattedRequest) // For debugging
-
+  
       const response = await axios.post(`http://localhost:8080/api/borrowing/requests`, formattedRequest, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
           "Content-Type": "application/json",
         },
       })
-
+  
       if (response.status === 200 || response.status === 201) {
         setShowBorrowForm(false)
-        showNotification({
-          type: "success",
-          title: "Request Sent",
-          message: "Your borrow request has been sent to the owner.",
-        })
+        toast.success('Your borrow request has been sent to the owner.');
       }
     } catch (error) {
       console.error("Borrow request error:", error)
       const errorMessage = error.response?.data?.message || "Failed to send borrow request. Please try again."
-      showNotification({
-        type: "error",
-        title: "Error",
-        message: errorMessage,
-      })
+      toast.error(errorMessage);
     }
-  }
+  };
 
   const suggestedMessages = [
     "Hi! I'm interested in borrowing this item. Is it still available?",
@@ -707,7 +745,7 @@ const ItemDetail = () => {
     return (
       <NotFoundContainer>
         <h2>Item not found</h2>
-        <Button variant="primary" onClick={() => navigate("/borrowing")}>
+        <Button $variant="primary" onClick={() => navigate("/borrowing")}>
           Back to Items
         </Button>
       </NotFoundContainer>
@@ -765,7 +803,7 @@ const ItemDetail = () => {
                 {item.imageUrls.map((url, index) => (
                   <ThumbnailButton
                     key={index}
-                    active={currentImageIndex === index}
+                    $active={currentImageIndex === index}
                     onClick={() => setCurrentImageIndex(index)}
                     className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2
                               ${currentImageIndex === index ? 'border-blue-500' : 'border-transparent'}`}
@@ -778,112 +816,268 @@ const ItemDetail = () => {
           </ImageGallery>
 
           <ItemDetails>
-            <div>
-              <ItemTitle>{item.name}</ItemTitle>
-              <ItemMeta>
-                <Category>{item.category}</Category>
-                <Location>
-                  <MdLocationOn />
-                  {item.location}
-                </Location>
-              </ItemMeta>
-            </div>
-
-            <Description>
-              <p>{item.description}</p>
-            </Description>
-
-            <div>
-              <SectionTitle>Availability</SectionTitle>
-              <AvailabilityGrid>
-                <Card>
-                  <IconContainer>
-                    <MdCalendarToday />
-                  </IconContainer>
-                  <CardContent>
-                    <CardLabel>Available From</CardLabel>
-                    <CardValue>{new Date(item.availableFrom).toLocaleDateString()}</CardValue>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <IconContainer>
-                    <MdCalendarToday />
-                  </IconContainer>
-                  <CardContent>
-                    <CardLabel>Available Until</CardLabel>
-                    <CardValue>{new Date(item.availableUntil).toLocaleDateString()}</CardValue>
-                  </CardContent>
-                </Card>
-              </AvailabilityGrid>
-            </div>
-
-            <div>
-              <SectionTitle>Owner</SectionTitle>
-              <Card variant="owner">
-                <IconContainer variant="owner">
-                  <MdPerson />
-                </IconContainer>
-                <CardContent>
-                  <CardValue>{item.owner?.username || "Anonymous"}</CardValue>
-                  <CardLabel>{item.availabilityPeriod}</CardLabel>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Terms and Conditions */}
-            {item.terms && (
-              <div>
-                <SectionTitle>Terms and Conditions</SectionTitle>
-                <Description>
-                  <p>{item.terms}</p>
-                </Description>
-              </div>
-            )}
-
-            <ActionButtons>
-              {item.owner?.id !== user?.id ? (
+              {!isEditing ? (
+                // Regular View Mode - Your existing code
                 <>
-                  <Button
-                    variant="primary"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => setShowBorrowForm(true)}
-                  >
-                    Request to Borrow
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => setShowContactInfo(true)}
-                  >
-                    Contact Owner
-                  </Button>
+                  <div>
+                    <ItemTitle>{item.name}</ItemTitle>
+                    <ItemMeta>
+                      <Category>{item.category}</Category>
+                      <Location>
+                        <MdLocationOn />
+                        {item.location}
+                      </Location>
+                    </ItemMeta>
+                  </div>
+
+                  <Description>
+                    <p>{item.description}</p>
+                  </Description>
+
+                  <div>
+                    <SectionTitle>Availability</SectionTitle>
+                    <AvailabilityGrid>
+                      <Card>
+                        <IconContainer>
+                          <MdCalendarToday />
+                        </IconContainer>
+                        <CardContent>
+                          <CardLabel>Available From</CardLabel>
+                          <CardValue>{new Date(item.availableFrom).toLocaleDateString()}</CardValue>
+                        </CardContent>
+                      </Card>
+                      <Card>
+                        <IconContainer>
+                          <MdCalendarToday />
+                        </IconContainer>
+                        <CardContent>
+                          <CardLabel>Available Until</CardLabel>
+                          <CardValue>{new Date(item.availableUntil).toLocaleDateString()}</CardValue>
+                        </CardContent>
+                      </Card>
+                    </AvailabilityGrid>
+                  </div>
+
+                  <div>
+                    <SectionTitle>Owner</SectionTitle>
+                    <Card $variant="owner">
+                      <IconContainer $variant="owner">
+                        <MdPerson />
+                      </IconContainer>
+                      <CardContent>
+                        <CardValue>{item.owner?.username || "Anonymous"}</CardValue>
+                        <CardLabel>{item.availabilityPeriod}</CardLabel>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  <div>
+                    <SectionTitle>Contact Preference</SectionTitle>
+                    <Card $variant="owner">
+                      <IconContainer $variant="owner">
+                        <MdPerson />
+                      </IconContainer>
+                      <CardContent>
+                        <CardValue>
+                          {item.contactPreference 
+                            ? item.contactPreference.charAt(0).toUpperCase() + item.contactPreference.slice(1) 
+                            : "Anonymous"}
+                        </CardValue>
+                        <CardLabel>
+                          {item.email
+                            ? item.email.charAt(0).toUpperCase() + item.email.slice(1)
+                            : ""}
+                        </CardLabel>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {item.terms && (
+                    <div>
+                      <SectionTitle>Terms and Conditions</SectionTitle>
+                      <Description>
+                        <p>{item.terms}</p>
+                      </Description>
+                    </div>
+                  )}
+
+                  <ActionButtons>
+                    {item.owner?.id !== user?.id ? (
+                      <>
+                        <Button
+                          $variant="primary"
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={() => setShowBorrowForm(true)}
+                        >
+                          Request to Borrow
+                        </Button>
+                        <Button
+                          $variant="secondary"
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={() => setShowContactInfo(true)}
+                        >
+                          Contact Owner
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button
+                          $variant="primary"
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={() => setIsEditing(true)}
+                        >
+                          Edit Item
+                        </Button>
+                        <Button
+                          $variant="delete"
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={handleDelete}
+                        >
+                          Delete Item
+                        </Button>
+                      </>
+                    )}
+                  </ActionButtons>
                 </>
               ) : (
-                <>
-                  <Button
-                    variant="primary"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => navigate(`/borrowing/edit/${item.id}`)}
-                  >
-                    Edit Item
-                  </Button>
-                  <Button
-                    variant="delete"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => {
-                      /* Add delete functionality */
-                    }}
-                  >
-                    Delete Item
-                  </Button>
-                </>
+                // Edit Mode
+                <Form onSubmit={(e) => {
+                  e.preventDefault();
+                  handleUpdate();
+                }}>
+                  <FormGroup>
+                    <Label>Name</Label>
+                    <Input
+                      type="text"
+                      name="name"
+                      value={editedItem.name}
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </FormGroup>
+
+                  <FormGroup>
+                    <Label>Description</Label>
+                    <Textarea
+                      name="description"
+                      value={editedItem.description}
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </FormGroup>
+
+                  <FormGroup>
+                    <Label>Category</Label>
+                    <Input
+                      type="text"
+                      name="category"
+                      value={editedItem.category}
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </FormGroup>
+
+                  <FormGroup>
+                    <Label>Location</Label>
+                    <Input
+                      type="text"
+                      name="location"
+                      value={editedItem.location}
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </FormGroup>
+
+                  <FormGroup>
+                    <Label>Availability Period</Label>
+                    <Input
+                      type="text"
+                      name="availabilityPeriod"
+                      value={editedItem.availabilityPeriod}
+                      onChange={handleInputChange}
+                    />
+                  </FormGroup>
+
+                  <FormGroup>
+                    <Label>Available From</Label>
+                    <Input
+                      type="date"
+                      name="availableFrom"
+                      value={editedItem.availableFrom}
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </FormGroup>
+
+                  <FormGroup>
+                    <Label>Available Until</Label>
+                    <Input
+                      type="date"
+                      name="availableUntil"
+                      value={editedItem.availableUntil}
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </FormGroup>
+
+                  <FormGroup>
+                    <Label>Terms and Conditions</Label>
+                    <Textarea
+                      name="terms"
+                      value={editedItem.terms}
+                      onChange={handleInputChange}
+                    />
+                  </FormGroup>
+
+                  <FormGroup>
+                    <Label>Contact Preference</Label>
+                    <Input
+                      type="text"
+                      name="contactPreference"
+                      value={editedItem.contactPreference}
+                      onChange={handleInputChange}
+                    />
+                  </FormGroup>
+
+                  <FormGroup>
+                    <Label>Email</Label>
+                    <Input
+                      type="email"
+                      name="email"
+                      value={editedItem.email}
+                      onChange={handleInputChange}
+                    />
+                  </FormGroup>
+
+                  <FormGroup>
+                    <Label>Phone</Label>
+                    <Input
+                      type="tel"
+                      name="phone"
+                      value={editedItem.phone}
+                      onChange={handleInputChange}
+                    />
+                  </FormGroup>
+
+                  <ActionButtons>
+                    <Button type="submit" variant="primary">
+                      Save Changes
+                    </Button>
+                    <Button
+                      type="button"
+                      $variant="secondary"
+                      onClick={() => setIsEditing(false)}
+                    >
+                      Cancel
+                    </Button>
+                  </ActionButtons>
+                </Form>
               )}
-            </ActionButtons>
-          </ItemDetails>
+            </ItemDetails>
         </Grid>
       </MainContent>
 
@@ -1004,8 +1198,8 @@ const ItemDetail = () => {
 
               <ContactInfo>
                 {item.email && (
-                  <Card variant="owner">
-                    <IconContainer variant="owner">
+                  <Card $variant="owner">
+                    <IconContainer $variant="owner">
                       <MdEmail />
                     </IconContainer>
                     <CardContent>
@@ -1016,8 +1210,8 @@ const ItemDetail = () => {
                 )}
 
                 {item.phone && (
-                  <Card variant="owner">
-                    <IconContainer variant="owner">
+                  <Card $variant="owner">
+                    <IconContainer $variant="owner">
                       <MdPhone />
                     </IconContainer>
                     <CardContent>
@@ -1027,8 +1221,8 @@ const ItemDetail = () => {
                   </Card>
                 )}
 
-                <Card variant="owner">
-                  <IconContainer variant="owner">
+                <Card $variant="owner">
+                  <IconContainer $variant="owner">
                     <MdInfo />
                   </IconContainer>
                   <CardContent>
