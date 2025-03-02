@@ -1,6 +1,7 @@
 package com.example.neighbornetbackend.controller;
 
 import com.example.neighbornetbackend.dto.BorrowRequestDTO;
+import com.example.neighbornetbackend.dto.ErrorResponse;
 import com.example.neighbornetbackend.dto.ItemDTO;
 import com.example.neighbornetbackend.model.Item;
 import com.example.neighbornetbackend.service.ItemImageStorageService;
@@ -108,17 +109,26 @@ public class ItemController {
         }
     }
 
-   /* @PostMapping("/requests")
-    public ResponseEntity<?> createBorrowRequest(
-            @RequestBody BorrowRequestDTO request,
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteItem(@PathVariable Long id, @CurrentUser UserPrincipal currentUser) {
+        try {
+            itemService.deleteItem(id, currentUser.getId());
+            return ResponseEntity.ok().build();
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
+        }
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<ItemDTO> updateItem(
+            @PathVariable Long id,
+            @RequestBody Item updatedItem,
             @CurrentUser UserPrincipal currentUser) {
         try {
-            logger.debug("Creating borrow request for item: {}", request.getItemId());
-            BorrowRequestDTO createdRequest = itemService.createBorrowRequest(request, currentUser.getId());
-            return ResponseEntity.ok(createdRequest);
-        } catch (Exception e) {
-            logger.error("Error creating borrow request", e);
-            return ResponseEntity.internalServerError().build();
+            ItemDTO item = itemService.updateItem(id, updatedItem, currentUser.getId());
+            return ResponseEntity.ok(item);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(null);
         }
-    }*/
+    }
 }

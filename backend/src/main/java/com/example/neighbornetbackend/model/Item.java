@@ -32,6 +32,9 @@ public class Item {
     @Column(columnDefinition = "TEXT")
     private String terms;
 
+    @OneToMany(mappedBy = "item", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<BorrowRequest> borrowRequests = new ArrayList<>();
+
     private LocalDate availableFrom;
     private LocalDate availableUntil;
 
@@ -198,5 +201,13 @@ public class Item {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public List<BorrowRequest> getBorrowRequests() {
+        return borrowRequests;
+    }
+
+    public void setBorrowRequests(List<BorrowRequest> borrowRequests) {
+        this.borrowRequests = borrowRequests;
     }
 }
