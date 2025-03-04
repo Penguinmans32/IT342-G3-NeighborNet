@@ -150,4 +150,16 @@ public class ItemController {
         Double averageRating = itemRatingService.getAverageRating(id);
         return ResponseEntity.ok(averageRating != null ? averageRating : 0.0);
     }
+
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<List<ItemDTO>> getItemsByUserId(@PathVariable Long userId) {
+        try {
+            logger.debug("Getting items for user ID: {}", userId);
+            List<ItemDTO> items = itemService.getItemsByUser(userId);
+            return ResponseEntity.ok(items);
+        } catch (Exception e) {
+            logger.error("Error getting items for user ID: " + userId, e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
 }
