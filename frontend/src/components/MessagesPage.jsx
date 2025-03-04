@@ -82,11 +82,17 @@ const MessagesPage = () => {
       const conversationIndex = updatedConversations.findIndex(conv => 
         conv.participant.id === (message.senderId === user.id ? message.receiverId : message.senderId)
       );
-
+  
+      const displayContent = message.messageType === 'IMAGE' 
+        ? '📷 Image' 
+        : message.messageType === 'FORM' 
+          ? '📋 Agreement' 
+          : message.content;
+  
       if (conversationIndex !== -1) {
         const updatedConversation = {
           ...updatedConversations[conversationIndex],
-          lastMessage: message.content,
+          lastMessage: displayContent,
           lastMessageTimestamp: message.timestamp,
           unreadCount: message.senderId !== user.id ? 
             (updatedConversations[conversationIndex].unreadCount + 1) : 
@@ -101,13 +107,13 @@ const MessagesPage = () => {
             id: message.senderId === user.id ? message.receiverId : message.senderId,
             username: message.senderName 
           },
-          lastMessage: message.content,
+          lastMessage: displayContent,
           lastMessageTimestamp: message.timestamp,
           unreadCount: message.senderId !== user.id ? 1 : 0
         };
         updatedConversations.unshift(newConversation);
       }
-
+  
       return updatedConversations;
     });
   };
