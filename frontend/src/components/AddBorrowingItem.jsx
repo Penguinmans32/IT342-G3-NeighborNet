@@ -34,6 +34,8 @@ const AddBorrowingItem = () => {
     phone: '',
     images: []
   });
+  const [isOtherCategory, setIsOtherCategory] = useState(false);
+  const [customCategory, setCustomCategory] = useState('');
 
 
   const [loading, setLoading] = useState(false);
@@ -149,7 +151,28 @@ const AddBorrowingItem = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     
-    if (name === 'contactPreference') {
+    if (name === 'category') {
+      if (value === 'other') {
+        setIsOtherCategory(true);
+        setItemData(prev => ({
+          ...prev,
+          category: 'other'
+        }));
+      } else {
+        setIsOtherCategory(false);
+        setCustomCategory('');
+        setItemData(prev => ({
+          ...prev,
+          category: value
+        }));
+      }
+    } else if (name === 'customCategory') {
+      setCustomCategory(value);
+      setItemData(prev => ({
+        ...prev,
+        category: value
+      }));
+    } else if (name === 'contactPreference') {
       setItemData(prev => ({
         ...prev,
         [name]: value,
@@ -163,6 +186,15 @@ const AddBorrowingItem = () => {
       }));
     }
   };
+
+  useEffect(() => {
+    if (itemData.category === 'other' && customCategory) {
+      setItemData(prev => ({
+        ...prev,
+        category: customCategory
+      }));
+    }
+  }, [customCategory]);
 
   const memoizedBackground = useMemo(() => <AnimatedBackground />, []);
 
@@ -361,7 +393,7 @@ const AddBorrowingItem = () => {
                         </label>
                         <select
                           name="category"
-                          value={itemData.category}
+                          value={isOtherCategory ? 'other' : itemData.category}
                           onChange={handleChange}
                           className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 
                                   focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
@@ -376,7 +408,34 @@ const AddBorrowingItem = () => {
                           <option value="garden">Garden Tools</option>
                           <option value="other">Other</option>
                         </select>
+
+                        <AnimatePresence mode="wait">
+                          {isOtherCategory && (
+                            <motion.div
+                              initial={{ opacity: 0, y: -10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: -10 }}
+                              transition={{ duration: 0.2 }}
+                              className="mt-4"
+                            >
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Specify Category
+                              </label>
+                              <input
+                                type="text"
+                                name="customCategory"
+                                value={customCategory}
+                                onChange={handleChange}
+                                placeholder="Enter custom category"
+                                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 
+                                          focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                                required={isOtherCategory}
+                              />
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </div>
+
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
@@ -660,7 +719,7 @@ const AddBorrowingItem = () => {
                     <div className="p-8">
                       <div className="flex items-center gap-3 mb-4">
                         <span className="px-4 py-1.5 bg-blue-100 text-blue-600 text-sm font-medium rounded-full">
-                          {itemData.category || "Uncategorized"}
+                          {isOtherCategory ? customCategory || "Custom Category" : itemData.category || "Uncategorized"}
                         </span>
                         <span className="text-sm text-gray-500 flex items-center gap-1">
                           <MdLocationOn className="text-blue-500" />

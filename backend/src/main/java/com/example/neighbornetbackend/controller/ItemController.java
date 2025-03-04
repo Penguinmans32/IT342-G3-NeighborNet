@@ -1,10 +1,12 @@
 package com.example.neighbornetbackend.controller;
 
-import com.example.neighbornetbackend.dto.BorrowRequestDTO;
 import com.example.neighbornetbackend.dto.ErrorResponse;
 import com.example.neighbornetbackend.dto.ItemDTO;
+import com.example.neighbornetbackend.dto.RatingRequest;
 import com.example.neighbornetbackend.model.Item;
+import com.example.neighbornetbackend.model.ItemRating;
 import com.example.neighbornetbackend.service.ItemImageStorageService;
+import com.example.neighbornetbackend.service.ItemRatingService;
 import com.example.neighbornetbackend.service.ItemService;
 import com.example.neighbornetbackend.security.CurrentUser;
 import com.example.neighbornetbackend.security.UserPrincipal;
@@ -29,10 +31,12 @@ public class ItemController {
     private static final Logger logger = LoggerFactory.getLogger(ItemController.class);
     private final ItemService itemService;
     private final ItemImageStorageService itemImageStorageService;
+    private final ItemRatingService itemRatingService;
 
-    public ItemController(ItemService itemService, ItemImageStorageService itemImageStorageService) {
+    public ItemController(ItemService itemService, ItemImageStorageService itemImageStorageService, ItemRatingService itemRatingService) {
         this.itemService = itemService;
         this.itemImageStorageService = itemImageStorageService;
+        this.itemRatingService = itemRatingService;
     }
 
     @PostMapping
@@ -130,5 +134,20 @@ public class ItemController {
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(null);
         }
+    }
+
+    @PostMapping("/{id}/rate")
+    public ResponseEntity<ItemRating> rateItem(
+            @PathVariable Long id,
+            @RequestBody RatingRequest ratingRequest,
+            @CurrentUser UserPrincipal currentUser) {
+        ItemRating rating = itemRatingService.rateItem(id, currentUser.getId(), ratingRequest.getRating());
+        return ResponseEntity.ok(rating);
+    }
+
+    @GetMapping("/{id}/rating")
+    public ResponseEntity<Double> getItemRating(@PathVariable Long id) {
+        Double averageRating = itemRatingService.getAverageRating(id);
+        return ResponseEntity.ok(averageRating != null ? averageRating : 0.0);
     }
 }

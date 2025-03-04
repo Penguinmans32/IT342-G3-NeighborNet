@@ -19,6 +19,7 @@ import EditClass from "./components/SplashScreen/EditClass";
 import Borrowing from "./components/Borrowing";
 import AddBorrowingItem from "./components/AddBorrowingItem";
 import ItemDetail from "./components/ItemDetail";
+import MessagesPage from "./components/MessagesPage";
 
 function App() {
   return (
@@ -125,6 +126,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <ItemDetail />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/messages"
+              element={
+                <ProtectedRoute>
+                  <MessagesPage />
                 </ProtectedRoute>
               } 
             />

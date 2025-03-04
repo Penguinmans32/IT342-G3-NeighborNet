@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../backendApi/AuthContext';
 import Footer from './SplashScreen/Footer';
 import { MdClose, MdImage } from 'react-icons/md';
+import { MdStarBorder, MdStarHalf } from 'react-icons/md';
 import {
   MdAdd,
   MdSearch,
@@ -20,10 +21,51 @@ import {
 import { ArrowLeft } from 'lucide-react';
 import axios from 'axios';
 
+
+const StarRating = ({ rating, onRate, readonly = false, isOwner = false, size = "text-xl" }) => {
+  const [hover, setHover] = useState(0);
+
+  const handleClick = (value) => {
+    if (!readonly && !isOwner && onRate) {
+      onRate(value);
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-1">
+      {[1, 2, 3, 4, 5].map((star) => {
+        const value = star;
+        const filled = hover || rating;
+
+        return (
+          <button
+            key={star}
+            className={`${size} ${isOwner ? 'cursor-not-allowed' : 'cursor-pointer'} 
+                       text-yellow-400 transition-colors`}
+            onClick={() => handleClick(value)}
+            onMouseEnter={() => !isOwner && setHover(value)}
+            onMouseLeave={() => !isOwner && setHover(0)}
+            disabled={isOwner}
+            title={isOwner ? "You can't rate your own item" : ""}
+          >
+            {filled >= star ? (
+              <MdStar />
+            ) : filled >= star - 0.5 ? (
+              <MdStarHalf />
+            ) : (
+              <MdStarBorder />
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+};
+
+
 const ImageGalleryModal = ({ images = [], isOpen, onClose, currentIndex = 0 }) => {
   const [activeIndex, setActiveIndex] = useState(currentIndex);
 
-  // Handle keyboard navigation
   useEffect(() => {
     const handleKeydown = (e) => {
       if (!isOpen) return;
@@ -147,6 +189,8 @@ const Borrowing = () => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [itemRatings, setItemRatings] = useState({});
+  const [ratingLoading, setRatingLoading] = useState({});
   const [searchTerm, setSearchTerm] = useState('');
   const [galleryModal, setGalleryModal] = useState({
     isOpen: false,
@@ -154,6 +198,69 @@ const Borrowing = () => {
     currentIndex: 0
   });
   const [availableCategories, setAvailableCategories] = useState([]);
+
+  const handleRateItem = async (itemId, rating, isOwner) => {
+    // Prevent rating if the user is the owner
+    if (isOwner) {
+      console.log("You can't rate your own item");
+      return;
+    }
+  
+    try {
+      setRatingLoading(prev => ({ ...prev, [itemId]: true }));
+      const response = await axios.post(
+        `http://localhost:8080/api/borrowing/items/${itemId}/rate`,
+        { rating },
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        }
+      );
+      setItemRatings(prev => ({
+        ...prev,
+        [itemId]: rating
+      }));
+    } catch (error) {
+      console.error('Error rating item:', error);
+    } finally {
+      setRatingLoading(prev => ({ ...prev, [itemId]: false }));
+    }
+  };
+
+  
+  useEffect(() => {
+    const fetchRatings = async () => {
+      const ratings = {};
+      for (const item of items) {
+        try {
+          const response = await axios.get(
+            `http://localhost:8080/api/borrowing/items/${item.id}/rating`,
+            {
+              headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+            }
+          );
+          ratings[item.id] = response.data;
+        } catch (error) {
+          console.error(`Error fetching rating for item ${item.id}:`, error);
+        }
+      }
+      setItemRatings(ratings);
+    };
+  
+    if (items.length > 0) {
+      fetchRatings();
+    }
+  }, [items]);
+
+  const handleMessageClick = (ownerId, ownerUsername) => {
+    navigate('/messages', {
+      state: {
+        selectedContact: {
+          id: ownerId,
+          username: ownerUsername
+        }
+      }
+    });
+  };
 
   const extractCategories = (items) => {
     // Get unique categories
@@ -202,7 +309,7 @@ const Borrowing = () => {
         }));
         
         setItems(itemsWithDefaultImages);
-        // Set available categories based on items
+        console.log(itemsWithDefaultImages);
         setAvailableCategories(extractCategories(itemsWithDefaultImages));
       } catch (error) {
         console.error('Error fetching items:', error);
@@ -418,6 +525,25 @@ const Borrowing = () => {
                       <h3 className="text-lg font-semibold text-gray-900 mb-2">
                         {item.name}
                       </h3>
+
+                      <div className="flex items-center gap-2 mb-2">
+                        <StarRating
+                          rating={itemRatings[item.id] || 0}
+                          onRate={(rating) => handleRateItem(item.id, rating, item.owner?.id === user?.id)}
+                          isOwner={item.owner?.id === user?.id}
+                          size="text-lg"
+                        />
+                        {ratingLoading[item.id] ? (
+                          <span className="text-sm text-gray-500">Updating...</span>
+                        ) : (
+                          <span className="text-sm text-gray-500">
+                            {itemRatings[item.id]?.toFixed(1) || "Not rated"}
+                            {item.owner?.id === user?.id && (
+                              <span className="ml-2 text-gray-400">(Can't rate own item)</span>
+                            )}
+                          </span>
+                        )}
+                      </div>
                       <p className="text-gray-600 text-sm mb-4 line-clamp-2">
                         {item.description}
                       </p>
@@ -437,14 +563,14 @@ const Borrowing = () => {
                         </div>
                         {item.owner?.id !== user?.id && ( 
                             <motion.button
-                              whileHover={{ scale: 1.05 }}
-                              whileTap={{ scale: 0.95 }}
-                              onClick={() => {/* Add message functionality */}}
-                              className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium
-                                        hover:bg-blue-600 transition-colors"
-                            >
-                              Message
-                            </motion.button>
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => handleMessageClick(item.owner.id, item.owner.username)}
+                            className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium
+                                      hover:bg-blue-600 transition-colors"
+                          >
+                            Message
+                          </motion.button>
                           )}
                       </div>
 
@@ -452,8 +578,8 @@ const Borrowing = () => {
                       <div className="mt-4 flex items-center gap-2 text-sm text-gray-500">
                         <MdCalendarToday className="text-blue-500" />
                         <span>
-                          {new Date(item.availableFrom).toLocaleDateString()} - 
-                          {new Date(item.availableUntil).toLocaleDateString()}
+                          Available dates: {new Date(item.availableFrom).toLocaleDateString()} - 
+                           {new Date(item.availableUntil).toLocaleDateString()}
                         </span>
                       </div>
                     </div>
