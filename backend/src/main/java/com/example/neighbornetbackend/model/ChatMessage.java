@@ -22,6 +22,15 @@ public class ChatMessage {
     @Column(nullable = false)
     private boolean is_read;
 
+    @Column(columnDefinition = "TEXT")
+    private String imageUrl;
+
+    @Column
+    private String messageType;
+
+    @Column(columnDefinition = "TEXT")
+    private String formData;
+
     public ChatMessage() {
         this.timestamp = LocalDateTime.now();
         this.is_read = false;
@@ -73,5 +82,29 @@ public class ChatMessage {
 
     public void setIs_read(boolean is_read) {
         this.is_read = is_read;
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
+
+    public String getMessageType() {
+        return messageType;
+    }
+
+    public void setMessageType(String messageType) {
+        this.messageType = messageType;
+    }
+
+    public String getFormData() {
+        return formData;
+    }
+
+    public void setFormData(String formData) {
+        this.formData = formData;
     }
 }

@@ -88,6 +88,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/borrowing/requests/").permitAll()
                         .requestMatchers("/api/borrowing/requests").permitAll()
                         .requestMatchers("/api/notifications/**").permitAll()
+                        .requestMatchers("/api/borrowing/items/user/*").permitAll()
                         .requestMatchers("/api/borrowing/items/images/**").permitAll()
                         .requestMatchers("/api/users/profile-pictures/*").permitAll()
                         .requestMatchers("/api/classes/**").permitAll()
