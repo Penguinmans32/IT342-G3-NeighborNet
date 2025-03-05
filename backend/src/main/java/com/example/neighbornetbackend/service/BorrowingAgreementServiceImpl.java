@@ -15,6 +15,18 @@ public class BorrowingAgreementServiceImpl implements BorrowingAgreementService 
 
     @Override
     public BorrowingAgreement create(BorrowingAgreement agreement) {
+        // Check for overlapping agreements
+        List<BorrowingAgreement> overlappingAgreements = borrowingAgreementRepository
+                .findOverlappingAgreements(
+                        agreement.getItemId(),
+                        agreement.getBorrowingStart(),
+                        agreement.getBorrowingEnd()
+                );
+
+        if (!overlappingAgreements.isEmpty()) {
+            throw new RuntimeException("Item is not available during the requested period");
+        }
+
         agreement.setCreatedAt(LocalDateTime.now());
         agreement.setStatus("PENDING");
         return borrowingAgreementRepository.save(agreement);
@@ -41,5 +53,15 @@ public class BorrowingAgreementServiceImpl implements BorrowingAgreementService 
     @Override
     public List<BorrowingAgreement> getByLenderId(Long lenderId) {
         return borrowingAgreementRepository.findByLenderId(lenderId);
+    }
+
+    public List<BorrowingAgreement> findByItemIdAndUsersAndStatus(
+            Long itemId, Long borrowerId, Long lenderId, String status) {
+        // Only check for PENDING agreements with the same itemId
+        return borrowingAgreementRepository.findByItemIdAndStatusAndBorrowingEndGreaterThan(
+                itemId,
+                "PENDING",
+                LocalDateTime.now()
+        );
     }
 }
