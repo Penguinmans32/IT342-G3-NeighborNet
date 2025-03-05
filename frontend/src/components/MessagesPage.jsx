@@ -73,8 +73,10 @@ const MessagesPage = () => {
   }, [user]);
 
   useEffect(() => {
-    fetchConversations();
-  }, [user]);
+    if (user?.id) {
+      fetchConversations();
+    }
+  }, [user?.id]);
 
   const handleNewMessage = (message) => {
     setConversations(prevConversations => {
@@ -119,13 +121,23 @@ const MessagesPage = () => {
   };
 
   const fetchConversations = async () => {
+    if (!user?.id) return; // Add this check
+
     try {
+      setLoading(true);
       const response = await fetch(`http://localhost:8080/conversations/${user.id}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       const data = await response.json();
-      setConversations(data);
-      setLoading(false);
+      setConversations(Array.isArray(data) ? data : []); // Ensure it's always an array
     } catch (error) {
       console.error('Error fetching conversations:', error);
+      setError(error.message);
+      setConversations([]); // Set empty array on error
+    } finally {
       setLoading(false);
     }
   };

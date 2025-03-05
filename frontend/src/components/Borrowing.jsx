@@ -6,6 +6,8 @@ import { useAuth } from '../backendApi/AuthContext';
 import Footer from './SplashScreen/Footer';
 import { MdClose, MdImage } from 'react-icons/md';
 import { MdStarBorder, MdStarHalf } from 'react-icons/md';
+import { Client } from '@stomp/stompjs';
+import SockJS from 'sockjs-client';
 import {
   MdAdd,
   MdSearch,
@@ -20,6 +22,114 @@ import {
 } from 'react-icons/md';
 import { ArrowLeft } from 'lucide-react';
 import axios from 'axios';
+
+const MessageModal = ({ isOpen, onClose, onSend, ownerName }) => {
+  const [messageType, setMessageType] = useState('custom');
+  const [customMessage, setCustomMessage] = useState('');
+  const [isSending, setIsSending] = useState(false);
+  
+  const predefinedMessages = [
+    { id: 'interest', text: `Hi! I'm interested in borrowing your item.` },
+    { id: 'availability', text: 'Is this item still available?' },
+    { id: 'details', text: 'Could you provide more details about this item?' },
+  ];
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const messageToSend = messageType === 'custom' ? 
+      customMessage : 
+      predefinedMessages.find(m => m.id === messageType)?.text;
+    
+    if (messageToSend) {
+      setIsSending(true);
+      try {
+        await onSend(messageToSend);
+        onClose();
+      } catch (error) {
+        console.error('Error sending message:', error);
+      } finally {
+        setIsSending(false);
+      }
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+        <h3 className="text-xl font-semibold mb-4">
+          Message to {ownerName}
+        </h3>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Message Type Selection */}
+          <div className="space-y-3">
+            {predefinedMessages.map((message) => (
+              <label key={message.id} className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  name="messageType"
+                  value={message.id}
+                  checked={messageType === message.id}
+                  onChange={(e) => {
+                    setMessageType(e.target.value);
+                    setCustomMessage('');
+                  }}
+                  className="text-blue-500 focus:ring-blue-500"
+                />
+                <span className="text-gray-700">{message.text}</span>
+              </label>
+            ))}
+            <label className="flex items-center gap-2">
+              <input
+                type="radio"
+                name="messageType"
+                value="custom"
+                checked={messageType === 'custom'}
+                onChange={(e) => setMessageType(e.target.value)}
+                className="text-blue-500 focus:ring-blue-500"
+              />
+              <span className="text-gray-700">Custom message</span>
+            </label>
+          </div>
+
+          {/* Custom Message Input */}
+          {messageType === 'custom' && (
+            <textarea
+              value={customMessage}
+              onChange={(e) => setCustomMessage(e.target.value)}
+              placeholder="Type your message here..."
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 
+                       focus:ring-blue-500 focus:border-blue-500 h-32 resize-none"
+              required
+            />
+          )}
+
+          {/* Action Buttons */}
+          <div className="flex justify-end gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg 
+                       hover:bg-gray-200 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSending}
+              className={`px-4 py-2 bg-blue-500 text-white rounded-lg 
+                        hover:bg-blue-600 transition-colors ${isSending ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              {isSending ? 'Sending...' : 'Send Message'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
 
 
 const StarRating = ({ rating, onRate, readonly = false, isOwner = false, size = "text-xl" }) => {
@@ -192,12 +302,49 @@ const Borrowing = () => {
   const [itemRatings, setItemRatings] = useState({});
   const [ratingLoading, setRatingLoading] = useState({});
   const [searchTerm, setSearchTerm] = useState('');
+  const [stompClient, setStompClient] = useState(null);
   const [galleryModal, setGalleryModal] = useState({
     isOpen: false,
     images: [],
     currentIndex: 0
   });
   const [availableCategories, setAvailableCategories] = useState([]);
+
+  const [messageModal, setMessageModal] = useState({
+    isOpen: false,
+    ownerId: null,
+    ownerName: '',
+  });
+
+  useEffect(() => {
+    if (user?.id) {
+      const socket = new SockJS('http://localhost:8080/ws');
+      const stomp = new Client({
+        webSocketFactory: () => socket,
+        debug: (str) => {
+          console.log(str);
+        },
+        reconnectDelay: 5000,
+        heartbeatIncoming: 4000,
+        heartbeatOutgoing: 4000,
+      });
+
+      stomp.onConnect = () => {
+        console.log('Connected to WebSocket');
+        setStompClient(stomp);
+      };
+
+      stomp.activate();
+
+      return () => {
+        if (stomp) {
+          stomp.deactivate();
+        }
+      };
+    }
+  }, [user]);
+
+  
 
   const handleRateItem = async (itemId, rating, isOwner) => {
     // Prevent rating if the user is the owner
@@ -251,15 +398,52 @@ const Borrowing = () => {
     }
   }, [items]);
 
-  const handleMessageClick = (ownerId, ownerUsername) => {
-    navigate('/messages', {
-      state: {
-        selectedContact: {
-          id: ownerId,
-          username: ownerUsername
-        }
-      }
+  const handleMessageClick = (ownerId, ownerName) => {
+    setMessageModal({
+      isOpen: true,
+      ownerId,
+      ownerName,
     });
+  };
+
+  const handleSendMessage = async (message) => {
+    try {
+      if (stompClient?.connected) {
+        const chatMessage = {
+          senderId: user.id,
+          receiverId: messageModal.ownerId,
+          content: message,
+          messageType: 'TEXT',  
+          timestamp: new Date().toISOString()
+        };
+  
+        stompClient.publish({
+          destination: '/app/chat',
+          body: JSON.stringify(chatMessage)
+        });
+  
+        navigate('/messages', {
+          state: {
+            selectedContact: {
+              id: messageModal.ownerId,
+              username: messageModal.ownerName
+            }
+          }
+        });
+      } else {
+        throw new Error('WebSocket not connected');
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
+      navigate('/messages', {
+        state: {
+          selectedContact: {
+            id: messageModal.ownerId,
+            username: messageModal.ownerName
+          }
+        }
+      });
+    }
   };
 
   const extractCategories = (items) => {
@@ -588,6 +772,13 @@ const Borrowing = () => {
             )}
           </div>
       </div>
+
+      <MessageModal
+        isOpen={messageModal.isOpen}
+        onClose={() => setMessageModal({ isOpen: false, ownerId: null, ownerName: '' })}
+        onSend={handleSendMessage}
+        ownerName={messageModal.ownerName}
+      />
 
       <ImageGalleryModal
         isOpen={galleryModal.isOpen}

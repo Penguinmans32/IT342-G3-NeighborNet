@@ -10,4 +10,5 @@ public interface BorrowingAgreementService {
     BorrowingAgreement updateStatus(Long id, String status);
     List<BorrowingAgreement> getByBorrowerId(Long borrowerId);
     List<BorrowingAgreement> getByLenderId(Long lenderId);
+    List<BorrowingAgreement> findByItemIdAndUsersAndStatus(Long itemId, Long borrowerId, Long lenderId, String status);
 }

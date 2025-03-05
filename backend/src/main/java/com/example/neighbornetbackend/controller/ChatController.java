@@ -2,6 +2,7 @@ package com.example.neighbornetbackend.controller;
 
 import com.example.neighbornetbackend.dto.BorrowingAgreementRequest;
 import com.example.neighbornetbackend.dto.ConversationDTO;
+import com.example.neighbornetbackend.dto.ErrorResponse;
 import com.example.neighbornetbackend.model.BorrowingAgreement;
 import com.example.neighbornetbackend.model.ChatMessage;
 import com.example.neighbornetbackend.service.BorrowingAgreementService;
@@ -36,28 +37,63 @@ public class ChatController {
     private final ChatService chatService;
     private final ChatImageStorageService chatImageStorageService;
     private final BorrowingAgreementService borrowingAgreementService;
+    private final ObjectMapper objectMapper;
 
     public ChatController(
             SimpMessagingTemplate messagingTemplate,
             ConversationService conversationService,
             ChatService chatService,
             ChatImageStorageService chatImageStorageService,
-            BorrowingAgreementService borrowingAgreementService) {
+            BorrowingAgreementService borrowingAgreementService,
+            ObjectMapper objectMapper) {
         this.messagingTemplate = messagingTemplate;
         this.conversationService = conversationService;
         this.chatService = chatService;
         this.chatImageStorageService = chatImageStorageService;
         this.borrowingAgreementService = borrowingAgreementService;
+        this.objectMapper = objectMapper;
     }
 
     @MessageMapping("/chat")
     public void processMessage(@Payload ChatMessage chatMessage) {
-        ChatMessage saved = chatService.save(chatMessage);
-        messagingTemplate.convertAndSendToUser(
-                String.valueOf(chatMessage.getReceiverId()),
-                "/queue/messages",
-                saved
-        );
+        try {
+            if (chatMessage.getMessageType() == null ||
+                    !("FORM".equals(chatMessage.getMessageType()) &&
+                            "Sent a borrowing agreement".equals(chatMessage.getContent()))) {
+
+                ChatMessage saved = chatService.save(chatMessage);
+                messagingTemplate.convertAndSendToUser(
+                        String.valueOf(chatMessage.getReceiverId()),
+                        "/queue/messages",
+                        saved
+                );
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    @PostMapping("/messages")
+    @ResponseBody
+    public ResponseEntity<ChatMessage> createMessage(@RequestBody ChatMessage message) {
+        try {
+            if (message.getTimestamp() == null) {
+                message.setTimestamp(LocalDateTime.now());
+            }
+
+            ChatMessage savedMessage = chatService.save(message);
+
+            messagingTemplate.convertAndSendToUser(
+                    String.valueOf(message.getReceiverId()),
+                    "/queue/messages",
+                    savedMessage
+            );
+
+            return ResponseEntity.ok(savedMessage);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+        }
     }
 
     @GetMapping("/messages/{senderId}/{receiverId}")
@@ -84,8 +120,33 @@ public class ChatController {
 
     @PostMapping("/chat/send-agreement")
     @ResponseBody
-    public ResponseEntity<BorrowingAgreement> createBorrowingAgreement(@RequestBody BorrowingAgreementRequest request) {
+    public ResponseEntity<?> createBorrowingAgreement(@RequestBody BorrowingAgreementRequest request) {
+        System.out.println("Received request: " + request);
         try {
+            // Validate request
+            if (request.getItemId() == null || request.getBorrowerId() == null ||
+                    request.getLenderId() == null || request.getBorrowingStart() == null ||
+                    request.getBorrowingEnd() == null || request.getTerms() == null) {
+                return ResponseEntity
+                        .badRequest()
+                        .body("Missing required fields");
+            }
+
+            // Check for existing pending agreements
+            List<BorrowingAgreement> existingAgreements = borrowingAgreementService
+                    .findByItemIdAndUsersAndStatus(
+                            request.getItemId(),
+                            request.getBorrowerId(),
+                            request.getLenderId(),
+                            "PENDING"
+                    );
+
+            if (!existingAgreements.isEmpty()) {
+                return ResponseEntity
+                        .badRequest()
+                        .body("A pending agreement already exists for this item");
+            }
+
             BorrowingAgreement agreement = new BorrowingAgreement();
             agreement.setItemId(request.getItemId());
             agreement.setLenderId(request.getLenderId());
@@ -105,10 +166,10 @@ public class ChatController {
             chatMessage.setMessageType("FORM");
             chatMessage.setContent("Sent a borrowing agreement");
             chatMessage.setFormData(toJson(savedAgreement));
+            chatMessage.setTimestamp(LocalDateTime.now());
 
             ChatMessage savedMessage = chatService.save(chatMessage);
 
-            // Send the message through WebSocket
             messagingTemplate.convertAndSendToUser(
                     String.valueOf(request.getLenderId()),
                     "/queue/messages",
@@ -117,16 +178,15 @@ public class ChatController {
 
             return ResponseEntity.ok(savedAgreement);
         } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(null);
+            return ResponseEntity
+                    .badRequest()
+                    .body(new ErrorResponse("Error creating agreement: " + e.getMessage()));
         }
     }
 
     private String toJson(BorrowingAgreement agreement) {
         try {
-            ObjectMapper mapper = new ObjectMapper();
-            return mapper.writeValueAsString(agreement);
+            return objectMapper.writeValueAsString(agreement);
         } catch (JsonProcessingException e) {
             e.printStackTrace();
             return "{}";

@@ -4,6 +4,33 @@ import SockJS from 'sockjs-client';
 import { motion, AnimatePresence } from 'framer-motion';
 import BorrowingAgreementForm from './BorrowingAgreementForm';
 
+
+const formatMessageTime = (timestamp) => {
+  try {
+    let date = new Date(timestamp);
+    
+    if (isNaN(date.getTime()) && typeof timestamp === 'string') {
+      date = new Date(timestamp.replace(' ', 'T') + 'Z');
+    }
+
+    if (isNaN(date.getTime())) {
+      console.error('Invalid timestamp:', timestamp);
+      return 'Invalid Time';
+    }
+
+    return new Intl.DateTimeFormat('en-US', {
+      hour: 'numeric',
+      minute: 'numeric',
+      hour12: true,
+      timeZone: 'Asia/Singapore'
+    }).format(date);
+  } catch (error) {
+    console.error('Error formatting time:', error, timestamp);
+    return 'Invalid Time';
+  }
+};
+
+
 const Chat = ({ senderId, receiverId, receiverName, onMessageSent, stompClient }) => {
   const [messages, setMessages] = useState([]);
   const [messageInput, setMessageInput] = useState('');
@@ -29,7 +56,6 @@ const Chat = ({ senderId, receiverId, receiverName, onMessageSent, stompClient }
   
       const updatedAgreement = await response.json();
   
-      // Send a message about the status update
       if (stompClient && stompClient.connected) {
         stompClient.publish({
           destination: '/app/chat',
@@ -43,7 +69,6 @@ const Chat = ({ senderId, receiverId, receiverName, onMessageSent, stompClient }
         });
       }
   
-      // Update the messages list to reflect the new status
       setMessages(prevMessages => 
         prevMessages.map(msg => {
           if (msg.messageType === 'FORM') {
@@ -103,6 +128,9 @@ const Chat = ({ senderId, receiverId, receiverName, onMessageSent, stompClient }
         timestamp: new Date().toISOString()
       };
   
+      const tempMessage = { ...imageMessage, id: `temp-${Date.now()}` };
+      setMessages(prev => [...prev, tempMessage]);
+  
       if (stompClient && stompClient.connected) {
         stompClient.publish({
           destination: '/app/chat',
@@ -110,7 +138,6 @@ const Chat = ({ senderId, receiverId, receiverName, onMessageSent, stompClient }
         });
       }
   
-      setMessages(prev => [...prev, imageMessage]);
       onMessageSent(imageMessage);
       setImagePreview(null);
       setSelectedImage(null);
@@ -128,43 +155,68 @@ const Chat = ({ senderId, receiverId, receiverName, onMessageSent, stompClient }
 
   const handleSendAgreement = async (formData) => {
     try {
+      const formatDate = (dateString) => {
+        const date = new Date(dateString);
+        date.setUTCHours(12, 0, 0, 0);
+        return date.toISOString();
+      };
+  
+      const requestData = {
+        ...formData,
+        lenderId: receiverId,
+        borrowerId: senderId,
+        borrowingStart: formatDate(formData.borrowingStart),
+        borrowingEnd: formatDate(formData.borrowingEnd)
+      };
+  
+      console.log('Sending agreement data:', requestData);
+  
       const response = await fetch('http://localhost:8080/chat/send-agreement', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify({
-          ...formData,
-          lenderId: senderId,
-          borrowerId: receiverId
-        })
+        body: JSON.stringify(requestData)
       });
   
-      const agreement = await response.json();
-      
+      const responseText = await response.text();
+      let responseData;
+  
+      try {
+        responseData = JSON.parse(responseText);
+      } catch (e) {
+        responseData = responseText;
+      }
+  
+      if (!response.ok) {
+        if (responseData === "A pending agreement already exists for this item") {
+          alert("You already have a pending agreement for this item. Please wait for the lender's response or check your existing agreements.");
+        } else {
+          alert(`Failed to send agreement: ${responseData}`);
+        }
+        return;
+      }
+
       const agreementMessage = {
+        id: `temp-agreement-${Date.now()}`,
         senderId,
         receiverId,
         messageType: 'FORM',
         content: 'Sent a borrowing agreement',
-        formData: JSON.stringify(agreement),
+        formData: JSON.stringify({
+          ...responseData,
+          itemName: formData.itemName 
+        }),
         timestamp: new Date().toISOString()
       };
-
-
-      setMessages(prev => [...prev, agreementMessage]);
-      
-      if (stompClient && stompClient.connected) {
-        stompClient.publish({
-          destination: '/app/chat',
-          body: JSON.stringify(agreementMessage)
-        });
-      }
   
+      setMessages(prev => [...prev, agreementMessage]);
       setShowAgreementForm(false);
       scrollToBottom();
     } catch (error) {
       console.error('Error sending agreement:', error);
+      alert('An unexpected error occurred. Please try again.');
     }
   };
 
@@ -177,7 +229,35 @@ const Chat = ({ senderId, receiverId, receiverName, onMessageSent, stompClient }
             ...newMessage,
             timestamp: newMessage.timestamp || new Date().toISOString()
           };
-          setMessages(prev => [...prev, processedMessage]);
+          
+          setMessages(prev => {
+            const filteredMessages = prev.filter(msg => 
+              !msg.id?.startsWith('temp-') || 
+              msg.content !== processedMessage.content
+            );
+  
+            const getMessageTypeWeight = (type) => {
+              switch (type) {
+                case 'FORM': return 3;
+                case 'IMAGE': return 2;
+                case 'TEXT': return 1;
+                default: return 0;
+              }
+            };
+  
+            const updatedMessages = [...filteredMessages, processedMessage].sort((a, b) => {
+              const timestampA = new Date(a.timestamp).getTime();
+              const timestampB = new Date(b.timestamp).getTime();
+              
+              if (timestampA === timestampB) {
+                return getMessageTypeWeight(a.messageType) - getMessageTypeWeight(b.messageType);
+              }
+              return timestampA - timestampB;
+            });
+  
+            return updatedMessages;
+          });
+  
           scrollToBottom();
         }
       });
@@ -199,7 +279,29 @@ const Chat = ({ senderId, receiverId, receiverName, onMessageSent, stompClient }
         `http://localhost:8080/messages/${senderId}/${receiverId}`
       );
       const data = await response.json();
-      setMessages(data);
+      
+      // Add message type weights for sorting
+      const getMessageTypeWeight = (type) => {
+        switch (type) {
+          case 'FORM': return 3;
+          case 'IMAGE': return 2;
+          case 'TEXT': return 1;
+          default: return 0;
+        }
+      };
+  
+
+      const sortedData = data.sort((a, b) => {
+        const timestampA = new Date(a.timestamp).getTime();
+        const timestampB = new Date(b.timestamp).getTime();
+        
+        if (timestampA === timestampB) {
+          return getMessageTypeWeight(a.messageType) - getMessageTypeWeight(b.messageType);
+        }
+        return timestampA - timestampB;
+      });
+  
+      setMessages(sortedData);
       scrollToBottom();
     } catch (error) {
       console.error('Error fetching messages:', error);
@@ -212,15 +314,23 @@ const Chat = ({ senderId, receiverId, receiverName, onMessageSent, stompClient }
         senderId: senderId,
         receiverId: receiverId,
         content: messageInput.trim(),
+        messageType: 'TEXT',
         timestamp: new Date().toISOString()
       };
-
+  
+      const tempMessage = { ...chatMessage, id: `temp-${Date.now()}` };
+      setMessages(prev => {
+        const newMessages = [...prev, tempMessage].sort((a, b) => 
+          new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+        );
+        return newMessages;
+      });
+  
       stompClient.publish({
         destination: '/app/chat',
         body: JSON.stringify(chatMessage)
       });
-
-      setMessages(prev => [...prev, chatMessage]);
+  
       onMessageSent(chatMessage);
       setMessageInput('');
       scrollToBottom();
@@ -231,79 +341,103 @@ const Chat = ({ senderId, receiverId, receiverName, onMessageSent, stompClient }
     <div className="flex flex-col h-full">
       {/* Chat Messages */}
       <div className="flex-1 overflow-y-auto p-4">
-      {messages.map((msg) => (
-        <div key={msg.id} className={`mb-4 ${msg.senderId === senderId ? 'text-right' : 'text-left'}`}>
-          <div className={`inline-block ${msg.senderId === senderId ? 'bg-blue-500 text-white' : 'bg-gray-200'} rounded-lg px-4 py-2 max-w-xs lg:max-w-md`}>
-            {msg.messageType === 'IMAGE' ? (
-              <div className="rounded-lg overflow-hidden">
-                <img 
-                  src={msg.imageUrl} 
-                  alt="Shared" 
-                  className="max-w-full h-auto cursor-pointer" 
-                  loading="lazy"
-                  onClick={() => window.open(msg.imageUrl, '_blank')}
-                />
-              </div>
-            ) : msg.messageType === 'FORM' ? (
-              <div className="bg-white/90 p-4 rounded-lg">
-                <h4 className="font-semibold text-gray-900">📋 Borrowing Agreement</h4>
-                <div className="text-sm mt-2">
-                  {(() => {
+        {messages.map((msg) => (
+          <div key={msg.id} className={`mb-4 ${msg.senderId === senderId ? 'text-right' : 'text-left'}`}>
+            <div className={`inline-block ${msg.senderId === senderId ? 'bg-blue-500 text-white' : 'bg-gray-200'} rounded-lg px-4 py-2 max-w-xs lg:max-w-md`}>
+              {msg.messageType === 'IMAGE' ? (
+                <div className="rounded-lg overflow-hidden">
+                  <img 
+                    src={msg.imageUrl} 
+                    alt="Shared" 
+                    className="max-w-full h-auto cursor-pointer" 
+                    loading="lazy"
+                    onClick={() => window.open(msg.imageUrl, '_blank')}
+                  />
+                </div>
+              ) : msg.messageType === 'FORM' ? (
+                (() => {
+                  try {
                     const formData = JSON.parse(msg.formData);
                     const isLender = senderId === formData.lenderId;
                     const isBorrower = senderId === formData.borrowerId;
                     const isPending = formData.status === 'PENDING';
-                    const canRespond = (isLender && msg.senderId === formData.borrowerId) || 
-                                     (isBorrower && msg.senderId === formData.lenderId);
+                    const canRespond = isPending && isLender && msg.senderId === formData.borrowerId;
 
                     return (
-                      <>
-                        <div className="mb-2">
-                          <p><strong>Item:</strong> {formData.itemName}</p>
-                          <p><strong>Period:</strong> {new Date(formData.borrowingStart).toLocaleDateString()} - {new Date(formData.borrowingEnd).toLocaleDateString()}</p>
-                          <p><strong>Terms:</strong> {formData.terms}</p>
-                        </div>
-                        <div className={`font-medium ${
-                          formData.status === 'PENDING' ? 'text-yellow-600' :
-                          formData.status === 'ACCEPTED' ? 'text-green-600' :
-                          'text-red-600'
-                        }`}>
-                          {formData.status === 'PENDING' ? '⏳ Pending Response' :
-                           formData.status === 'ACCEPTED' ? '✅ Accepted' :
-                           '❌ Rejected'}
-                        </div>
-                        {isPending && canRespond && (
-                          <div className="mt-2 flex gap-2">
-                            <button
-                              onClick={() => handleAgreementResponse(formData.id, 'ACCEPTED')}
-                              className="px-3 py-1 bg-green-500 text-white rounded-md hover:bg-green-600 text-sm"
-                            >
-                              Accept
-                            </button>
-                            <button
-                              onClick={() => handleAgreementResponse(formData.id, 'REJECTED')}
-                              className="px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 text-sm"
-                            >
-                              Reject
-                            </button>
+                      <div className="bg-white/90 p-4 rounded-lg">
+                        <h4 className="font-semibold text-gray-900">📋 Borrowing Agreement</h4>
+                        <div className="text-sm mt-2">
+                          <div className="mb-2">
+                            <p><strong>Item:</strong> {formData.itemName}</p>
+                            <p><strong>Period:</strong> {(() => {
+                                try {
+                                  const formatDateTime = (dateString) => {
+                                    const date = new Date(dateString);
+                                    if (isNaN(date.getTime())) {
+                                      return 'Invalid Date';
+                                    }
+                                    return date.toLocaleDateString('en-US', {
+                                      year: 'numeric',
+                                      month: 'long',
+                                      day: 'numeric'
+                                    });
+                                  };
+
+                                  const start = formatDateTime(formData.borrowingStart);
+                                  const end = formatDateTime(formData.borrowingEnd);
+
+                                  return `${start} - ${end}`;
+                                } catch (error) {
+                                  console.error('Date parsing error:', error);
+                                  return 'Invalid Date Range';
+                                }
+                              })()}</p>
+                            <p><strong>Terms:</strong> {formData.terms}</p>
                           </div>
-                        )}
-                      </>
+                          <div className={`font-medium ${
+                            formData.status === 'PENDING' ? 'text-yellow-600' :
+                            formData.status === 'ACCEPTED' ? 'text-green-600' :
+                            'text-red-600'
+                          }`}>
+                            {formData.status === 'PENDING' ? '⏳ Pending Response' :
+                            formData.status === 'ACCEPTED' ? '✅ Accepted' :
+                            '❌ Rejected'}
+                          </div>
+                          {canRespond && (
+                            <div className="mt-2 flex gap-2">
+                              <button
+                                onClick={() => handleAgreementResponse(formData.id, 'ACCEPTED')}
+                                className="px-3 py-1 bg-green-500 text-white rounded-md hover:bg-green-600 text-sm"
+                              >
+                                Accept
+                              </button>
+                              <button
+                                onClick={() => handleAgreementResponse(formData.id, 'REJECTED')}
+                                className="px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 text-sm"
+                              >
+                                Reject
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     );
-                  })()}
-                </div>
-              </div>
-            ) : (
-              <span>{msg.content}</span>
-            )}
+                  } catch (error) {
+                    console.error('Error parsing agreement data:', error);
+                    return null;
+                  }
+                })()
+              ) : (
+                <span>{msg.content}</span>
+              )}
+            </div>
+            <div className="text-xs text-gray-500 mt-1">
+              {formatMessageTime(msg.timestamp)}
+            </div>
           </div>
-          <div className="text-xs text-gray-500 mt-1">
-            {new Date(msg.timestamp).toLocaleTimeString()}
-          </div>
-        </div>
-      ))}
-      <div ref={messagesEndRef} />
-    </div>
+        ))}
+        <div ref={messagesEndRef} />
+      </div>
   
       {/* Image Preview Area */}
       {imagePreview && (
