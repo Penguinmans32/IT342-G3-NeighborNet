@@ -303,6 +303,7 @@ const Borrowing = () => {
   const [ratingLoading, setRatingLoading] = useState({});
   const [searchTerm, setSearchTerm] = useState('');
   const [stompClient, setStompClient] = useState(null);
+  const [borrowedItems, setBorrowedItems] = useState(new Set());
   const [galleryModal, setGalleryModal] = useState({
     isOpen: false,
     images: [],
@@ -315,6 +316,19 @@ const Borrowing = () => {
     ownerId: null,
     ownerName: '',
   });
+
+  const fetchBorrowedItemsStatus = async () => {
+    try {
+      const response = await axios.get('http://localhost:8080/api/borrowing/items/borrowed', {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      const borrowedItemIds = new Set(response.data.map(item => item.id));
+      setBorrowedItems(borrowedItemIds);
+      console.log("Borrowed items:", borrowedItemIds);
+    } catch (error) {
+      console.error('Error fetching borrowed items status:', error);
+    }
+  };
 
   useEffect(() => {
     if (user?.id) {
@@ -510,6 +524,7 @@ const Borrowing = () => {
     };
   
     fetchItems();
+    fetchBorrowedItemsStatus();
   }, []);
 
   const handleAddItem = () => {
@@ -619,52 +634,69 @@ const Borrowing = () => {
                   <motion.div
                     key={item.id}
                     whileHover={{ y: -5 }}
-                    className="bg-white rounded-xl shadow-sm overflow-hidden group"
+                    className={`bg-white rounded-xl shadow-sm overflow-hidden group 
+                      ${borrowedItems.has(item.id) ? 'opacity-85' : ''}`}
                   >
                     {/* Image Gallery */}
-                      <div className="aspect-[4/3] relative overflow-hidden bg-gray-100">
-                        {item.imageUrls && item.imageUrls.length > 0 ? (
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 p-2 h-full">
-                            {/* Main Image */}
-                            <div className="col-span-2 h-48 relative rounded-lg overflow-hidden">
-                              <img
-                                src={item.imageUrls[0]}
-                                alt={`${item.name} - Main`}
-                                className="w-full h-full object-cover"
-                                onError={(e) => {
-                                  e.target.onerror = null;
-                                  e.target.src = 'https://via.placeholder.com/400x300?text=No+Image';
-                                }}
-                              />
+                    <div className="aspect-[4/3] relative overflow-hidden bg-gray-100">
+                      {/* Images - Always show these */}
+                      {item.imageUrls && item.imageUrls.length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 p-2 h-full">
+                          {/* Main Image */}
+                          <div className="col-span-2 h-48 relative rounded-lg overflow-hidden">
+                            <img
+                              src={item.imageUrls[0]}
+                              alt={`${item.name} - Main`}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.target.onerror = null;
+                                e.target.src = 'https://via.placeholder.com/400x300?text=No+Image';
+                              }}
+                            />
+                          </div>
+                          
+                          {/* Thumbnail Images */}
+                          {item.imageUrls.length > 1 && (
+                            <div className="grid grid-cols-3 gap-2 col-span-2">
+                              {item.imageUrls.slice(1, 4).map((url, index) => (
+                                <div key={index} className="aspect-square relative rounded-lg overflow-hidden">
+                                  <img
+                                    src={url}
+                                    alt={`${item.name} - ${index + 2}`}
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                      e.target.onerror = null;
+                                      e.target.src = 'https://via.placeholder.com/150?text=No+Image';
+                                    }}
+                                  />
+                                </div>
+                              ))}
                             </div>
-                            
-                            {/* Thumbnail Images */}
-                            {item.imageUrls.length > 1 && (
-                              <div className="grid grid-cols-3 gap-2 col-span-2">
-                                {item.imageUrls.slice(1, 4).map((url, index) => (
-                                  <div key={index} className="aspect-square relative rounded-lg overflow-hidden">
-                                    <img
-                                      src={url}
-                                      alt={`${item.name} - ${index + 2}`}
-                                      className="w-full h-full object-cover"
-                                      onError={(e) => {
-                                        e.target.onerror = null;
-                                        e.target.src = 'https://via.placeholder.com/150?text=No+Image';
-                                      }}
-                                    />
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="flex flex-col items-center justify-center h-full p-4">
-                            <MdImage className="text-4xl text-gray-400 mb-2" />
-                            <p className="text-gray-500 text-sm text-center">No images available</p>
-                          </div>
-                        )}
+                          )}
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center h-full p-4">
+                          <MdImage className="text-4xl text-gray-400 mb-2" />
+                          <p className="text-gray-500 text-sm text-center">No images available</p>
+                        </div>
+                      )}
 
-                        {/* Hover Overlay */}
+                      {/* Borrowed Overlay - Show only if borrowed */}
+                      {borrowedItems.has(item.id) && (
+                        <div className="absolute inset-0 z-20 bg-black/60 flex flex-col items-center justify-center">
+                          <div className="bg-red-500 text-white px-6 py-2 rounded-full font-bold mb-2">
+                            Currently Borrowed
+                          </div>
+                          {item.borrower && (
+                            <div className="text-white text-sm bg-black/40 px-4 py-1 rounded-full">
+                              by {item.borrower.username}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Hover Overlay - Show only if NOT borrowed */}
+                      {!borrowedItems.has(item.id) && (
                         <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 
                                         transition-opacity flex items-center justify-center">
                           <div className="flex gap-2">
@@ -692,10 +724,12 @@ const Borrowing = () => {
                             </motion.button>
                           </div>
                         </div>
-                      </div>
+                      )}
+                    </div>
 
                     {/* Item Details */}
                     <div className="p-6">
+                      {/* Category and Location */}
                       <div className="flex items-center gap-2 mb-3">
                         <span className="px-3 py-1 bg-blue-50 text-blue-600 text-xs font-medium rounded-full">
                           {item.category}
@@ -706,10 +740,40 @@ const Borrowing = () => {
                         </span>
                       </div>
 
+                      {/* Item Name */}
                       <h3 className="text-lg font-semibold text-gray-900 mb-2">
                         {item.name}
                       </h3>
 
+                      {/* Borrowed Status Badge */}
+                        {borrowedItems.has(item.id) && (
+                          <div className="mb-3 bg-red-50 border border-red-200 rounded-lg p-3">
+                            <div className="flex flex-col gap-2">
+                              <div className="flex items-center gap-2">
+                                <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" 
+                                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                <span className="text-red-700 font-medium">Not Available</span>
+                              </div>
+                              <div className="flex items-center gap-2 text-sm text-red-600">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" 
+                                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                </svg>
+                                <span>
+                                  Currently borrowed by: {item.borrower ? (
+                                    <span className="font-medium">{item.borrower.username}</span>
+                                  ) : (
+                                    <span className="italic">another user</span>
+                                  )}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                      {/* Star Rating */}
                       <div className="flex items-center gap-2 mb-2">
                         <StarRating
                           rating={itemRatings[item.id] || 0}
@@ -728,6 +792,8 @@ const Borrowing = () => {
                           </span>
                         )}
                       </div>
+
+                      {/* Description */}
                       <p className="text-gray-600 text-sm mb-4 line-clamp-2">
                         {item.description}
                       </p>
@@ -745,8 +811,9 @@ const Borrowing = () => {
                             <p className="text-gray-500">{item.availabilityPeriod}</p>
                           </div>
                         </div>
-                        {item.owner?.id !== user?.id && ( 
-                            <motion.button
+                        {/* Show message button only if not borrowed and not owner */}
+                        {item.owner?.id !== user?.id && !borrowedItems.has(item.id) && (
+                          <motion.button
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
                             onClick={() => handleMessageClick(item.owner.id, item.owner.username)}
@@ -755,7 +822,7 @@ const Borrowing = () => {
                           >
                             Message
                           </motion.button>
-                          )}
+                        )}
                       </div>
 
                       {/* Availability Dates */}
@@ -763,7 +830,7 @@ const Borrowing = () => {
                         <MdCalendarToday className="text-blue-500" />
                         <span>
                           Available dates: {new Date(item.availableFrom).toLocaleDateString()} - 
-                           {new Date(item.availableUntil).toLocaleDateString()}
+                          {new Date(item.availableUntil).toLocaleDateString()}
                         </span>
                       </div>
                     </div>
