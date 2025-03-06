@@ -1,6 +1,7 @@
 package com.example.neighbornetbackend.model;
 
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
@@ -13,12 +14,17 @@ public class ChatMessage {
 
     @Column(nullable = false)
     private Long senderId;
+
     @Column(nullable = false)
     private Long receiverId;
+
     @Column(nullable = false)
     private String content;
+
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
     @Column(nullable = false)
     private LocalDateTime timestamp;
+
     @Column(nullable = false)
     private boolean is_read;
 

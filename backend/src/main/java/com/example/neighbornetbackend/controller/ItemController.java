@@ -3,8 +3,10 @@ package com.example.neighbornetbackend.controller;
 import com.example.neighbornetbackend.dto.ErrorResponse;
 import com.example.neighbornetbackend.dto.ItemDTO;
 import com.example.neighbornetbackend.dto.RatingRequest;
+import com.example.neighbornetbackend.model.BorrowingAgreement;
 import com.example.neighbornetbackend.model.Item;
 import com.example.neighbornetbackend.model.ItemRating;
+import com.example.neighbornetbackend.service.BorrowingAgreementService;
 import com.example.neighbornetbackend.service.ItemImageStorageService;
 import com.example.neighbornetbackend.service.ItemRatingService;
 import com.example.neighbornetbackend.service.ItemService;
@@ -32,11 +34,13 @@ public class ItemController {
     private final ItemService itemService;
     private final ItemImageStorageService itemImageStorageService;
     private final ItemRatingService itemRatingService;
+    private final BorrowingAgreementService borrowingAgreementService;
 
-    public ItemController(ItemService itemService, ItemImageStorageService itemImageStorageService, ItemRatingService itemRatingService) {
+    public ItemController(ItemService itemService, ItemImageStorageService itemImageStorageService, ItemRatingService itemRatingService, BorrowingAgreementService borrowingAgreementService) {
         this.itemService = itemService;
         this.itemImageStorageService = itemImageStorageService;
         this.itemRatingService = itemRatingService;
+        this.borrowingAgreementService = borrowingAgreementService;
     }
 
     @PostMapping
@@ -159,6 +163,44 @@ public class ItemController {
             return ResponseEntity.ok(items);
         } catch (Exception e) {
             logger.error("Error getting items for user ID: " + userId, e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    @GetMapping("/borrowed")
+    public ResponseEntity<List<ItemDTO>> getBorrowedItems(@CurrentUser UserPrincipal currentUser) {
+        try {
+            List<ItemDTO> borrowedItems = borrowingAgreementService.getBorrowedItems(currentUser.getId());
+            return ResponseEntity.ok(borrowedItems);
+        } catch (Exception e) {
+            logger.error("Error getting borrowed items for user: " + currentUser.getId(), e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    @GetMapping("/lent")
+    public ResponseEntity<List<ItemDTO>> getLentItems(@CurrentUser UserPrincipal currentUser) {
+        try {
+            List<ItemDTO> lentItems = borrowingAgreementService.getLentItems(currentUser.getId());
+            return ResponseEntity.ok(lentItems);
+        } catch (Exception e) {
+            logger.error("Error getting lent items for user: " + currentUser.getId(), e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    @GetMapping("/{itemId}/borrowers")
+    public ResponseEntity<?> getItemBorrowers(
+            @PathVariable Long itemId,
+            @CurrentUser UserPrincipal currentUser) {
+        try {
+            // Check if the current user owns the item
+            if (!itemService.isItemOwner(itemId, currentUser.getId())) {
+                return ResponseEntity.status(403).body(new ErrorResponse("You don't own this item"));
+            }
+            List<BorrowingAgreement> borrowers = itemService.getItemBorrowers(itemId);
+            return ResponseEntity.ok(borrowers);
+        } catch (Exception e) {
             return ResponseEntity.internalServerError().build();
         }
     }

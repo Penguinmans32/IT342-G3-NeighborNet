@@ -20,6 +20,8 @@ import Borrowing from "./components/Borrowing";
 import AddBorrowingItem from "./components/AddBorrowingItem";
 import ItemDetail from "./components/ItemDetail";
 import MessagesPage from "./components/MessagesPage";
+import YourItems from "./components/YourItems";
+import BorrowedItems from "./components/BorrowedItems";
 
 function App() {
   return (
@@ -134,6 +136,22 @@ function App() {
               element={
                 <ProtectedRoute>
                   <MessagesPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/your-items"
+              element={
+                <ProtectedRoute>
+                  <YourItems />
+                </ProtectedRoute>
+              } 
+            />
+             <Route 
+              path="/borrowed-items"
+              element={
+                <ProtectedRoute>
+                  <BorrowedItems />
                 </ProtectedRoute>
               } 
             />

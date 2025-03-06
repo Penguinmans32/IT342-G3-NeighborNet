@@ -31,6 +31,7 @@ import {
   MdMusicNote,
   MdEdit,
   MdFilterList,
+  MdInventory,
   MdPlayArrow,
   MdClose,
 } from "react-icons/md";
@@ -1017,6 +1018,7 @@ const Homepage = () => {
                 {[
                   { icon: <MdAdd />, label: "Create Class", path: "/create-class" },
                   { icon: <MdLibraryBooks />, label: "Your Classes", path: "/your-classes" },
+                  { icon: <MdInventory />, label: "Your Items", path: "/your-items" },
                 ].map((item, index) => (
                   <motion.button
                     key={index}
