@@ -3,8 +3,10 @@ package com.example.neighbornetbackend.service;
 import com.example.neighbornetbackend.dto.BorrowRequestDTO;
 import com.example.neighbornetbackend.dto.CreatorDTO;
 import com.example.neighbornetbackend.dto.ItemDTO;
+import com.example.neighbornetbackend.model.BorrowingAgreement;
 import com.example.neighbornetbackend.model.Item;
 import com.example.neighbornetbackend.model.User;
+import com.example.neighbornetbackend.repository.BorrowingAgreementRepository;
 import com.example.neighbornetbackend.repository.ItemRepository;
 import com.example.neighbornetbackend.repository.UserRepository;
 import org.slf4j.Logger;
@@ -13,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -23,13 +26,15 @@ public class ItemService {
     private final ItemRepository itemRepository;
     private final UserRepository userRepository;
     private final ItemImageStorageService itemImageStorageService;
+    private final BorrowingAgreementRepository borrowingAgreementRepository;
 
     private static final Logger logger = LoggerFactory.getLogger(ItemService.class);
 
-    public ItemService(ItemRepository itemRepository, UserRepository userRepository, ItemImageStorageService itemImageStorageService) {
+    public ItemService(ItemRepository itemRepository, UserRepository userRepository, ItemImageStorageService itemImageStorageService, BorrowingAgreementRepository borrowingAgreementRepository) {
         this.itemRepository = itemRepository;
         this.userRepository = userRepository;
         this.itemImageStorageService = itemImageStorageService;
+        this.borrowingAgreementRepository = borrowingAgreementRepository;
     }
 
     public ItemDTO createItem(Item item, List<MultipartFile> images, Long userId) throws IOException {
@@ -145,5 +150,18 @@ public class ItemService {
 
         Item savedItem = itemRepository.save(existingItem);
         return convertToDTO(savedItem);
+    }
+
+    public boolean isItemOwner(Long itemId, Long userId) {
+        Item item = itemRepository.findById(itemId).orElse(null);
+        if (item == null || item.getOwner() == null) {
+            return false;
+        }
+        return item.getOwner().getId().equals(userId);
+    }
+
+    public List<BorrowingAgreement> getItemBorrowers(Long itemId) {
+        return borrowingAgreementRepository.findByItemIdAndStatusAndBorrowingEndGreaterThan(
+                itemId, "ACCEPTED", LocalDateTime.now());
     }
 }
