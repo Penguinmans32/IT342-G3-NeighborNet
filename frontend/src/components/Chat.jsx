@@ -1,20 +1,46 @@
 import { useState, useEffect, useRef } from 'react';
-import { Client } from '@stomp/stompjs';
-import SockJS from 'sockjs-client';
 import { motion, AnimatePresence } from 'framer-motion';
 import BorrowingAgreementForm from './BorrowingAgreementForm';
 
 
 const formatMessageTime = (timestamp) => {
   try {
-    let date = new Date(timestamp);
-    
-    if (isNaN(date.getTime()) && typeof timestamp === 'string') {
-      date = new Date(timestamp.replace(' ', 'T') + 'Z');
+    // First check if we have a valid timestamp
+    if (!timestamp) {
+      console.error('No timestamp provided');
+      return 'Invalid Time';
     }
 
-    if (isNaN(date.getTime())) {
-      console.error('Invalid timestamp:', timestamp);
+    // If timestamp is already a Date object
+    if (timestamp instanceof Date) {
+      return new Intl.DateTimeFormat('en-US', {
+        hour: 'numeric',
+        minute: 'numeric',
+        hour12: true,
+        timeZone: 'Asia/Singapore'
+      }).format(timestamp);
+    }
+
+    // If timestamp is a string, try to parse it
+    let date;
+    if (typeof timestamp === 'string') {
+      // Check if the timestamp contains microseconds
+      if (timestamp.includes('.')) {
+        // Remove anything after milliseconds (more than 3 digits after dot)
+        const cleanTimestamp = timestamp.replace(/(\.\d{3})\d+/, '$1');
+        // Make sure it's in ISO format
+        if (!timestamp.includes('T')) {
+          timestamp = cleanTimestamp.replace(' ', 'T');
+        }
+        if (!timestamp.endsWith('Z')) {
+          timestamp = timestamp + 'Z';
+        }
+      }
+      date = new Date(timestamp);
+    }
+
+    if (!date || isNaN(date.getTime())) {
+      console.error('Invalid timestamp format:', timestamp);
       return 'Invalid Time';
     }
 
