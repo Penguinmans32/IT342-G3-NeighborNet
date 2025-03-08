@@ -420,45 +420,51 @@ const Borrowing = () => {
     });
   };
 
-  const handleSendMessage = async (message) => {
-    try {
-      if (stompClient?.connected) {
-        const chatMessage = {
-          senderId: user.id,
-          receiverId: messageModal.ownerId,
-          content: message,
-          messageType: 'TEXT',  
-          timestamp: new Date().toISOString()
-        };
-  
-        stompClient.publish({
-          destination: '/app/chat',
-          body: JSON.stringify(chatMessage)
-        });
-  
-        navigate('/messages', {
-          state: {
-            selectedContact: {
-              id: messageModal.ownerId,
-              username: messageModal.ownerName
-            }
-          }
-        });
-      } else {
-        throw new Error('WebSocket not connected');
-      }
-    } catch (error) {
-      console.error('Error sending message:', error);
+ const handleSendMessage = async (message) => {
+  try {
+    if (stompClient?.connected) {
+      const chatMessage = {
+        senderId: user.id,
+        receiverId: messageModal.ownerId,
+        content: message,
+        messageType: 'TEXT',  
+        timestamp: new Date().toISOString()
+      };
+
+      stompClient.publish({
+        destination: '/app/chat',
+        body: JSON.stringify(chatMessage)
+      });
+
+      await new Promise(resolve => setTimeout(resolve, 100));
+
       navigate('/messages', {
         state: {
           selectedContact: {
             id: messageModal.ownerId,
             username: messageModal.ownerName
+          },
+          newMessage: {
+            ...chatMessage,
+            temporary: true
           }
         }
       });
+    } else {
+      throw new Error('WebSocket not connected');
     }
-  };
+  } catch (error) {
+    console.error('Error sending message:', error);
+    navigate('/messages', {
+      state: {
+        selectedContact: {
+          id: messageModal.ownerId,
+          username: messageModal.ownerName
+        }
+      }
+    });
+  }
+};
 
   const extractCategories = (items) => {
     // Get unique categories
