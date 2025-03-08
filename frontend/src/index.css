@@ -1,3 +1,35 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Apply default fonts to the entire application */
+@layer base {
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Poppins', sans-serif;
+  }
+}
+
+/* Define reusable text styles */
+@layer components {
+  .text-title {
+    @apply font-display text-2xl md:text-3xl font-bold;
+  }
+
+  .text-subtitle {
+    @apply font-display text-xl md:text-2xl font-semibold;
+  }
+
+  .text-body {
+    @apply font-body text-base text-gray-600;
+  }
+
+  .text-caption {
+    @apply font-body text-sm text-gray-500;
+  }
+}
