@@ -168,7 +168,7 @@
                 closeSignInModal();
         
                 setTimeout(() => {
-                  navigate('/homepage');
+                  navigate('/dashboard');
                 }, 500);
               } catch (error) {
                 console.error('Error fetching user data:', error);
@@ -232,7 +232,7 @@
               title: 'Welcome back!',
               message: 'You have successfully logged in'
           });
-          navigate('/homepage');
+          navigate('/dashboard');
       } catch (err) {
           console.error('Login error:', err);
           const errorMessage = err.response?.data?.message || err.message || 'An error occurred during login';

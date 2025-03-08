@@ -22,6 +22,7 @@ import ItemDetail from "./components/ItemDetail";
 import MessagesPage from "./components/MessagesPage";
 import YourItems from "./components/YourItems";
 import BorrowedItems from "./components/BorrowedItems";
+import Dashboard from "./components/Dashboard";
 
 function App() {
   return (
@@ -152,6 +153,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <BorrowedItems />
+                </ProtectedRoute>
+              } 
+            />
+             <Route 
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <Dashboard />
                 </ProtectedRoute>
               } 
             />

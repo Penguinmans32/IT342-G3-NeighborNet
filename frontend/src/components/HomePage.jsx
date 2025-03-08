@@ -421,7 +421,11 @@ const Homepage = () => {
                   </div>
                 ) : (
                 <div className="flex items-center gap-3">
-                  <span className="text-white hidden lg:block">{user.username}</span>
+                  <span className="text-white hidden lg:block font-display">
+                    {user.username.split(' ').map(word => 
+                      word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+                    ).join(' ')}
+                  </span>
 
                   <motion.button
                     whileHover={{ scale: 1.05 }}
@@ -1078,7 +1082,7 @@ const Homepage = () => {
             </nav>
           </motion.div>
         )}
-        <Footer />
+        <Footer className="mt-auto" /> 
     </div>
   );
 };

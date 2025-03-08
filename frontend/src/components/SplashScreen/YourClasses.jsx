@@ -7,7 +7,7 @@ import {
   MdTimeline, MdGridView, MdSearch, MdPlayCircle,
   MdBrightness1, MdRadar, MdHub, MdTrendingUp
 } from 'react-icons/md';
-import { Play, Clock, Book, Award, TrendingUp } from 'lucide-react';
+import {Clock, Book, Award, TrendingUp, BookX} from 'lucide-react';
 import axios from "axios"
 import '../../styles/YourClasses.css';
 import LessonList from "./LessonList";
@@ -684,7 +684,7 @@ const YourClasses = () => {
           </motion.div>
         ) : filteredAndSortedClasses.length === 0 ? (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center py-20">
-            <img src="/empty-classes.svg" alt="No classes" className="w-72 h-72 mx-auto mb-8 opacity-50" />
+            <BookX className="w-20 h-20 text-gray-400 opacity-50 mx-auto" />
             <h3 className="text-3xl font-bold text-gray-900 mb-4">Start Your Teaching Journey</h3>
             <p className="text-gray-600 mb-8 max-w-md mx-auto">
               Create your first class and share your knowledge with eager learners worldwide.
