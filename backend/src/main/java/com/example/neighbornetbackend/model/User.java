@@ -3,6 +3,7 @@ package com.example.neighbornetbackend.model;
 
 import jakarta.persistence.*;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -40,6 +41,14 @@ public class User {
 
     @Column(name = "image_url")
     private String imageUrl;
+
+    @Column(name = "created_date")
+    private LocalDateTime createdDate;
+
+    @PrePersist
+    protected void onCreate() {
+        createdDate = LocalDateTime.now();
+    }
 
     public String getProvider() {
         return provider;
@@ -131,4 +140,13 @@ public class User {
         notifications.remove(notification);
         notification.setUser(null);
     }
+
+    public LocalDateTime getCreatedDate() {
+        return createdDate;
+    }
+
+    public void setCreatedDate(LocalDateTime createdDate) {
+        this.createdDate = createdDate;
+    }
+
 }

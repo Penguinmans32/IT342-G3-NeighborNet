@@ -26,4 +26,6 @@ public interface BorrowingAgreementRepository extends JpaRepository<BorrowingAgr
             @Param("itemId") Long itemId,
             @Param("start") LocalDateTime start,
             @Param("end") LocalDateTime end);
+
+    long countByCreatedAtBefore(LocalDateTime date);
 }
