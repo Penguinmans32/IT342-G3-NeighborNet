@@ -96,6 +96,8 @@ const Dashboard = () => {
   const [isCommenting, setIsCommenting] = useState({});
   const [editingPostId, setEditingPostId] = useState(null);
   const [editedContent, setEditedContent] = useState('');
+  const [recentClasses, setRecentClasses] = useState([]);
+  const [recentActivities, setRecentActivities] = useState([]);
   const [stats, setStats] = useState({
     skillsShared: 0,
     itemsBorrowed: 0,
@@ -106,6 +108,70 @@ const Dashboard = () => {
       activeUsersChange: 0,
     },
   })
+
+  const getFullThumbnailUrl = (thumbnailUrl) => {
+    if (!thumbnailUrl) return "/default-class-image.jpg";
+    return thumbnailUrl.startsWith('http') 
+      ? thumbnailUrl 
+      : `http://localhost:8080${thumbnailUrl}`;
+  };
+
+  useEffect(() => {
+    const fetchRecentActivities = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          navigate('/login');
+          return;
+        }
+  
+        const response = await axios.get("http://localhost:8080/api/activities/recent", {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        }); 
+  
+        setRecentActivities(response.data);
+      } catch (error) {
+        console.error("Error fetching recent activities:", error);
+      }
+    };
+  
+    fetchRecentActivities();
+  }, [navigate]);
+  
+
+  useEffect(() => {
+    const fetchRecentClasses = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          navigate('/login');
+          return;
+        }
+  
+        const response = await axios.get("http://localhost:8080/api/classes/all", {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+  
+        // Get the 5 most recent classes
+        const sortedClasses = response.data
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+          .slice(0, 5);
+  
+        setRecentClasses(sortedClasses);
+        console.log(response.data)
+      } catch (error) {
+        console.error("Error fetching recent classes:", error);
+      }
+    };
+  
+    fetchRecentClasses();
+  }, [navigate]);
 
   useEffect(() => {
     const fetchPosts = async () => {
@@ -546,42 +612,6 @@ const Dashboard = () => {
     fetchDashboardStats()
   }, [])
 
-  const recentActivities = [
-    {
-      type: "skill",
-      user: "Sarah Chen",
-      action: "shared a new skill",
-      title: "Advanced Photography Tips",
-      time: "2 hours ago",
-      engagement: { likes: 12, comments: 5 },
-    },
-    {
-      type: "borrow",
-      user: "Mike Johnson",
-      action: "borrowed",
-      title: "Professional Camera Kit",
-      time: "3 hours ago",
-      engagement: { likes: 8, comments: 3 },
-    },
-    // Add more activities...
-  ]
-
-  const upcomingSessions = [
-    {
-      title: "Guitar Basics Workshop",
-      instructor: "John Doe",
-      date: "Tomorrow, 3:00 PM",
-      participants: 5,
-    },
-    {
-      title: "Cooking Class: Italian Cuisine",
-      instructor: "Maria Garcia",
-      date: "Mar 10, 5:30 PM",
-      participants: 8,
-    },
-    // Add more sessions...
-  ]
-
   return (
     <div className="min-h-screen bg-indigo-50/30">
       <GlobalStyle />
@@ -666,9 +696,11 @@ const Dashboard = () => {
       `}</style>
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Welcome Section */}
+       {/* Welcome Section */}
         <div className="mb-8">
-          <h1 className="text-2xl font-display font-bold text-indigo-900">Welcome back, ey! 👋</h1>
+          <h1 className="text-2xl font-display font-bold text-indigo-900">
+            Welcome back, {user?.username || 'User'}! 👋
+          </h1>
           <p className="text-indigo-600 mt-1">Here's what's happening in your community</p>
         </div>
 
@@ -1059,33 +1091,47 @@ const Dashboard = () => {
           <div className="space-y-6">
             {/* Upcoming Sessions */}
             <div className="bg-white rounded-xl shadow-sm p-6 border border-purple-100">
-              <h2 className="text-xl font-semibold mb-6 text-purple-900">Upcoming Sessions</h2>
+              <h2 className="text-xl font-semibold mb-6 text-purple-900">Recent Classes</h2>
               <div className="space-y-4">
-                {upcomingSessions.map((session, index) => (
+                {recentClasses.map((classItem) => (
                   <div
-                    key={index}
-                    className="flex items-start gap-4 p-3 rounded-lg hover:bg-purple-50 transition-colors"
+                    key={classItem.id}
+                    className="flex items-start gap-4 p-3 rounded-lg hover:bg-purple-50 transition-colors cursor-pointer"
+                    onClick={() => navigate(`/classes/${classItem.id}`)}
                   >
-                    <div className="w-12 h-12 rounded-lg bg-purple-100 flex items-center justify-center">
-                      <Calendar className="w-6 h-6 text-purple-600" />
+                    <div className="w-12 h-12 rounded-lg bg-purple-100 overflow-hidden">
+                      {classItem.thumbnailUrl ? (
+                        <img 
+                          src={getFullThumbnailUrl(classItem.thumbnailUrl)}
+                          alt={classItem.title}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Calendar className="w-6 h-6 text-purple-600" />
+                        </div>
+                      )}
                     </div>
                     <div className="flex-1">
-                      <h3 className="font-medium text-purple-900">{session.title}</h3>
-                      <p className="text-sm text-purple-700">by {session.instructor}</p>
+                      <h3 className="font-medium text-purple-900">{classItem.title}</h3>
+                      <p className="text-sm text-purple-700">by {classItem.creator.username}</p>
                       <div className="flex items-center gap-2 mt-1 text-sm">
-                        <span className="text-purple-600">{session.date}</span>
+                        <span className="text-purple-600">{formatDate(classItem.createdAt)}</span>
                         <span className="text-purple-400">•</span>
-                        <span className="text-purple-600">{session.participants} participants</span>
+                        <span className="text-purple-600">
+                          {classItem.category}
+                        </span>
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
               <button
+                onClick={() => navigate('/homepage')}
                 className="w-full mt-4 px-4 py-2 border border-purple-600 text-purple-600 
-                               rounded-lg hover:bg-purple-50 transition-colors text-sm font-medium"
+                          rounded-lg hover:bg-purple-50 transition-colors text-sm font-medium"
               >
-                View All Sessions
+                View All Classes
               </button>
             </div>
 
@@ -1097,21 +1143,29 @@ const Dashboard = () => {
                   <div key={index} className="flex items-start gap-4 p-3 rounded-lg hover:bg-blue-50 transition-colors">
                     <div
                       className={`w-12 h-12 rounded-lg flex items-center justify-center
-                                  ${activity.type === "skill" ? "bg-purple-100" : "bg-blue-100"}`}
+                                  ${activity.type === "class" ? "bg-purple-100" : "bg-blue-100"}`}
                     >
-                      {activity.type === "skill" ? (
-                        <BookOpen className="w-6 h-6 text-purple-600" />
+                      {activity.type === "class" ? (
+                        activity.thumbnailUrl ? (
+                          <img 
+                            src={getFullThumbnailUrl(activity.thumbnailUrl)}
+                            alt={activity.title}
+                            className="w-full h-full object-cover rounded-lg"
+                          />
+                        ) : (
+                          <BookOpen className="w-6 h-6 text-purple-600" />
+                        )
                       ) : (
                         <HandshakeIcon className="w-6 h-6 text-blue-600" />
                       )}
                     </div>
                     <div className="flex-1">
                       <p className="text-sm text-blue-900">
-                        <span className="font-medium">{activity.user}</span> {activity.action}{" "}
+                        <span className="font-medium">{activity.user.username}</span> {activity.action}{" "}
                         <span className="font-medium">{activity.title}</span>
                       </p>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className="text-xs text-blue-500">{activity.time}</span>
+                        <span className="text-xs text-blue-500">{formatDate(activity.createdAt)}</span>
                         <div className="flex items-center gap-1">
                           <Heart className="w-4 h-4 text-blue-400" />
                           <span className="text-xs text-blue-500">{activity.engagement.likes}</span>
