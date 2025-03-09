@@ -28,4 +28,6 @@ public interface BorrowingAgreementRepository extends JpaRepository<BorrowingAgr
             @Param("end") LocalDateTime end);
 
     long countByCreatedAtBefore(LocalDateTime date);
+
+    List<BorrowingAgreement> findTop10ByStatusOrderByCreatedAtDesc(String status);
 }

@@ -1,6 +1,7 @@
 package com.example.neighbornetbackend.dto;
 
 import com.example.neighbornetbackend.model.Feedback;
+import com.fasterxml.jackson.annotation.JsonFormat;
 
 import java.time.LocalDateTime;
 
@@ -10,6 +11,7 @@ public class FeedbackResponse {
     private Integer rating;
     private String userName;
     private String userImage;
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS")
     private LocalDateTime createdAt;
 
     public static FeedbackResponse fromEntity(Feedback feedback) {

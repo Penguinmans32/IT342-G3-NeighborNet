@@ -262,4 +262,8 @@ public class ClassService {
     public boolean isUserLearning(Long classId, Long userId) {
         return enrollmentRepository.existsByCourseClassIdAndUserId(classId, userId);
     }
+
+    public List<ClassEnrollment> getRecentEnrollments() {
+        return enrollmentRepository.findTop10ByOrderByEnrolledAtDesc();
+    }
 }

@@ -108,4 +108,8 @@ public class BorrowingAgreementServiceImpl implements BorrowingAgreementService 
                 .filter(item -> item != null)
                 .collect(Collectors.toList());
     }
+
+    public List<BorrowingAgreement> getRecentBorrows() {
+        return borrowingAgreementRepository.findTop10ByStatusOrderByCreatedAtDesc("ACCEPTED");
+    }
 }

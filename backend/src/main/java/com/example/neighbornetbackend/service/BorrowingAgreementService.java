@@ -14,4 +14,5 @@ public interface BorrowingAgreementService {
     List<BorrowingAgreement> findByItemIdAndUsersAndStatus(Long itemId, Long borrowerId, Long lenderId, String status);
     List<ItemDTO> getBorrowedItems(Long userId);
     List<ItemDTO> getLentItems(Long userId);
+    List<BorrowingAgreement> getRecentBorrows();
 }
