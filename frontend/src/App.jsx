@@ -157,7 +157,7 @@ function App() {
               } 
             />
              <Route 
-              path="/dashboard"
+              path="/community"
               element={
                 <ProtectedRoute>
                   <Dashboard />
