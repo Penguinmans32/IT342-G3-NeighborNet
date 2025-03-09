@@ -123,12 +123,10 @@
         }
     
         const messageHandler = async (event) => {
-          // Debug logging
           console.log('Message received:', event);
           console.log('Origin:', event.origin);
           console.log('Expected origin:', window.location.origin);
           
-          // Accept messages from both backend and frontend URLs
           if (event.origin !== window.location.origin && 
               event.origin !== import.meta.env.VITE_APP_API_URL) {
             console.log('Invalid origin:', event.origin);
@@ -168,7 +166,7 @@
                 closeSignInModal();
         
                 setTimeout(() => {
-                  navigate('/dashboard');
+                  navigate('/community');
                 }, 500);
               } catch (error) {
                 console.error('Error fetching user data:', error);
@@ -232,7 +230,7 @@
               title: 'Welcome back!',
               message: 'You have successfully logged in'
           });
-          navigate('/dashboard');
+          navigate('/community');
       } catch (err) {
           console.error('Login error:', err);
           const errorMessage = err.response?.data?.message || err.message || 'An error occurred during login';

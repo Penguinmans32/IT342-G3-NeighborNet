@@ -91,7 +91,7 @@ useEffect(() => {
         showToast(newNotification);
     }, []);
 
-    const showToast = useCallback(({ type, title, message, duration = 5000 }) => {
+    const showNotification = useCallback(({ type, title, message, duration = 5000 }) => {
         const id = Date.now();
         setNotifications(prev => [...prev, { id, type, title, message, duration }]);
     }, []);
@@ -146,7 +146,7 @@ useEffect(() => {
     const value = {
         notifications,
         unreadCount,
-        showToast,
+        showNotification,
         markAsRead,
         markAllAsRead,
         deleteNotification,

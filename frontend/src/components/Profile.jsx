@@ -1,43 +1,16 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../backendApi/AuthContext";
-import { MdMenu, MdAccountCircle, MdDashboard, MdSchool, MdSwapHoriz, MdChat, MdPeople, MdAdd, MdLibraryBooks, MdLogout, MdSearch, MdNotifications, MdNotificationsActive, MdNotificationsOff, MdInfo, MdClose} from "react-icons/md";
-import { useNavigate, useLocation } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { useNavigate} from "react-router-dom";
+import { motion,} from "framer-motion";
 import Footer from './SplashScreen/Footer';
 import axios from "axios";
 
 const Profile = () => {
-  const { user, logout } = useAuth();
+  const { user} = useAuth();
   const navigate = useNavigate();
-  const [isProfileMenuOpen, setProfileMenuOpen] = useState(false);
-  const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("profile");
   const [isUpdating, setIsUpdating] = useState(false);
   const [profileData, setProfileData] = useState(null);
-
-  const [isNotificationsOpen, setNotificationsOpen] = useState(false);
-  const [unreadNotifications, setUnreadNotifications] = useState(2); 
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      type: 'message',
-      title: 'New Message',
-      message: 'You have a new message from John Doe',
-      time: '5 minutes ago',
-      unread: true
-    },
-    {
-      id: 2,
-      type: 'alert',
-      title: 'Class Reminder',
-      message: 'Your next class starts in 30 minutes',
-      time: '10 minutes ago',
-      unread: true
-    },
-  ]);
-
-  const location = useLocation();
-  const isProfilePage = location.pathname === "/profile";
 
   useEffect(() => {
     const fetchProfileData = async () => {
@@ -92,14 +65,41 @@ const Profile = () => {
   const styles = {
     container: {
       minHeight: "100vh",
-      backgroundColor: "#fff",
+      backgroundColor: "rgba(255, 255, 255, 0.9)",
+      position: "relative",
+      zIndex: "1",
+      paddingTop: "50px",
+    },
+    homeButton: {
+      position: "absolute",
+      top: "20px",
+      left: "20px",  // Changed from right to left
+      background: "linear-gradient(to right, #3b82f6, #8b5cf6)",
+      color: "#fff",
+      border: "none",
+      padding: "10px 20px",
+      borderRadius: "8px",
+      cursor: "pointer",
+      fontSize: "0.9rem",
+      fontWeight: "500",
+      boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+      transition: "transform 0.2s ease, box-shadow 0.2s ease",
+      zIndex: "10",
+      "&:hover": {
+        transform: "translateY(-2px)",
+        boxShadow: "0 4px 6px rgba(0, 0, 0, 0.15)",
+      },
     },
     content: {
-      backgroundColor: "#fff",
+      backgroundColor: "rgba(255, 255, 255, 0.95)",
       margin: "20px",
-      borderRadius: "8px",
+      borderRadius: "16px",
       padding: "20px",
       display: "flex",
+      boxShadow: "0 8px 32px rgba(0, 0, 0, 0.1)",
+      backdropFilter: "blur(8px)",
+      border: "1px solid rgba(255, 255, 255, 0.2)",
+      paddingTop: "20px",
     },
     profileContainer: {
       display: 'flex',
@@ -148,16 +148,59 @@ const Profile = () => {
       display: "flex",
       borderBottom: "1px solid #eee",
       marginBottom: "20px",
+      width: "100%",
+      position: "relative",
+      background: "linear-gradient(to right, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1))",
+      padding: "10px 0",
+      borderRadius: "8px",
+    },
+    tabsWrapper: {
+      display: "flex",
+      gap: "100px",
+      position: "relative",
+      zIndex: "1",
     },
     tab: {
-      padding: "10px 20px",
+      padding: "10px 30px",
       cursor: "pointer",
       color: "#666",
       borderBottom: "2px solid transparent",
+      position: "relative",
+      transition: "all 0.3s ease",
+      "&:hover": {
+        color: "#8b5cf6",
+        transform: "translateY(-2px)",
+      },
+    },
+    profileTab: {
+      marginLeft: "20px", 
+    },
+    achievementsTab: {
+      position: "absolute",
+      left: "50%",
+      transform: "translateX(-50%)",
+    },
+    tabHighlight: {
+      position: "absolute",
+      bottom: "-1px",
+      height: "2px",
+      transition: "all 0.3s ease",
+      background: "linear-gradient(to right, #3b82f6, #8b5cf6)",
+    },
+    animatedBackground: {
+      position: "fixed",
+      top: "0",
+      left: "0",
+      right: "0",
+      bottom: "0",
+      background: "linear-gradient(45deg, rgba(59, 130, 246, 0.05), rgba(139, 92, 246, 0.05))",
+      zIndex: "-1",
+      overflow: "hidden",
     },
     activeTab: {
       borderBottom: "2px solid #8b5cf6",
       color: "#8b5cf6",
+      fontWeight: "bold",
     },
     section: {
       marginBottom: "20px",
@@ -206,550 +249,192 @@ const Profile = () => {
     },
   };
 
-  const menuItemVariants = {
-    hidden: { opacity: 0, x: -20 },
-    visible: { opacity: 1, x: 0 },
-  };
+  const FloatingElement = ({ style }) => (
+    <div
+      style={{
+        position: "absolute",
+        width: "100px",
+        height: "100px",
+        borderRadius: "50%",
+        background: "linear-gradient(45deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1))",
+        animation: `float ${Math.random() * 10 + 5}s ease-in-out infinite`,
+        ...style,
+      }}
+    />
+  );
 
   return (
+    <>
+     <div style={styles.animatedBackground}>
+        <FloatingElement style={{ top: "10%", left: "10%" }} />
+        <FloatingElement style={{ top: "50%", right: "15%" }} />
+        <FloatingElement style={{ bottom: "20%", left: "30%" }} />
+      </div>
+
+      <button 
+      style={styles.homeButton} 
+      onClick={() => navigate("/homepage")}
+    >
+      Homepage
+    </button>
     <div style={styles.container}>
-       <header className="sticky top-0 z-50 w-full">
-          <div className="absolute inset-0 bg-gradient-to-r from-gray-700 to-blue-900 via-purple-600">
-            <div className="absolute inset-0">
-              <div className="floating-elements"></div>
-              <div className="floating-elements floating-elements2"></div>
-              <div className="floating-elements floating-elements3"></div>
-            </div>
-          </div>
-
-          <div className="relative z-10 backdrop-blur-sm transition-all duration-300">
-            <div className="container mx-auto">
-              <div className="flex h-16 items-center justify-between px-4 relative">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setMobileMenuOpen(!isMobileMenuOpen)}
-                  className="lg:hidden text-white p-2 hover:bg-white/10 rounded-lg transition-colors"
-                  aria-label="Toggle menu"
-                >
-                  <motion.div
-                    initial={false}
-                    animate={{ rotate: isMobileMenuOpen ? 90 : 0 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    {isMobileMenuOpen ? <MdClose className="text-2xl" /> : <MdMenu className="text-2xl" />}
-                  </motion.div>
-                </motion.button>
-
-                <motion.div
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  className="flex items-center gap-2 group cursor-pointer"
-                  onClick={() => navigate('/homepage')}
-                >
-                  <motion.div
-                    whileHover={{ rotate: 12 }}
-                    className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/95 shadow-md"
-                  >
-                    <span className="text-xl font-bold text-blue-600">N</span>
-                  </motion.div>
-                  <motion.span
-                    className="text-xl font-semibold text-white hidden sm:block"
-                    whileHover={{ scale: 1.05 }}
-                  >
-                    Neighbor Net
-                  </motion.span>
-                </motion.div>
-
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="flex-1 max-w-2xl mx-4 hidden md:block"
-                >
-                  <div className="relative group">
-                    <MdSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-xl" />
-                    <input
-                      type="search"
-                      placeholder="Search Classes, Teachers..."
-                      className="w-full h-10 pl-10 pr-12 rounded-full border-2 border-transparent 
-                                bg-white/90 backdrop-blur-sm focus:outline-none focus:ring-2 
-                                focus:ring-purple-400 transition-all shadow-lg hover:bg-white"
-                    />
-                    <span className="absolute right-4 top-1/2 transform -translate-y-1/2 
-                                  bg-gray-100 px-2 py-1 rounded-md text-xs text-gray-500
-                                  opacity-50 group-hover:opacity-100 transition-opacity duration-300">
-                      ⌘ K
-                    </span>
-                  </div>
-                </motion.div>
-
-                <motion.div
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  className="flex items-center gap-4"
-                >
-                  {!user ? (
-                    <div className="flex items-center gap-2">
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        className="hidden sm:inline-flex text-white hover:bg-white/10 px-6 py-2.5 
-                                  rounded-lg transition-colors shimmer-hover relative overflow-hidden"
-                      >
-                        Sign In
-                      </motion.button>
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        className="relative px-8 py-2.5 bg-white text-blue-600 rounded-full 
-                                  overflow-hidden group hover:shadow-xl transition-all duration-300"
-                      >
-                        <span className="relative z-10">Sign Up</span>
-                        <motion.div
-                          className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500"
-                          initial={{ x: '-100%' }}
-                          whileHover={{ x: '100%' }}
-                          transition={{ duration: 0.5 }}
-                        />
-                      </motion.button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-3">
-                  <span className="text-white hidden lg:block">{user.username}</span>
-
-
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    onClick={() => setNotificationsOpen(!isNotificationsOpen)}
-                    className="relative flex items-center justify-center w-10 h-10 rounded-full hover:bg-white/10 transition-colors"
-                  >
-                    <div className="relative">
-                      <MdNotifications className="text-2xl text-white" />
-                      {unreadNotifications > 0 && (
-                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
-                          <span className="text-xs text-white">{unreadNotifications}</span>
+              <div style={styles.content}>
+                <div style={styles.profileSection}>
+                  <div style={styles.profileContainer}>
+                    <div style={styles.avatar} className="relative group">
+                      <img
+                        src={
+                          profileData?.imageUrl
+                            ? profileData.imageUrl.startsWith('http')
+                              ? profileData.imageUrl
+                              : `http://localhost:8080${profileData.imageUrl}`
+                            : "/images/defaultProfile.png"
+                        }
+                        alt="Profile"
+                        className="w-full h-full rounded-full object-cover"
+                        onError={(e) => {
+                          console.error("Error loading image:", e);
+                          e.target.onerror = null;
+                          e.target.src = "/images/defaultProfile.png";
+                        }}
+                      />
+                      <div className="absolute inset-0 bg-black/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <label className="cursor-pointer">
+                          <span className="text-white text-sm">Change Photo</span>
+                          <input
+                            type="file"
+                            className="hidden"
+                            accept="image/*"
+                            onChange={handleProfilePictureUpdate}
+                            disabled={isUpdating}
+                          />
+                        </label>
+                      </div>
+                      {/* Loading overlay */}
+                      {isUpdating && (
+                        <div className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center">
+                          <span className="text-white">Updating...</span>
                         </div>
                       )}
                     </div>
-                  </motion.button>
 
+                    {/* Profile Info */}
+                    <h1 style={styles.name}>{profileData?.username || user?.username}</h1>
+                    <p style={styles.bio}>
+                      {profileData?.email}
+                    </p>
+                    <button style={styles.editButton} onClick={() => navigate("/edit-profile")}>
+                      Edit Profile
+                    </button>
 
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    onClick={() => setProfileMenuOpen(!isProfileMenuOpen)}
-                    className="relative flex items-center justify-center w-10 h-10 rounded-full hover:bg-white/10 transition-colors"
-                  >
-                    <MdAccountCircle className="text-2xl text-white" />
-                  </motion.button>
-                </div>
-                  )}
-                </motion.div>
-              </div>
-            </div>
-          </div>
+                    {/* Stats */}
+                    <div style={styles.statsContainer}>
+                      <div style={styles.stat}>
+                        <span style={styles.statLabel}>Followers</span>
+                        <span style={styles.statValue}>0</span>
+                      </div>
+                      <div style={styles.stat}>
+                        <span style={styles.statLabel}>Following</span>
+                        <span style={styles.statValue}>0</span>
+                      </div>
+                    </div>
 
-          {isMobileMenuOpen && (
-            <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="lg:hidden bg-white border-t border-gray-100 shadow-lg"
-            >
-              <div className="p-4">
-                <div className="relative">
-                  <MdSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-xl" />
-                  <input
-                    type="search"
-                    placeholder="Search Classes, Teachers..."
-                    className="w-full h-10 pl-10 pr-4 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-400"
-                  />
-                </div>
-              </div>
-              <nav className="py-2">
-                {[
-                  { icon: <MdDashboard />, label: "Dashboard", path: "/dashboard" },
-                  { icon: <MdSchool />, label: "Skills", path: "/skills" },
-                  { icon: <MdSwapHoriz />, label: "Borrowing", path: "/borrowing" },
-                  { icon: <MdChat />, label: "Messages", path: "/messages" },
-                  { icon: <MdPeople />, label: "Community", path: "/community" },
-                ].map((item, index) => (
-                  <motion.button
-                    key={index}
-                    variants={menuItemVariants}
-                    initial="hidden"
-                    animate="visible"
-                    transition={{ delay: index * 0.1 }}
-                    className="w-full flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-50"
-                    onClick={() => navigate(item.path)}
-                  >
-                    <span className="text-blue-500">{item.icon}</span>
-                    {item.label}
-                  </motion.button>
-                ))}
-              </nav>
-            </motion.div>
-          )}
-      </header>
+                    {/* Social Links */}
+                    <button style={styles.linkButton} onClick={() => navigate("/edit-profile")}>
+                      <span>🔗</span>
+                      Link social accounts
+                    </button>
 
-              <AnimatePresence>
-                  {isNotificationsOpen && (
-                    <>
-                      {/* Overlay */}
-                      <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        onClick={() => setNotificationsOpen(false)}
-                        className="fixed inset-0 bg-black/50 z-40"
-                      />
-                      
-                      <motion.div
-                        initial={{ x: "100%" }}
-                        animate={{ x: 0 }}
-                        exit={{ x: "100%" }}
-                        transition={{ type: "tween", duration: 0.3 }}
-                        className="fixed right-0 top-0 h-screen w-80 bg-white shadow-xl z-50"
-                      >
-                        <div className="p-4 border-b border-gray-100">
-                          <div className="flex items-center justify-between">
-                            <h2 className="text-lg font-semibold">Notifications</h2>
-                            <button
-                              onClick={() => setNotificationsOpen(false)}
-                              className="p-2 hover:bg-gray-100 rounded-full"
-                            >
-                              <MdClose className="text-xl" />
-                            </button>
-                          </div>
-                        </div>
-      
-                        <div className="overflow-y-auto h-[calc(100vh-64px)]">
-                          {notifications.map((notification, index) => (
-                            <motion.div
-                              key={notification.id}
-                              initial={{ opacity: 0, x: -20 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              transition={{ delay: index * 0.1 }}
-                              className={`p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer
-                                        ${notification.unread ? 'bg-blue-50/50' : ''}`}
-                            >
-                              <div className="flex gap-3">
-                                <div className="flex-shrink-0">
-                                  <span className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                                    {notification.type === 'message' && <MdChat className="text-blue-500" />}
-                                    {notification.type === 'alert' && <MdNotificationsActive className="text-red-500" />}
-                                    {notification.type === 'update' && <MdInfo className="text-green-500" />}
-                                  </span>
-                                </div>
-                                <div className="flex-1">
-                                  <p className="text-sm font-medium text-gray-900">{notification.title}</p>
-                                  <p className="text-sm text-gray-500">{notification.message}</p>
-                                  <p className="text-xs text-gray-400 mt-1">
-                                    {notification.time}
-                                  </p>
-                                </div>
-                                {notification.unread && (
-                                  <div className="w-2 h-2 rounded-full bg-blue-500 self-center" />
-                                )}
-                              </div>
-                            </motion.div>
-                          ))}
-      
-                          {notifications.length === 0 && (
-                            <div className="flex flex-col items-center justify-center h-full p-8 text-center text-gray-500">
-                              <MdNotificationsOff className="text-4xl mb-2" />
-                              <p>No notifications yet</p>
-                            </div>
-                          )}
-                        </div>
-                      </motion.div>
-                    </>
-                  )}
-                </AnimatePresence>
-
-  
-        {isProfileMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="absolute right-4 top-16 bg-white shadow-xl rounded-xl w-[300px] overflow-hidden border border-gray-100 z-50"
-          >
-            <div className="p-6 text-center border-b">
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                className="w-20 h-20 mx-auto mb-3 relative group"
-              >
-                <img
-                  src={
-                    profileData?.imageUrl
-                      ? profileData.imageUrl.startsWith('http')
-                        ? profileData.imageUrl
-                        : `http://localhost:8080${profileData.imageUrl}`
-                      : "/placeholder.svg"
-                  }
-                  alt="Profile"
-                  className="w-full h-full rounded-full object-cover ring-2 ring-offset-2 ring-blue-500"
-                  onError={(e) => {
-                    console.error("Error loading image:", e);
-                    e.target.onerror = null;
-                    e.target.src = "/placeholder.svg";
-                  }}
-                />
-                <label className="absolute inset-0 bg-black/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
-                  <span className="text-white text-sm">Change Photo</span>
-                  <input
-                    type="file"
-                    className="hidden"
-                    accept="image/*"
-                    onChange={handleProfilePictureUpdate}
-                    disabled={isUpdating}
-                  />
-                </label>
-                {isUpdating && (
-                  <div className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+                    {/* Progress Section */}
+                    <div style={styles.section}>
+                      <h3 style={styles.sectionTitle}>Progress*</h3>
+                      <p style={styles.progressNote}>*These stats are only visible to you</p>
+                    </div>
                   </div>
-                )}
-              </motion.div>
-              <h3 className="font-semibold text-lg">
-                {user?.name || profileData?.username || "User"}
-              </h3>
-              <p className="text-sm text-gray-500 mb-3">
-                {profileData?.email || "Add your email"}
-              </p>
-              
-              {!isProfilePage && (
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  className="w-full py-2 px-4 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white rounded-lg transition-colors shadow-sm"
-                  onClick={() => navigate("/profile")}
-                >
-                  View Profile
-                </motion.button>
-              )}
-            </div>
-
-            <nav className="py-2">
-              <div className="px-3 py-2">
-                <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-3">
-                  Main Features
                 </div>
-                {[
-                  { icon: <MdDashboard />, label: "Dashboard", path: "/dashboard" },
-                  { icon: <MdSchool />, label: "Skills", path: "/skills" },
-                  { icon: <MdPeople />, label: "Community", path: "/community" },
-                ].map((item, index) => (
-                  <motion.button
-                    key={index}
-                    variants={menuItemVariants}
-                    initial="hidden"
-                    animate="visible"
-                    transition={{ delay: index * 0.05 }}
-                    className="w-full flex items-center gap-3 px-6 py-2.5 text-gray-700 hover:bg-gray-50 transition-colors rounded-lg"
-                    onClick={() => navigate(item.path)}
-                  >
-                    <span className="text-xl text-blue-500">{item.icon}</span>
-                    <span>{item.label}</span>
-                  </motion.button>
-                ))}
-              </div>
 
-              <div className="px-3 py-2 border-t border-gray-100">
-                <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-3">
-                  Class Management
+
+                    {/* Right side - Tabs and Content */}
+                    <div className="flex-1 ml-8">
+                      {/* Tabs */}
+                      <div style={styles.tabs}>
+                        <div
+                          style={{
+                            ...styles.tab,
+                            ...styles.profileTab,
+                            ...(activeTab === "profile" ? styles.activeTab : {}),
+                          }}
+                          onClick={() => setActiveTab("profile")}
+                        >
+                          Profile
+                        </div>
+                        <div
+                          style={{
+                            ...styles.tab,
+                            ...styles.achievementsTab,
+                            ...(activeTab === "achievements" ? styles.activeTab : {}),
+                          }}
+                          onClick={() => setActiveTab("achievements")}
+                        >
+                          Achievements
+                        </div>
+                      </div>
+
+                      {/* Tab Content */}
+                      <div className="mt-6">
+                        {activeTab === "profile" && (
+                          <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ duration: 0.3 }}
+                          >
+                            <div style={styles.section}>
+                              <h2 style={styles.sectionTitle}>About Me</h2>
+                              <p>{profileData?.bio || "No bio yet"}</p>
+                            </div>
+                            {/* Additional profile sections can go here */}
+                          </motion.div>
+                        )}
+
+                        {activeTab === "achievements" && (
+                          <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ duration: 0.3 }}
+                            style={{ textAlign: "center", color: "#666", padding: "20px" }}
+                          >
+                            No achievements yet
+                          </motion.div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <Footer />
                 </div>
-                {[
-                  { icon: <MdAdd />, label: "Create Class", path: "/create-class" },
-                  { icon: <MdLibraryBooks />, label: "Your Classes", path: "/your-classes" },
-                ].map((item, index) => (
-                  <motion.button
-                    key={index}
-                    variants={menuItemVariants}
-                    initial="hidden"
-                    animate="visible"
-                    transition={{ delay: index * 0.05 }}
-                    className="w-full flex items-center gap-3 px-6 py-2.5 text-gray-700 hover:bg-gray-50 transition-colors rounded-lg"
-                    onClick={() => navigate(item.path)}
-                  >
-                    <span className="text-xl text-purple-500">{item.icon}</span>
-                    <span>{item.label}</span>
-                  </motion.button>
-                ))}
-              </div>
-
-              <div className="px-3 py-2 border-t border-gray-100">
-                <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-3">
-                  Communication
-                </div>
-                {[
-                  { icon: <MdChat />, label: "Messages", path: "/messages" },
-                  { icon: <MdSwapHoriz />, label: "Borrowing", path: "/borrowing" },
-                ].map((item, index) => (
-                  <motion.button
-                    key={index}
-                    variants={menuItemVariants}
-                    initial="hidden"
-                    animate="visible"
-                    transition={{ delay: index * 0.05 }}
-                    className="w-full flex items-center gap-3 px-6 py-2.5 text-gray-700 hover:bg-gray-50 transition-colors rounded-lg"
-                    onClick={() => navigate(item.path)}
-                  >
-                    <span className="text-xl text-green-500">{item.icon}</span>
-                    <span>{item.label}</span>
-                  </motion.button>
-                ))}
-              </div>
-
-              <div className="px-3 py-2 border-t border-gray-100">
-                <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-3">
-                  Account
-                </div>
-                <motion.button
-                  variants={menuItemVariants}
-                  initial="hidden"
-                  animate="visible"
-                  className="w-full flex items-center gap-3 px-6 py-2.5 text-gray-700 hover:bg-red-50 transition-colors rounded-lg"
-                  onClick={logout}
-                >
-                  <span className="text-xl text-red-500">
-                    <MdLogout />
-                  </span>
-                  <span className="text-red-600">Log out</span>
-                </motion.button>
-              </div>
-            </nav>
-          </motion.div>
-        )}
-
-<div style={styles.content}>
-  <div style={styles.profileSection}>
-    <div style={styles.profileContainer}>
-      <div style={styles.avatar} className="relative group">
-        <img
-          src={
-            profileData?.imageUrl
-              ? profileData.imageUrl.startsWith('http')
-                ? profileData.imageUrl
-                : `http://localhost:8080${profileData.imageUrl}`
-              : "/images/defaultProfile.png"
+                <style>
+        {`
+          @keyframes float {
+            0% {
+              transform: translateY(0) rotate(0);
+            }
+            50% {
+              transform: translateY(-20px) rotate(180deg);
+            }
+            100% {
+              transform: translateY(0) rotate(360deg);
+            }
           }
-          alt="Profile"
-          className="w-full h-full rounded-full object-cover"
-          onError={(e) => {
-            console.error("Error loading image:", e);
-            e.target.onerror = null;
-            e.target.src = "/images/defaultProfile.png";
-          }}
-        />
-        <div className="absolute inset-0 bg-black/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-          <label className="cursor-pointer">
-            <span className="text-white text-sm">Change Photo</span>
-            <input
-              type="file"
-              className="hidden"
-              accept="image/*"
-              onChange={handleProfilePictureUpdate}
-              disabled={isUpdating}
-            />
-          </label>
-        </div>
-        {/* Loading overlay */}
-        {isUpdating && (
-          <div className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center">
-            <span className="text-white">Updating...</span>
-          </div>
-        )}
-      </div>
-
-      {/* Profile Info */}
-      <h1 style={styles.name}>{profileData?.username || user?.username}</h1>
-      <p style={styles.bio}>
-        {profileData?.email}
-      </p>
-      <button style={styles.editButton} onClick={() => navigate("/edit-profile")}>
-        Edit Profile
-      </button>
-
-      {/* Stats */}
-      <div style={styles.statsContainer}>
-        <div style={styles.stat}>
-          <span style={styles.statLabel}>Followers</span>
-          <span style={styles.statValue}>0</span>
-        </div>
-        <div style={styles.stat}>
-          <span style={styles.statLabel}>Following</span>
-          <span style={styles.statValue}>0</span>
-        </div>
-      </div>
-
-      {/* Social Links */}
-      <button style={styles.linkButton} onClick={() => navigate("/edit-profile")}>
-        <span>🔗</span>
-        Link social accounts
-      </button>
-
-      {/* Progress Section */}
-      <div style={styles.section}>
-        <h3 style={styles.sectionTitle}>Progress*</h3>
-        <p style={styles.progressNote}>*These stats are only visible to you</p>
-      </div>
-    </div>
-  </div>
-
-
-      {/* Right side - Tabs and Content */}
-      <div className="flex-1 ml-8">
-        {/* Tabs */}
-        <div style={styles.tabs}>
-          <div
-            style={{
-              ...styles.tab,
-              ...(activeTab === "profile" ? styles.activeTab : {}),
-            }}
-            onClick={() => setActiveTab("profile")}
-          >
-            Profile
-          </div>
-          <div
-            style={{
-              ...styles.tab,
-              ...(activeTab === "achievements" ? styles.activeTab : {}),
-            }}
-            onClick={() => setActiveTab("achievements")}
-          >
-            Achievements
-          </div>
-        </div>
-
-        {/* Tab Content */}
-        <div className="mt-6">
-          {activeTab === "profile" && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.3 }}
-            >
-              <div style={styles.section}>
-                <h2 style={styles.sectionTitle}>About Me</h2>
-                <p>{profileData?.bio || "No bio yet"}</p>
-              </div>
-              {/* Additional profile sections can go here */}
-            </motion.div>
-          )}
-
-          {activeTab === "achievements" && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.3 }}
-              style={{ textAlign: "center", color: "#666", padding: "20px" }}
-            >
-              No achievements yet
-            </motion.div>
-          )}
-        </div>
-      </div>
-    </div>
-    <Footer />
-  </div>
+          
+          .tab-transition {
+            transition: all 0.3s ease;
+          }
+          
+          .tab-hover:hover {
+            transform: translateY(-2px);
+          }
+        `}
+      </style>
+      </>
   );
 };
 
