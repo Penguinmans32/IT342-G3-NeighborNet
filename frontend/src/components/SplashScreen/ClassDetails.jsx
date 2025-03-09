@@ -14,6 +14,58 @@ import { useAuth } from '../../backendApi/AuthContext';
 import Footer from './Footer';
 import toast from 'react-hot-toast';
 
+const formatDate = (dateString) => {
+  if (!dateString) return '';
+
+  let date;
+  if (Array.isArray(dateString)) {
+    date = new Date(
+      dateString[0], 
+      dateString[1] - 1,
+      dateString[2],    
+      dateString[3],    
+      dateString[4],    
+      dateString[5], 
+      dateString[6] / 1000000 
+    );
+  } else {
+    date = new Date(dateString);
+  }
+
+  if (isNaN(date.getTime())) {
+    console.error('Invalid date string:', dateString);
+    return 'Invalid Date';
+  }
+
+  const now = new Date();
+  const diffInSeconds = Math.floor((now - date) / 1000);
+  const diffInMinutes = Math.floor(diffInSeconds / 60);
+  const diffInHours = Math.floor(diffInMinutes / 60);
+  const diffInDays = Math.floor(diffInHours / 24);
+
+  if (diffInSeconds < 60) {
+    return 'Just now';
+  }
+  if (diffInMinutes < 60) {
+    return `${diffInMinutes} ${diffInMinutes === 1 ? 'minute' : 'minutes'} ago`;
+  }
+  if (diffInHours < 24) {
+    return `${diffInHours} ${diffInHours === 1 ? 'hour' : 'hours'} ago`;
+  }
+  if (diffInDays < 7) {
+    return `${diffInDays} ${diffInDays === 1 ? 'day' : 'days'} ago`;
+  }
+  
+  return new Intl.DateTimeFormat('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true
+  }).format(date);
+};
+
 const FeedbackItemEnhanced = ({ feedback }) => {
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all duration-300">
@@ -46,11 +98,7 @@ const FeedbackItemEnhanced = ({ feedback }) => {
                   ))}
                 </div>
                 <span className="text-xs text-gray-500 font-medium">
-                  • {new Date(feedback.createdAt).toLocaleDateString(undefined, { 
-                      year: 'numeric', 
-                      month: 'short', 
-                      day: 'numeric'
-                    })}
+                  {formatDate(feedback.createdAt)}
                 </span>
               </div>
             </div>
@@ -64,19 +112,6 @@ const FeedbackItemEnhanced = ({ feedback }) => {
               {feedback.content}
             </p>
           </div>
-        </div>
-        
-        {/* Feedback reactions - Decorative only */}
-        <div className="mt-4 pt-3 border-t border-gray-100 flex items-center gap-4">
-          <button className="flex items-center gap-1 text-sm text-gray-500 hover:text-blue-600 transition-colors">
-            <MdThumbUp className="text-base" />
-            <span>Helpful</span>
-          </button>
-          <div className="text-xs text-gray-400">|</div>
-          <button className="flex items-center gap-1 text-sm text-gray-500 hover:text-blue-600 transition-colors">
-            <MdFlag className="text-base" />
-            <span>Report</span>
-          </button>
         </div>
       </div>
     </div>
@@ -1402,7 +1437,6 @@ const ClassDetails = () => {
                   <div className="flex-1">
                     <div className="space-y-2">
                       {[5, 4, 3, 2, 1].map((rating) => {
-                        // Calculate percentage (mock data - you can replace with actual data)
                         const percentage = 
                           displayRating.count > 0 
                             ? Math.round((displayRating.average >= rating ? (6-rating)*20 : 0) * 100) / 100

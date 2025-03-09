@@ -1,5 +1,7 @@
 package com.example.neighbornetbackend.dto;
 
+import com.example.neighbornetbackend.model.User;
+
 public class UserDTO {
     private Long id;
     private String username;
@@ -10,6 +12,16 @@ public class UserDTO {
         this.username = username;
         this.imageUrl = imageUrl;
     }
+
+    public static UserDTO fromEntity(User user) {
+        return new UserDTO(
+                user.getId(),
+                user.getUsername(),
+                user.getImageUrl()
+        );
+    }
+
+    public UserDTO() {}
 
     // Getters and setters
     public Long getId() {
