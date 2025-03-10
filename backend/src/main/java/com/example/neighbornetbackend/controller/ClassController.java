@@ -8,6 +8,7 @@ import com.example.neighbornetbackend.security.CurrentUser;
 import com.example.neighbornetbackend.security.UserPrincipal;
 import com.example.neighbornetbackend.service.ClassService;
 import com.example.neighbornetbackend.service.FeedbackService;
+import com.example.neighbornetbackend.service.LessonProgressService;
 import com.example.neighbornetbackend.service.RatingService;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.http.MediaType;
@@ -32,12 +33,14 @@ public class ClassController {
     private final ClassRepository classRepository;
     private final RatingService ratingService;
     private final FeedbackService feedbackService;
+    private final LessonProgressService progressService;
 
-    public ClassController(ClassService classService, ClassRepository classRepository, RatingService ratingService, FeedbackService feedbackService) {
+    public ClassController(ClassService classService, ClassRepository classRepository, RatingService ratingService, FeedbackService feedbackService, LessonProgressService progressService) {
         this.classService = classService;
         this.classRepository = classRepository;
         this.ratingService = ratingService;
         this.feedbackService = feedbackService;
+        this.progressService = progressService;
     }
 
     @Operation(summary = "Create a new class")
@@ -307,6 +310,37 @@ public class ClassController {
             return ResponseEntity.ok(relatedClasses);
         } catch (ResourceNotFoundException e) {
             return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @GetMapping("/enrolled")
+    public ResponseEntity<List<ClassResponse>> getEnrolledClasses(@CurrentUser UserPrincipal currentUser) {
+        try {
+            List<CourseClass> enrolledClasses = classService.getEnrolledClassesByUser(currentUser.getId());
+            List<ClassResponse> responses = enrolledClasses.stream()
+                    .map(courseClass -> {
+                        ClassResponse response = ClassResponse.fromEntity(courseClass);
+
+                        List<LessonProgressDTO> progress = progressService.getProgressForClass(
+                                courseClass.getId(),
+                                currentUser.getId()
+                        );
+
+                        response.setLessons(progress.stream()
+                                .map(lessonProgress -> {
+                                    LessonResponse lessonResponse = lessonProgress.getLessons();
+                                    lessonResponse.setCompleted(lessonProgress.isCompleted());
+                                    return lessonResponse;
+                                })
+                                .collect(Collectors.toList()));
+
+                        return response;
+                    })
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(responses);
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.badRequest().build();

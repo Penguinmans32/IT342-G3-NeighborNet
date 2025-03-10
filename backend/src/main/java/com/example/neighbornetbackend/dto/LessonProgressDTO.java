@@ -11,6 +11,7 @@ public class LessonProgressDTO {
     private Long lastWatchedPosition;
     private LocalDateTime completedAt;
     private LocalDateTime updatedAt;
+    private LessonResponse lessons;
 
     public static LessonProgressDTO fromEntity(LessonProgress progress) {
         LessonProgressDTO dto = new LessonProgressDTO();
@@ -21,6 +22,7 @@ public class LessonProgressDTO {
         dto.setLastWatchedPosition(progress.getLastWatchedPosition());
         dto.setCompletedAt(progress.getCompletedAt());
         dto.setUpdatedAt(progress.getUpdatedAt());
+        dto.setLessons(LessonResponse.fromEntity(progress.getLesson()));
         return dto;
     }
 
@@ -80,4 +82,13 @@ public class LessonProgressDTO {
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
     }
+
+    public LessonResponse getLessons() {
+        return lessons;
+    }
+
+    public void setLessons(LessonResponse lessons) {
+        this.lessons = lessons;
+    }
 }
+

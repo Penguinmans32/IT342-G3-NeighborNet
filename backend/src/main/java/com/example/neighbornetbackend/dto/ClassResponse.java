@@ -3,6 +3,7 @@ package com.example.neighbornetbackend.dto;
 import com.example.neighbornetbackend.model.CourseClass;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 
@@ -60,6 +61,7 @@ public class ClassResponse {
         response.setLinkedinUrl(classEntity.getLinkedinUrl());
         response.setPortfolioUrl(classEntity.getPortfolioUrl());
         response.setPhone_number(classEntity.getCreatorPhone());
+        response.setLessons(new ArrayList<>());
         if (classEntity.getCreator() != null) {
             try {
                 response.setCreator(new CreatorDTO(
