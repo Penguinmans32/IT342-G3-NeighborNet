@@ -16,6 +16,7 @@ public class LessonResponse {
     private LocalDateTime updatedAt;
     private double averageRating;
     private long ratingCount;
+    private boolean completed;
 
     public static LessonResponse fromEntity(Lesson lesson) {
         LessonResponse response = new LessonResponse();
@@ -129,5 +130,13 @@ public class LessonResponse {
 
     public void setRatingCount(long ratingCount) {
         this.ratingCount = ratingCount;
+    }
+
+    public boolean isCompleted() {
+        return completed;
+    }
+
+    public void setCompleted(boolean completed) {
+        this.completed = completed;
     }
 }

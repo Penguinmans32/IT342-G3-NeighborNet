@@ -266,4 +266,11 @@ public class ClassService {
     public List<ClassEnrollment> getRecentEnrollments() {
         return enrollmentRepository.findTop10ByOrderByEnrolledAtDesc();
     }
+
+    public List<CourseClass> getEnrolledClassesByUser(Long userId) {
+        List<ClassEnrollment> enrollments = enrollmentRepository.findByUserId(userId);
+        return enrollments.stream()
+                .map(ClassEnrollment::getCourseClass)
+                .collect(Collectors.toList());
+    }
 }

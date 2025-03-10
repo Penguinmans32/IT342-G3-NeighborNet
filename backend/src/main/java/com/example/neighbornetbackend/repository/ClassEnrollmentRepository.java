@@ -16,4 +16,6 @@ public interface ClassEnrollmentRepository extends JpaRepository<ClassEnrollment
     long countByCourseClassId(@Param("courseClassId") Long courseClassId);
 
     List<ClassEnrollment> findTop10ByOrderByEnrolledAtDesc();
+
+    List<ClassEnrollment> findByUserId(Long userId);
 }
