@@ -23,6 +23,7 @@ import MessagesPage from "./components/MessagesPage";
 import YourItems from "./components/YourItems";
 import BorrowedItems from "./components/BorrowedItems";
 import Dashboard from "./components/Dashboard";
+import SkillsMap from "./components/SkillsMap";
 
 function App() {
   return (
@@ -161,6 +162,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Dashboard />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/skills"
+              element={
+                <ProtectedRoute>
+                  <SkillsMap />
                 </ProtectedRoute>
               } 
             />
