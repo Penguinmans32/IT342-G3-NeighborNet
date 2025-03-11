@@ -32,4 +32,18 @@ interface AuthService {
         "Content-Type: application/json"
     )
     suspend fun verifyEmail(@Body verificationRequest: VerificationRequest): Response<ApiResponse<Unit>>
+
+    @POST("api/auth/firebase/login")
+    @Headers(
+        "Accept: application/json",
+        "Content-Type: application/json"
+    )
+    suspend fun firebaseLogin(@Body request: FirebaseTokenRequest): Response<ApiResponse<AuthResponse>>
+
+    @POST("api/auth/logout")
+    @Headers(
+        "Accept: application/json",
+        "Content-Type: application/json"
+    )
+    suspend fun logout(@Body request: LogOutRequest): Response<MessageResponse>
 }

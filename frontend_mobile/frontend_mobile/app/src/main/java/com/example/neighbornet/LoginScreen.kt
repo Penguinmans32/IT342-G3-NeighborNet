@@ -1,5 +1,6 @@
 package com.example.neighbornet
 
+import android.app.Activity
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -23,6 +24,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.launch
 
 @Composable
@@ -39,6 +41,8 @@ fun LoginScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val authState by authViewModel.authState.collectAsState()
+    val context = LocalContext.current
+    val activity = remember { context as Activity }
 
     // Handle errors
     LaunchedEffect(authState.error) {
@@ -180,7 +184,7 @@ fun LoginScreen(
             ) {
                 // Google Login Button
                 OutlinedButton(
-                    onClick = onGoogleLogin,
+                    onClick = { authViewModel.signInWithGoogle(activity) },
                     modifier = Modifier
                         .weight(1f)
                         .height(45.dp),
@@ -195,7 +199,7 @@ fun LoginScreen(
 
                 // GitHub Login Button
                 OutlinedButton(
-                    onClick = onGithubLogin,
+                    onClick = { authViewModel.signInWithGitHub(activity) },
                     modifier = Modifier
                         .weight(1f)
                         .height(45.dp),
@@ -210,7 +214,7 @@ fun LoginScreen(
 
                 // Microsoft Login Button
                 OutlinedButton(
-                    onClick = onMicrosoftLogin,
+                    onClick = { authViewModel.signInWithMicrosoft(activity) },
                     modifier = Modifier
                         .weight(1f)
                         .height(45.dp),
