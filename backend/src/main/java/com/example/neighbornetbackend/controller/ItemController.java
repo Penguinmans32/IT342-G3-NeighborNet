@@ -2,6 +2,7 @@ package com.example.neighbornetbackend.controller;
 
 import com.example.neighbornetbackend.dto.ErrorResponse;
 import com.example.neighbornetbackend.dto.ItemDTO;
+import com.example.neighbornetbackend.dto.ItemUpdateRequest;
 import com.example.neighbornetbackend.dto.RatingRequest;
 import com.example.neighbornetbackend.model.BorrowingAgreement;
 import com.example.neighbornetbackend.model.Item;
@@ -130,12 +131,27 @@ public class ItemController {
     @PutMapping("/{id}")
     public ResponseEntity<ItemDTO> updateItem(
             @PathVariable Long id,
-            @RequestBody Item updatedItem,
+            @RequestBody ItemUpdateRequest updateRequest,
             @CurrentUser UserPrincipal currentUser) {
         try {
+            // Convert DTO to Item
+            Item updatedItem = new Item();
+            updatedItem.setName(updateRequest.getName());
+            updatedItem.setDescription(updateRequest.getDescription());
+            updatedItem.setCategory(updateRequest.getCategory());
+            updatedItem.setLocation(updateRequest.getLocation());
+            updatedItem.setAvailabilityPeriod(updateRequest.getAvailabilityPeriod());
+            updatedItem.setAvailableFrom(updateRequest.getAvailableFrom());
+            updatedItem.setAvailableUntil(updateRequest.getAvailableUntil());
+            updatedItem.setTerms(updateRequest.getTerms());
+            updatedItem.setContactPreference(updateRequest.getContactPreference());
+            updatedItem.setEmail(updateRequest.getEmail());
+            updatedItem.setPhone(updateRequest.getPhone());
+
             ItemDTO item = itemService.updateItem(id, updatedItem, currentUser.getId());
             return ResponseEntity.ok(item);
         } catch (RuntimeException e) {
+            logger.error("Error updating item", e);
             return ResponseEntity.badRequest().body(null);
         }
     }

@@ -2,13 +2,13 @@ package com.example.neighbornetbackend.dto;
 
 
 public class AuthResponse {
-    private String token;
+    private String accessToken;
     private String refreshToken;
     private String type = "Bearer";
     private String username;
 
-    public AuthResponse(String token, String refreshToken, String type, String username) {
-        this.token = token;
+    public AuthResponse(String accessToken, String refreshToken, String type, String username) {
+        this.accessToken = accessToken;
         this.refreshToken = refreshToken;
         this.type = type;
         this.username = username;
@@ -16,12 +16,12 @@ public class AuthResponse {
 
 
     // Getters and Setters
-    public String getToken() {
-        return token;
+    public String getAccessToken() {
+        return accessToken;
     }
 
-    public void setToken(String token) {
-        this.token = token;
+    public void setAccessToken(String accessToken) {
+        this.accessToken = accessToken;
     }
 
     public String getRefreshToken() {

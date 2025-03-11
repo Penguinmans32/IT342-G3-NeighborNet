@@ -12,10 +12,10 @@ data class SignupRequest(
 )
 
 data class AuthResponse(
-    val accessToken: String,
-    val refreshToken: String,
-    val tokenType: String,
-    val username: String
+    val accessToken: String? = null,
+    val refreshToken: String? = null,
+    val tokenType: String? = null,
+    val username: String? = null
 )
 
 data class ApiResponse<T>(
@@ -46,4 +46,16 @@ data class SignupResponse(
     val message: String,
     val success: Boolean = true
 )
+
+data class FirebaseTokenRequest(
+    val token: String
+)
+
+data class LogOutRequest(
+    val userId: Long
+) {
+    init {
+        require(userId > -1) { "Invalid user ID" }
+    }
+}
 

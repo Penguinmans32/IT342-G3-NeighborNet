@@ -584,11 +584,19 @@ const ItemDetail = () => {
   const [editedItem, setEditedItem] = useState(null);
 
   useEffect(() => {
-    if (item && !editedItem) {
+    if (item) {
       setEditedItem({
-        ...item,
-        availableFrom: formatDateForInput(item.availableFrom),
-        availableUntil: formatDateForInput(item.availableUntil),
+        name: item.name || '',
+        description: item.description || '',
+        category: item.category || '',
+        location: item.location || '',
+        availabilityPeriod: item.availabilityPeriod || '',
+        availableFrom: formatDateForInput(item.availableFrom) || '',
+        availableUntil: formatDateForInput(item.availableUntil) || '',
+        terms: item.terms || '',
+        contactPreference: item.contactPreference || '',
+        email: item.email || '',
+        phone: item.phone || ''
       });
     }
   }, [item]);
@@ -652,27 +660,48 @@ const ItemDetail = () => {
 
   const handleUpdate = async () => {
     try {
-      const response = await axios.put(
-        `http://localhost:8080/api/borrowing/items/${id}`,
-        editedItem,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-            'Content-Type': 'application/json',
-          },
+        const updateRequest = {
+            name: editedItem.name,
+            description: editedItem.description,
+            category: editedItem.category,
+            location: editedItem.location,
+            availabilityPeriod: editedItem.availabilityPeriod,
+            availableFrom: editedItem.availableFrom,
+            availableUntil: editedItem.availableUntil,
+            terms: editedItem.terms,
+            contactPreference: editedItem.contactPreference,
+            email: editedItem.email,
+            phone: editedItem.phone
+        };
+
+        const response = await axios.put(
+            `http://localhost:8080/api/borrowing/items/${id}`,
+            updateRequest,
+            {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem("token")}`,
+                    'Content-Type': 'application/json',
+                },
+            }
+        );
+
+        if (response.data) {
+            setItem(response.data);
+            setIsEditing(false);
+            toast.success('Your item has been successfully updated.');
+        } else {
+            throw new Error('No data received from server');
         }
-      );
-  
-      setItem(response.data);
-      setIsEditing(false);
-      toast.success('Your item has been successfully updated.');
     } catch (error) {
-      console.error("Error updating item:", error);
-      toast.error(error.response?.data?.message || "Failed to update the item");
+        console.error("Error updating item:", error);
+        console.error("Error response:", error.response?.data);
+        toast.error(error.response?.data?.message || "Failed to update the item");
     }
-  };
+};
 
   const handleInputChange = (e) => {
+    if (!editedItem) return;
+    
     const { name, value } = e.target;
     setEditedItem(prev => ({
       ...prev,

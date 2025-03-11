@@ -32,6 +32,10 @@ import com.example.neighbornet.network.RetrofitClient
 import com.example.neighbornet.network.VerificationRequest
 import kotlinx.coroutines.launch
 import androidx.compose.ui.res.painterResource
+import android.util.Log
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.common.api.ApiException
+import com.google.firebase.auth.FirebaseAuth
 
 class MainActivity : ComponentActivity() {
 
@@ -47,12 +51,28 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        authViewModel.initGoogleSignIn(this)
+
+        FirebaseAuth.getInstance().addAuthStateListener { firebaseAuth ->
+            firebaseAuth.currentUser?.let { user ->
+                lifecycleScope.launch {
+                    authViewModel.handleSocialLogin(user)
+                }
+            }
+        }
 
         setContent {
             NeighbornetTheme {
                 val snackbarHostState = remember { SnackbarHostState() }
                 var currentScreen by remember { mutableStateOf("landing") }
                 val authState by authViewModel.authState.collectAsState()
+
+                LaunchedEffect(authState.isLoggedIn) {
+                    if (!authState.isLoggedIn && currentScreen == "home") {
+                        currentScreen = "login"
+                        snackbarHostState.showSnackbar("Logged out successfully")
+                    }
+                }
 
                 Scaffold(
                     snackbarHost = { SnackbarHost(snackbarHostState) }
@@ -130,28 +150,18 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun verifyEmail(token: String) {
-        verificationState = VerificationState.Loading
 
-        lifecycleScope.launch {
+    @Deprecated("Deprecated in Java")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+
+        if (requestCode == AuthViewModel.RC_SIGN_IN) {
+            val task = GoogleSignIn.getSignedInAccountFromIntent(data)
             try {
-                val verificationRequest = VerificationRequest(otp = token)
-                val response = RetrofitClient.authService.verifyEmail(verificationRequest)
-
-                if (response.isSuccessful) {
-                    verificationState = VerificationState.Success(
-                        (response.body() ?: "Email verified successfully!").toString()
-                    )
-                    delay(1500)
-                } else {
-                    verificationState = VerificationState.Error(
-                        response.errorBody()?.string() ?: "Verification failed"
-                    )
-                }
-            } catch (e: Exception) {
-                verificationState = VerificationState.Error(
-                    e.message ?: "An error occurred during verification"
-                )
+                val account = task.getResult(ApiException::class.java)
+                authViewModel.handleGoogleSignInResult(account)
+            } catch (e: ApiException) {
+                Log.w("MainActivity", "Google sign in failed", e)
             }
         }
     }

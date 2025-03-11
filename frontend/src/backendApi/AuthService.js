@@ -21,7 +21,7 @@ class AuthService {
                 const authData = response.data.data;
                 // Store the raw token without Bearer prefix
                 localStorage.setItem("user", JSON.stringify(authData));
-                localStorage.setItem("token", authData.token); // Store raw token
+                localStorage.setItem("token", authData.accessToken); // Store raw token
     
                 // Add Bearer prefix when setting axios header
                 axios.defaults.headers.common['Authorization'] = `Bearer ${authData.token}`;
