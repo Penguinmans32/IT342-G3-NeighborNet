@@ -86,7 +86,6 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                 extractUserIdFromToken(authResponse.accessToken)
             } catch (e: Exception) {
                 Log.e("AuthViewModel", "Failed to extract user ID, using username hash", e)
-                // Fallback: use username hash as temporary ID
                 authResponse.username?.hashCode()?.toLong() ?: throw e
             }
 
