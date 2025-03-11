@@ -40,10 +40,12 @@ public class JwtTokenProvider {
 
     public String generateToken(Authentication authentication) {
         String username;
+        Long userId = null;
 
         if (authentication.getPrincipal() instanceof UserPrincipal) {
             UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
             username = userPrincipal.getEmail();
+            userId = userPrincipal.getId();
             log.info("Generating token for UserPrincipal with email: {}", username);
         } else if (authentication.getPrincipal() instanceof OAuth2User) {
             OAuth2User oauth2User = (OAuth2User) authentication.getPrincipal();
@@ -73,6 +75,7 @@ public class JwtTokenProvider {
 
         return Jwts.builder()
                 .setSubject(username)
+                .claim("user_id", userId)
                 .setIssuedAt(now)
                 .setExpiration(expiryDate)
                 .signWith(key)

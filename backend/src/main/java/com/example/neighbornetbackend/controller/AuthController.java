@@ -7,18 +7,19 @@ import com.example.neighbornetbackend.model.RefreshToken;
 import com.example.neighbornetbackend.model.User;
 import com.example.neighbornetbackend.repository.UserRepository;
 import com.example.neighbornetbackend.security.CurrentUser;
-import com.example.neighbornetbackend.security.CustomUserDetails;
 import com.example.neighbornetbackend.security.JwtTokenProvider;
 import com.example.neighbornetbackend.security.UserPrincipal;
 import com.example.neighbornetbackend.service.EmailService;
 import com.example.neighbornetbackend.service.EmailVerificationService;
 import com.example.neighbornetbackend.service.RefreshTokenService;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseAuthException;
+import com.google.firebase.auth.FirebaseToken;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import jakarta.mail.MessagingException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -32,6 +33,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.user.OAuth2User;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
@@ -90,14 +92,22 @@ public class AuthController {
             summary = "Register new user",
             description = "Create a new user account"
     )
-    @ApiResponses({
+    @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
-                    description = "User successfully registered"
+                    description = "User successfully registered",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ApiResponse.class)
+                    )
             ),
             @ApiResponse(
                     responseCode = "400",
-                    description = "Username/Email already exists"
+                    description = "Username/Email already exists",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ApiResponse.class)
+                    )
             )
     })
     @PostMapping("/signup")
@@ -136,15 +146,22 @@ public class AuthController {
             summary = "Login User",
             description = "Authenticate a user and return JWT token"
     )
-    @ApiResponses({
+    @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
-                    description = "Sucessfully authenticated",
-                    content = @Content(schema = @Schema(implementation = AuthResponse.class))
+                    description = "Successfully authenticated",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ApiResponse.class)
+                    )
             ),
             @ApiResponse(
                     responseCode = "401",
-                    description = "Invalid credentials"
+                    description = "Invalid credentials",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ApiResponse.class)
+                    )
             )
     })
     @PostMapping(value = "/login",
@@ -224,8 +241,12 @@ public class AuthController {
 
     @PostMapping("/logout")
     public ResponseEntity<?> logoutUser(@RequestBody LogOutRequest logOutRequest) {
-        refreshTokenService.deleteByUserId(logOutRequest.getUserId());
-        return ResponseEntity.ok("Log out successful!");
+        try {
+            refreshTokenService.deleteByUserId(logOutRequest.getUserId());
+            return ResponseEntity.ok(com.example.neighbornetbackend.dto.ApiResponse.success(null, "Log out successful!"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.ok(com.example.neighbornetbackend.dto.ApiResponse.success(null, "Log out successful!"));
+        }
     }
 
     @PostMapping("/logout-all-devices")
@@ -308,6 +329,93 @@ public class AuthController {
             return ResponseEntity.ok(com.example.neighbornetbackend.dto.ApiResponse.success(null, "Email verified successfully"));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(com.example.neighbornetbackend.dto.ApiResponse.error(e.getMessage()));
+        }
+    }
+
+
+    @Operation(
+            summary = "Firebase Login",
+            description = "Authenticate using Firebase token"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Successfully authenticated with Firebase",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ApiResponse.class)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid Firebase token",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ApiResponse.class)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "500",
+                    description = "Internal server error",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ApiResponse.class)
+                    )
+            )
+    })
+    @PostMapping("/firebase/login")
+    @Transactional
+    public ResponseEntity<?> handleFirebaseLogin(@RequestBody FirebaseTokenRequest firebaseTokenRequest) {
+        try {
+            FirebaseAuth firebaseAuth = FirebaseAuth.getInstance();
+            FirebaseToken decodedToken = firebaseAuth.verifyIdToken(firebaseTokenRequest.getToken());
+
+            String email = decodedToken.getEmail();
+            String name = decodedToken.getName();
+            String photoUrl = decodedToken.getPicture();
+
+            logger.debug("Firebase user details - Email: {}, Name: {}", email, name);
+
+            // Find or create user
+            User user = userRepository.findByEmail(email)
+                    .orElseGet(() -> {
+                        User newUser = new User();
+                        newUser.setEmail(email);
+                        newUser.setUsername(name != null ? name : email.substring(0, email.indexOf('@')));
+                        newUser.setEmailVerified(true);
+                        newUser.setProvider("firebase");
+                        newUser.setProviderId(decodedToken.getUid());
+                        newUser.setImageUrl(photoUrl);
+                        newUser.setRole("ROLE_USER");
+                        newUser.setPassword("");
+                        return userRepository.save(newUser);
+                    });
+
+            logger.debug("User found/created with ID: {}", user.getId());
+
+            // Create new refresh token
+            RefreshToken refreshToken = refreshTokenService.createRefreshToken(user.getId());
+            String jwt = tokenProvider.generateTokenFromUsername(user.getUsername());
+
+            AuthResponse authResponse = new AuthResponse(
+                    jwt,
+                    refreshToken.getToken(),
+                    "Bearer",
+                    user.getUsername()
+            );
+
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(com.example.neighbornetbackend.dto.ApiResponse.success(authResponse, "Login successful"));
+
+        } catch (FirebaseAuthException e) {
+            logger.error("Firebase Authentication failed", e);
+            return ResponseEntity.badRequest()
+                    .body(com.example.neighbornetbackend.dto.ApiResponse.error("Firebase Authentication failed"));
+        } catch (Exception e) {
+            logger.error("Error processing Firebase authentication", e);
+            return ResponseEntity.badRequest()
+                    .body(com.example.neighbornetbackend.dto.ApiResponse.error("Authentication Failed: " + e.getMessage()));
         }
     }
 }

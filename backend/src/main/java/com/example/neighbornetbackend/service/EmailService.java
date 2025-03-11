@@ -1,5 +1,6 @@
 package com.example.neighbornetbackend.service;
 
+import com.example.neighbornetbackend.security.FirebaseAuthenticationTokenFilter;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import org.slf4j.Logger;
@@ -11,8 +12,9 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class EmailService {
-    private static final Logger logger = LoggerFactory.getLogger(EmailService.class);
     private final JavaMailSender mailSender;
+    private final int MAX_RETRIES = 3;
+    private static final Logger logger = LoggerFactory.getLogger(EmailService.class);
 
     @Value("${spring.mail.username}")
     private String fromEmail;
@@ -25,61 +27,115 @@ public class EmailService {
     }
 
     public void sendVerificationEmail(String to, String token, String otp, boolean isMobileRequest) throws MessagingException {
-        try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+        int retryCount = 0;
+        Exception lastException = null;
 
-            helper.setFrom(fromEmail);
-            helper.setTo(to);
-            helper.setSubject("Email Verification - NeighborNet");
+        while (retryCount < MAX_RETRIES) {
+            try {
+                MimeMessage message = mailSender.createMimeMessage();
+                MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-            String webVerificationLink = frontendUrl + "/verify-email?token=" + token;
+                helper.setFrom(String.format("%s <%s>", "NeighborNet", fromEmail));
+                helper.setTo(to);
+                helper.setSubject("Email Verification - NeighborNet");
 
-            String emailContent;
-            if (isMobileRequest) {
-                emailContent = """
-                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                        <h2 style="color: #4a5568;">Welcome to NeighborNet!</h2>
-                        <p>Thank you for registering. Please verify your email address.</p>
-                        
-                        <!-- Mobile Users Section -->
-                        <div style="margin: 20px 0; padding: 20px; background-color: #f3f4f6; border-radius: 8px;">
-                            <p style="margin: 0 0 15px 0;"><strong>Verification Code:</strong></p>
-                            <p style="margin: 0 0 10px 0;">Enter this verification code in your mobile app:</p>
-                            <div style="background-color: white; padding: 15px; border-radius: 4px; text-align: center;">
-                                <span style="font-family: monospace; font-size: 24px; letter-spacing: 5px; color: #4f46e5;">%s</span>
-                            </div>
-                        </div>
-                        
-                        <p style="color: #666; margin-top: 20px;">This verification code will expire in 10 minutes.</p>
-                        <p style="color: #666;">If you didn't create an account, you can safely ignore this email.</p>
+                // Add important headers
+                message.addHeader("List-Unsubscribe", "<mailto:" + fromEmail + "?subject=unsubscribe>");
+                message.addHeader("Precedence", "bulk");
+                message.addHeader("X-Auto-Response-Suppress", "OOF, AutoReply");
+                message.addHeader("X-Priority", "1");
+                message.addHeader("Importance", "High");
+
+                String webVerificationLink = frontendUrl + "/verify-email?token=" + token;
+
+                String emailContent = createEmailContent(isMobileRequest, webVerificationLink, otp);
+                helper.setText(emailContent, true);
+
+                mailSender.send(message);
+                logger.info("Verification email sent successfully to: {} ({}) - Attempt {}",
+                        to, isMobileRequest ? "mobile" : "web", retryCount + 1);
+                return;
+
+            } catch (Exception e) {
+                lastException = e;
+                logger.warn("Failed to send verification email to: {} - Attempt {} - Error: {}",
+                        to, retryCount + 1, e.getMessage());
+                retryCount++;
+                if (retryCount < MAX_RETRIES) {
+                    try {
+                        Thread.sleep(1000 * retryCount); // Exponential backoff
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+                }
+            }
+        }
+
+        logger.error("Failed to send verification email after {} attempts", MAX_RETRIES);
+        throw new MessagingException("Failed to send verification email after " + MAX_RETRIES + " attempts", lastException);
+    }
+
+    private String createEmailContent(boolean isMobileRequest, String webVerificationLink, String otp) {
+        if (isMobileRequest) {
+            return """
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #ffffff;">
+                    <div style="text-align: center; margin-bottom: 30px;">
+                        <h1 style="color: #4f46e5; margin-bottom: 10px;">Welcome to NeighborNet!</h1>
+                        <p style="color: #374151; font-size: 16px;">Thank you for joining our community.</p>
                     </div>
-                    """.formatted(otp);
-            } else {
-                emailContent = """
-                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                        <h2 style="color: #4a5568;">Welcome to NeighborNet!</h2>
-                        <p>Thank you for registering. Please verify your email address.</p>
-                        
-                        <!-- Web Users Section -->
-                        <div style="margin: 20px 0;">
-                            <a href="%s" style="display: inline-block; padding: 12px 24px; background-color: #4f46e5; color: white; text-decoration: none; border-radius: 6px;">
+                    
+                    <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                        <p style="color: #374151; font-size: 16px; margin-bottom: 15px;">Your verification code is:</p>
+                        <div style="background-color: #ffffff; padding: 15px; border-radius: 4px; text-align: center;">
+                            <span style="font-family: monospace; font-size: 32px; letter-spacing: 5px; color: #4f46e5;">%s</span>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+                        <p style="color: #6b7280; font-size: 14px;">This code will expire in 10 minutes.</p>
+                        <p style="color: #6b7280; font-size: 14px;">If you didn't request this verification, please ignore this email.</p>
+                    </div>
+                    
+                    <div style="margin-top: 30px; text-align: center; color: #9ca3af; font-size: 12px;">
+                        <p>© NeighborNet. All rights reserved.</p>
+                        <p>Please add %s to your contacts to ensure delivery.</p>
+                    </div>
+                </div>
+                """.formatted(otp, fromEmail);
+        } else {
+            return """
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #ffffff;">
+                    <div style="text-align: center; margin-bottom: 30px;">
+                        <h1 style="color: #4f46e5; margin-bottom: 10px;">Welcome to NeighborNet!</h1>
+                        <p style="color: #374151; font-size: 16px;">Thank you for joining our community.</p>
+                    </div>
+                    
+                    <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                        <p style="color: #374151; font-size: 16px; margin-bottom: 15px;">Please verify your email address by clicking the button below:</p>
+                        <div style="text-align: center;">
+                            <a href="%s" style="display: inline-block; padding: 12px 24px; background-color: #4f46e5; color: white; text-decoration: none; border-radius: 6px; font-weight: 600;">
                                 Verify Email Address
                             </a>
                         </div>
-                        
-                        <p style="color: #666; margin-top: 20px;">This verification link will expire in 24 hours.</p>
-                        <p style="color: #666;">If you didn't create an account, you can safely ignore this email.</p>
                     </div>
-                    """.formatted(webVerificationLink);
-            }
 
-            helper.setText(emailContent, true);
-            mailSender.send(message);
-            logger.info("Verification email sent successfully to: {} ({})", to, isMobileRequest ? "mobile" : "web");
-        } catch (Exception e) {
-            logger.error("Failed to send verification email to: " + to, e);
-            throw new MessagingException("Failed to send verification email", e);
+                    <div style="margin-top: 20px;">
+                        <p style="color: #6b7280; font-size: 14px;">If the button doesn't work, copy and paste this link into your browser:</p>
+                        <p style="word-break: break-all; color: #4f46e5;">%s</p>
+                    </div>
+
+                    <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+                        <p style="color: #6b7280; font-size: 14px;">This link will expire in 24 hours.</p>
+                        <p style="color: #6b7280; font-size: 14px;">If you didn't create an account, you can safely ignore this email.</p>
+                    </div>
+                    
+                    <div style="margin-top: 30px; text-align: center; color: #9ca3af; font-size: 12px;">
+                        <p>© NeighborNet. All rights reserved.</p>
+                        <p>Please add %s to your contacts to ensure delivery.</p>
+                    </div>
+                </div>
+                """.formatted(webVerificationLink, webVerificationLink, fromEmail);
         }
     }
 }

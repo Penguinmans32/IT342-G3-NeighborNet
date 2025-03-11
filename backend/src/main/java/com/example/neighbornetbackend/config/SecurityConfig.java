@@ -32,6 +32,7 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final CustomUserDetailsService customUserDetailsService;
+    private final FirebaseAuthenticationTokenFilter firebaseAuthenticationTokenFilter;
 
     @Autowired
     private CustomOAuth2UserService customOAuth2UserService;
@@ -46,9 +47,10 @@ public class SecurityConfig {
     private String frontendUrl;
 
     public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter,
-                          CustomUserDetailsService customUserDetailsService) {
+                          CustomUserDetailsService customUserDetailsService, FirebaseAuthenticationTokenFilter firebaseAuthenticationTokenFilter) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.customUserDetailsService = customUserDetailsService;
+        this.firebaseAuthenticationTokenFilter = firebaseAuthenticationTokenFilter;
     }
 
     @Bean
@@ -128,7 +130,8 @@ public class SecurityConfig {
                         .failureHandler(oAuth2AuthenticationFailureHandler)
                 )
                 .authenticationProvider(authenticationProvider())
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(firebaseAuthenticationTokenFilter, JwtAuthenticationFilter.class);
 
         return http.build();
     }
@@ -156,7 +159,9 @@ public class SecurityConfig {
                 "http://10.0.2.2:8080",
                 "http://10.0.2.2",
                 "http://10.0.118.40:8080",
-                "http://10.0.118.40"
+                "http://10.0.118.40",
+                "http://10.0.6.216:8080",
+                "http://10.0.6.216"
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList(
