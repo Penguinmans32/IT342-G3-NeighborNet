@@ -257,87 +257,100 @@
       }
   };
 
-    const handleRegisterSubmit = async (e) => {
-      e.preventDefault();
-      setError('');
+  const handleRegisterSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
 
-      if (!isValidEmail(registerForm.email)) {
+    if (!isValidEmail(registerForm.email)) {
         setValidationErrors(prev => ({
-          ...prev,
-          email: 'Please enter a valid email address'
+            ...prev,
+            email: 'Please enter a valid email address'
         }));
         showNotification({
-          type: 'error',
-          title: 'Invalid Email',
-          message: 'Please enter a valid email address',
-          duration: 4000
+            type: 'error',
+            title: 'Invalid Email',
+            message: 'Please enter a valid email address',
+            duration: 4000
         });
         return;
-      }
+    }
 
     const passwordCheck = checkPasswordStrength(registerForm.password);
-      if (!passwordCheck.isStrong) {
+    if (!passwordCheck.isStrong) {
         setValidationErrors(prev => ({
-          ...prev,
-          password: passwordCheck.messages
+            ...prev,
+            password: passwordCheck.messages
         }));
         showNotification({
-          type: 'error',
-          title: 'Weak Password',
-          message: 'Please create a stronger password',
-          duration: 4000
+            type: 'error',
+            title: 'Weak Password',
+            message: 'Please create a stronger password',
+            duration: 4000
         });
         return;
-      }
+    }
 
-      if (registerForm.password !== registerForm.confirmPassword) {
+    if (registerForm.password !== registerForm.confirmPassword) {
         setError('Passwords do not match');
         showNotification({
-          type: 'error',
-          title: 'Password Mismatch',
-          message: 'Please make sure your passwords match.',
-          duration: 4000
+            type: 'error',
+            title: 'Password Mismatch',
+            message: 'Please make sure your passwords match.',
+            duration: 4000
         });
         return;
-      }
+    }
 
-      setLoading(true);
-      try {
+    setLoading(true);
+    try {
         await register(
-          registerForm.username,
-          registerForm.email,
-          registerForm.password
+            registerForm.username,
+            registerForm.email,
+            registerForm.password
         );
         closeSignUpModal();
+
+        // Initial success notification
         showNotification({
-          type: 'success',
-          title: 'Hi There!',
-          message: 'Welcome to NeighborNet! Please check your email to verify your account.',
-          duration: 8000
+            type: 'success',
+            title: 'Welcome to NeighborNet! 🎉',
+            message: 'Registration successful! Please check your email to verify your account.',
+            duration: 8000
         });
 
+        // First follow-up notification about email verification
         setTimeout(() => {
-          showNotification({
-            type: 'info',
-            title: 'Check Your Inbox',
-            message: `We've sent a verification link to ${registerForm.email}. Please verify your email to continue.`,
-            duration: 10000
-          });
+            showNotification({
+                type: 'info',
+                title: '📧 Check Your Email',
+                message: `We've sent a verification link to ${registerForm.email}`,
+                duration: 10000
+            });
         }, 1000);
 
+        // Second follow-up notification about spam folder
+        setTimeout(() => {
+            showNotification({
+                type: 'info',
+                title: '📝 Important Note',
+                message: `Can't find the email? Please check your spam/junk folder and mark us as 'not spam' to ensure you receive our communications.`,
+                duration: 12000
+            });
+        }, 2000);
+
         setIsSignInOpen(true);
-      } catch (err) {
+    } catch (err) {
         setError(err.response?.data || 'An error occurred during registration');
         showNotification({
-          type: 'error',
-          title: 'Registration Failed',
-          message: err.response?.data || 'An error occurred during registration',
-          duration: 6000
+            type: 'error',
+            title: 'Registration Failed',
+            message: err.response?.data || 'An error occurred during registration',
+            duration: 6000
         });
-      } finally {
+    } finally {
         setLoading(false);
-      }
-    };
+    }
+  };
 
       const handlePasswordChange = (e) => {
       const newPassword = e.target.value;
