@@ -1,12 +1,15 @@
 package com.example.neighbornetbackend.security;
 
 
+import com.example.neighbornetbackend.model.User;
+import com.example.neighbornetbackend.repository.UserRepository;
 import com.example.neighbornetbackend.service.CustomOAuth2UserService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -33,6 +36,9 @@ public class JwtTokenProvider {
 
     private Key key;
 
+    @Autowired
+    private UserRepository userRepository;
+
     @PostConstruct
     public void init() {
         this.key = Keys.hmacShaKeyFor(jwtSecret.getBytes());
@@ -46,25 +52,30 @@ public class JwtTokenProvider {
             UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
             username = userPrincipal.getEmail();
             userId = userPrincipal.getId();
-            log.info("Generating token for UserPrincipal with email: {}", username);
+            log.info("Generating token for UserPrincipal with email: {} and ID: {}", username, userId);
         } else if (authentication.getPrincipal() instanceof OAuth2User) {
             OAuth2User oauth2User = (OAuth2User) authentication.getPrincipal();
             Map<String, Object> attributes = oauth2User.getAttributes();
             log.info("OAuth2User attributes: {}", attributes);
 
-            username = (String) attributes.get("mail");  // Try Microsoft specific first
+            username = (String) attributes.get("mail");
             if (username == null) {
-                username = (String) attributes.get("email");  // Try standard
+                username = (String) attributes.get("email");
             }
             if (username == null) {
-                username = (String) attributes.get("userPrincipalName");  // Try Microsoft fallback
+                username = (String) attributes.get("userPrincipalName");
             }
 
             if (username == null) {
                 throw new IllegalStateException("Could not find email in OAuth2 user attributes");
             }
 
-            log.info("Generating token for OAuth2User with email: {}", username);
+            // Get user ID from database
+            User user = userRepository.findByEmail(username)
+                    .orElseThrow(() -> new IllegalStateException("User not found"));
+            userId = user.getId();
+
+            log.info("Generating token for OAuth2User with email: {} and ID: {}", username, userId);
         } else {
             throw new IllegalArgumentException("Unsupported principal type: " +
                     authentication.getPrincipal().getClass());
@@ -105,11 +116,16 @@ public class JwtTokenProvider {
     }
 
     public String generateTokenFromUsername(String username) {
+        // Find user to get the correct ID
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + jwtExpiration);
 
         return Jwts.builder()
                 .setSubject(username)
+                .claim("user_id", user.getId())
                 .setIssuedAt(now)
                 .setExpiration(expiryDate)
                 .signWith(key)

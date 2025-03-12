@@ -6,15 +6,12 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -28,17 +25,22 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.lifecycleScope
 import com.example.neighbornet.auth.AuthViewModel
-import com.example.neighbornet.network.RetrofitClient
-import com.example.neighbornet.network.VerificationRequest
 import kotlinx.coroutines.launch
 import androidx.compose.ui.res.painterResource
 import android.util.Log
+import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.rememberNavController
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.common.api.ApiException
 import com.google.firebase.auth.FirebaseAuth
+import dagger.hilt.android.AndroidEntryPoint
+import androidx.navigation.compose.composable
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
-
     private var verificationState by mutableStateOf<VerificationState>(VerificationState.Idle)
     private val authViewModel: AuthViewModel by viewModels()
 
@@ -66,6 +68,7 @@ class MainActivity : ComponentActivity() {
                 val snackbarHostState = remember { SnackbarHostState() }
                 var currentScreen by remember { mutableStateOf("landing") }
                 val authState by authViewModel.authState.collectAsState()
+                val navController = rememberNavController()
 
                 LaunchedEffect(authState.isLoggedIn) {
                     if (!authState.isLoggedIn && currentScreen == "home") {
@@ -119,7 +122,57 @@ class MainActivity : ComponentActivity() {
                                 viewModel = authViewModel,
                                 onVerificationComplete = { currentScreen = "login" }
                             )
-                            "home" -> HomePage()
+                            "home" -> {
+                                NavHost(
+                                    navController = navController,
+                                    startDestination = Screen.Home.route
+                                ) {
+                                    composable(Screen.Home.route) {
+                                        CompositionLocalProvider(
+                                            LocalViewModelStoreOwner provides this@MainActivity
+                                        ) {
+                                            HomePage(navController = navController)
+                                        }
+                                    }
+                                    composable(
+                                        route = Screen.ClassDetails.route,
+                                        arguments = listOf(
+                                            navArgument("classId") {
+                                                type = NavType.LongType
+                                                nullable = false
+                                                defaultValue = -1L
+                                            }
+                                        )
+                                    ) { backStackEntry ->
+                                        val classId = backStackEntry.arguments?.getLong("classId") ?: return@composable
+                                        CompositionLocalProvider(
+                                            LocalViewModelStoreOwner provides this@MainActivity
+                                        ) {
+                                            ClassDetailsScreen(
+                                                classId = classId,
+                                                onBackClick = { navController.navigateUp() }
+                                            )
+                                        }
+                                    }
+                                    composable(Screen.Categories.route) {
+                                        CategoriesContent(
+                                            onCategoryClick = { category ->
+                                                // Handle category navigation
+                                            }
+                                        )
+                                    }
+                                    composable(Screen.Chat.route) {
+                                        ChatContent()
+                                    }
+                                    composable(Screen.Profile.route) {
+                                        ProfileContent(
+                                            onLogoutSuccess = {
+                                                currentScreen = "login"
+                                            }
+                                        )
+                                    }
+                                }
+                            }
                         }
 
                         // Show any errors

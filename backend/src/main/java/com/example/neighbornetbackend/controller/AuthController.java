@@ -207,7 +207,8 @@ public class AuthController {
                     jwt,
                     refreshToken.getToken(),
                     "Bearer",
-                    user.getUsername()
+                    user.getUsername(),
+                    user.getId()
             );
 
             return ResponseEntity.ok()
@@ -401,17 +402,14 @@ public class AuthController {
                     jwt,
                     refreshToken.getToken(),
                     "Bearer",
-                    user.getUsername()
+                    user.getUsername(),
+                    user.getId()
             );
 
             return ResponseEntity.ok()
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(com.example.neighbornetbackend.dto.ApiResponse.success(authResponse, "Login successful"));
 
-        } catch (FirebaseAuthException e) {
-            logger.error("Firebase Authentication failed", e);
-            return ResponseEntity.badRequest()
-                    .body(com.example.neighbornetbackend.dto.ApiResponse.error("Firebase Authentication failed"));
         } catch (Exception e) {
             logger.error("Error processing Firebase authentication", e);
             return ResponseEntity.badRequest()

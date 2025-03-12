@@ -25,6 +25,8 @@ import android.webkit.CookieManager
 import android.webkit.WebStorage
 import android.webkit.WebView
 import com.google.firebase.auth.FirebaseAuth
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 
 data class AuthState(
     val isLoading: Boolean = false,
@@ -38,13 +40,17 @@ data class AuthState(
     val userId: Long? = null,
     val username: String? = null
 )
-
-class AuthViewModel(application: Application) : AndroidViewModel(application) {
+@HiltViewModel
+class AuthViewModel @Inject constructor(
+    application: Application,
+    private val tokenManager: TokenManager,
+    private val firebaseAuthService: FirebaseAuthService,
+    private val authService: AuthService
+    ): AndroidViewModel(application) {
     private val sessionManager = SessionManager(application)
     private val _authState = MutableStateFlow(AuthState())
     val authState: StateFlow<AuthState> = _authState
     private lateinit var googleSignInClient: GoogleSignInClient
-    private val firebaseAuthService = FirebaseAuthService()
 
     companion object {
         const val RC_SIGN_IN = 9001
@@ -79,6 +85,11 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                 throw IllegalStateException("Access token is null or empty")
             }
 
+            tokenManager.saveToken(authResponse.accessToken)
+
+            val savedToken = tokenManager.getToken()
+            Log.d("AuthViewModel", "Token saved and retrieved: ${savedToken != null}")
+
             // Log the token for debugging
             Log.d("AuthViewModel", "Access token: ${authResponse.accessToken}")
 
@@ -86,7 +97,6 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                 extractUserIdFromToken(authResponse.accessToken)
             } catch (e: Exception) {
                 Log.e("AuthViewModel", "Failed to extract user ID, using username hash", e)
-                // Fallback: use username hash as temporary ID
                 authResponse.username?.hashCode()?.toLong() ?: throw e
             }
 
@@ -166,7 +176,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                 FirebaseAuth.getInstance().signOut()
 
                 try {
-                    val response = RetrofitClient.authService.logout(LogOutRequest(userId))
+                    val response = authService.logout(LogOutRequest(userId))
                     if (response.isSuccessful) {
                         Log.d("AuthViewModel", "Server-side logout successful")
                     } else {
@@ -176,6 +186,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                     Log.e("AuthViewModel", "Error during server-side logout", e)
                 }
 
+                tokenManager.clearToken()
                 // Clear local data
                 clearAuthData()
                 _authState.value = AuthState()
@@ -273,7 +284,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                 // Add debug logging
                 Log.d("AuthViewModel", "Firebase ID Token: $idToken")
 
-                val response = RetrofitClient.authService.firebaseLogin(
+                val response = authService.firebaseLogin(
                     FirebaseTokenRequest(token = idToken!!)
                 )
 
@@ -373,7 +384,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             _authState.value = _authState.value.copy(isLoading = true, error = null)
 
             try {
-                val response = RetrofitClient.authService.login(LoginRequest(username, password))
+                val response = authService.login(LoginRequest(username, password))
 
                 if (response.isSuccessful) {
                     response.body()?.let { apiResponse ->
@@ -428,7 +439,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             _authState.value = _authState.value.copy(isLoading = true, error = null)
 
             try {
-                val response = RetrofitClient.authService.signup(
+                val response = authService.signup(
                     SignupRequest(username, email, password)
                 )
 
@@ -486,7 +497,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             _authState.value = _authState.value.copy(isLoading = true, error = null)
 
             try {
-                val response = RetrofitClient.authService.verifyEmail(
+                val response = authService.verifyEmail(
                     VerificationRequest(otp = otp)
                 )
 

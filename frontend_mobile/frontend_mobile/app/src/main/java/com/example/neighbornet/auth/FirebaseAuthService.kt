@@ -7,8 +7,12 @@ import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.OAuthProvider
 import kotlinx.coroutines.tasks.await
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class FirebaseAuthService {
+
+@Singleton
+class FirebaseAuthService @Inject constructor() {
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()
 
     suspend fun signInWithGoogle(account: GoogleSignInAccount): FirebaseUser? {

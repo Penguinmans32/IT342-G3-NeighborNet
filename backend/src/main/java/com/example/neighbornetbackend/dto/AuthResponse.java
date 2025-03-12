@@ -6,12 +6,14 @@ public class AuthResponse {
     private String refreshToken;
     private String type = "Bearer";
     private String username;
+    private Long userId;
 
-    public AuthResponse(String accessToken, String refreshToken, String type, String username) {
+    public AuthResponse(String accessToken, String refreshToken, String type, String username, Long userId) {
         this.accessToken = accessToken;
         this.refreshToken = refreshToken;
         this.type = type;
         this.username = username;
+        this.userId = userId;
     }
 
 
@@ -46,5 +48,13 @@ public class AuthResponse {
 
     public void setUsername(String username) {
         this.username = username;
+    }
+
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
     }
 }
