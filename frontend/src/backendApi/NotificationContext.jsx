@@ -1,8 +1,9 @@
+// NotificationContext.jsx
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { notificationService } from './NotificationService';
 import { useAuth } from './AuthContext';
-import Notification from '../components/Notification';
+import Toast from '../components/Toast';
 import axios from 'axios';
 
 const NotificationContext = createContext();
@@ -16,127 +17,144 @@ export const useNotification = () => {
 };
 
 export const NotificationProvider = ({ children }) => {
-    const [notifications, setNotifications] = useState([]);
-    const { user } = useAuth();
+    const [notifications, setNotifications] = useState([]); // Persistent notifications
+    const [toasts, setToasts] = useState([]); // Temporary toast notifications
     const [unreadCount, setUnreadCount] = useState(0);
+    const { user } = useAuth();
 
+    // Fetch persistent notifications from backend
     const fetchNotifications = useCallback(async () => {
-      if (user) {
-          try {
-              //console.log("Fetching notifications for user:", user);
-              const response = await axios.get('http://localhost:8080/api/notifications', {
-                  headers: {
-                      Authorization: `Bearer ${localStorage.getItem('token')}`
-                  }
-              });
-              //console.log("Raw response:", response);
-              
-              if (response.data) {
-                  //console.log("Setting notifications:", response.data);
-                  setNotifications(response.data);
-                  const unreadCount = response.data.filter(n => !n.is_read).length;
-                  setUnreadCount(unreadCount);
-                  return response.data;
-              } else {
-                  console.log("No notifications data in response");
-                  return [];
-              }
-          } catch (error) {
-              console.error('Error fetching notifications:', error);
-              if (error.response) {
-                  console.error('Error response:', error.response);
-              }
-              return [];
-          }
-      }
-      return [];
-  }, [user]);
+        if (!user) return [];
 
-  useEffect(() => {
-    if (user) {
-        fetchNotifications();
-    }
-}, [user, fetchNotifications]);
+        try {
+            const response = await axios.get('http://localhost:8080/api/notifications', {
+                headers: {
+                    Authorization: `Bearer ${localStorage.getItem('token')}`
+                }
+            });
 
-useEffect(() => {
-  if (user) {
-      const token = localStorage.getItem('token');
-      notificationService.connect(user.id, token);
+            if (response.data) {
+                setNotifications(response.data);
+                const unreadCount = response.data.filter(n => !n.is_read).length;
+                setUnreadCount(unreadCount);
+                return response.data;
+            }
+            return [];
+        } catch (error) {
+            console.error('Error fetching notifications:', error);
+            return [];
+        }
+    }, [user]);
 
-      const unsubscribe = notificationService.subscribe((notification) => {
-          console.log("New notification received:", notification);
-          // When a new notification is received, fetch all notifications again
-          fetchNotifications();
-      });
+    // Connect to WebSocket for real-time notifications
+    useEffect(() => {
+        if (user) {
+            const token = localStorage.getItem('token');
+            notificationService.connect(user.id, token);
 
-      return () => {
-          unsubscribe();
-          notificationService.disconnect();
-      };
-  }
-}, [user, fetchNotifications]);
+            const unsubscribe = notificationService.subscribe((notification) => {
+                console.log("New notification received:", notification);
+                fetchNotifications();
+                
+                // Show toast for new notifications
+                showToast({
+                    type: notification.type || 'DEFAULT',
+                    title: notification.title,
+                    message: notification.message,
+                    duration: 5000
+                });
+            });
 
+            return () => {
+                unsubscribe();
+                notificationService.disconnect();
+            };
+        }
+    }, [user, fetchNotifications]);
+
+    // Initial fetch of notifications
+    useEffect(() => {
+        if (user) {
+            fetchNotifications();
+        }
+    }, [user, fetchNotifications]);
+
+    // Toast notification handler
+    const showToast = useCallback(({ type, title, message, duration = 5000 }) => {
+        const id = Date.now();
+        const newToast = { id, type, title, message, duration };
+        
+        setToasts(prev => [...prev, newToast]);
+        
+        if (duration) {
+            setTimeout(() => {
+                setToasts(prev => prev.filter(toast => toast.id !== id));
+            }, duration);
+        }
+    }, []);
+
+    // Persistent notification handlers
     const addNotification = useCallback((notification) => {
         const newNotification = {
             id: Date.now(),
             ...notification,
-            unread: true,
-            time: new Date().toISOString(),
+            is_read: false,
+            timestamp: new Date().toISOString(),
         };
 
         setNotifications(prev => [newNotification, ...prev]);
         setUnreadCount(count => count + 1);
         
-        // Show toast notification
-        showToast(newNotification);
-    }, []);
-
-    const showNotification = useCallback(({ type, title, message, duration = 5000 }) => {
-        const id = Date.now();
-        setNotifications(prev => [...prev, { id, type, title, message, duration }]);
-    }, []);
+        // Show toast for new notification
+        showToast({
+            type: notification.type,
+            title: notification.title,
+            message: notification.message,
+            duration: 5000
+        });
+    }, [showToast]);
 
     const markAsRead = useCallback(async (notificationId) => {
-      try {
-          await axios.put(`http://localhost:8080/api/notifications/${notificationId}/read`, null, {
-              headers: {
-                  Authorization: `Bearer ${localStorage.getItem('token')}`
-              }
-          });
-          // Update local state
-          setNotifications(prev =>
-              prev.map(notification =>
-                  notification.id === notificationId
-                      ? { ...notification, is_read: true }
-                      : notification
-              )
-          );
-          setUnreadCount(prev => Math.max(0, prev - 1));
-      } catch (error) {
-          console.error('Error marking notification as read:', error);
-      }
-  }, []);
+        try {
+            await axios.put(`http://localhost:8080/api/notifications/${notificationId}/read`, null, {
+                headers: {
+                    Authorization: `Bearer ${localStorage.getItem('token')}`
+                }
+            });
 
-  const markAllAsRead = useCallback(async () => {
-    try {
-        await axios.put('http://localhost:8080/api/notifications/mark-all-read', null, {
-            headers: {
-                Authorization: `Bearer ${localStorage.getItem('token')}`
-            }
-        });
-        setNotifications(prev =>
-            prev.map(notification => ({ ...notification, is_read: true }))
-        );
-        setUnreadCount(0);
-    } catch (error) {
-        console.error('Error marking all notifications as read:', error);
-    }
-}, []);
+            setNotifications(prev =>
+                prev.map(notification =>
+                    notification.id === notificationId
+                        ? { ...notification, is_read: true }
+                        : notification
+                )
+            );
+            setUnreadCount(prev => Math.max(0, prev - 1));
+        } catch (error) {
+            console.error('Error marking notification as read:', error);
+        }
+    }, []);
+
+    const markAllAsRead = useCallback(async () => {
+        try {
+            await axios.put('http://localhost:8080/api/notifications/mark-all-read', null, {
+                headers: {
+                    Authorization: `Bearer ${localStorage.getItem('token')}`
+                }
+            });
+            setNotifications(prev =>
+                prev.map(notification => ({ ...notification, is_read: true }))
+            );
+            setUnreadCount(0);
+        } catch (error) {
+            console.error('Error marking all notifications as read:', error);
+        }
+    }, []);
 
     const deleteNotification = useCallback((notificationId) => {
         setNotifications(prev => {
             const notification = prev.find(n => n.id === notificationId);
-            if (notification?.unread) {
+            if (notification && !notification.is_read) {
                 setUnreadCount(count => Math.max(0, count - 1));
             }
             return prev.filter(n => n.id !== notificationId);
@@ -144,35 +162,42 @@ useEffect(() => {
     }, []);
 
     const value = {
-        notifications,
-        unreadCount,
-        showNotification,
-        markAsRead,
-        markAllAsRead,
-        deleteNotification,
-        fetchNotifications,
+        notifications,    
+        unreadCount,       
+        showToast,        
+        addNotification,  
+        markAsRead,        
+        markAllAsRead,    
+        deleteNotification, 
+        fetchNotifications 
     };
 
     return (
-      <NotificationContext.Provider value={value}>
-          {children}
-          <div className="fixed inset-0 pointer-events-none flex flex-col items-end gap-2 p-4 z-50">
-              <AnimatePresence>
-                  {notifications
-                      .filter(n => !n.is_read) // Show only unread notifications as toasts
-                      .map((notification) => (
-                          <div key={notification.id} className="pointer-events-auto">
-                              <Notification
-                                  title={notification.title}
-                                  message={notification.message}
-                                  type={notification.type}
-                                  show={true}
-                                  onClose={() => markAsRead(notification.id)}
-                              />
-                          </div>
-                      ))}
-              </AnimatePresence>
-          </div>
-      </NotificationContext.Provider>
-  );
+        <NotificationContext.Provider value={value}>
+            {children}
+            {/* Toast Container */}
+            <div className="fixed inset-0 pointer-events-none flex flex-col items-end gap-2 p-4 z-50">
+                <AnimatePresence>
+                    {toasts.map((toast) => (
+                        <div key={toast.id} className="pointer-events-auto">
+                            <Toast
+                                title={toast.title}
+                                message={toast.message}
+                                type={toast.type}
+                                show={true}
+                                duration={toast.duration}
+                                onClose={() => {
+                                    setToasts(prev => 
+                                        prev.filter(t => t.id !== toast.id)
+                                    );
+                                }}
+                            />
+                        </div>
+                    ))}
+                </AnimatePresence>
+            </div>
+        </NotificationContext.Provider>
+    );
 };
+
+export default NotificationProvider;

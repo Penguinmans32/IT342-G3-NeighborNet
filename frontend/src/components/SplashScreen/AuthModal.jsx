@@ -61,8 +61,8 @@
 
 
   const AuthModals = ({ isSignInOpen, isSignUpOpen, closeSignInModal, closeSignUpModal, setIsSignInOpen, setIsSignUpOpen }) => {
-    const { showNotification } = useNotification();
     const navigate = useNavigate();
+    const { showToast, addNotification } = useNotification();
 
     const { login, register, setUser } = useAuth();
     const [loading, setLoading] = useState(false);
@@ -113,7 +113,7 @@
         );
     
         if (!popup) {
-          showNotification({
+          showToast({
             type: 'error',
             title: 'Popup Blocked',
             message: 'Please allow popups for this site to use social login.'
@@ -155,7 +155,7 @@
                   popup.close();
                 }
         
-                showNotification({
+                showToast({
                   type: 'success',
                   title: 'Login Successful',
                   message: 'Welcome back!'
@@ -170,7 +170,7 @@
                 }, 500);
               } catch (error) {
                 console.error('Error fetching user data:', error);
-                showNotification({
+                showToast({
                   type: 'error',
                   title: 'Login Error',
                   message: 'Failed to fetch user data'
@@ -203,7 +203,7 @@
     
       } catch (error) {
         console.error('Social login error:', error);
-        showNotification({
+        showToast({
           type: 'error',
           title: 'Login Failed',
           message: 'An error occurred during social login'
@@ -225,7 +225,7 @@
           console.log('Login successful:', userData);
           
           closeSignInModal();
-          showNotification({
+          showToast({
               type: 'success',
               title: 'Welcome back!',
               message: 'You have successfully logged in'
@@ -238,14 +238,14 @@
           setError(errorMessage);
           
           if (errorMessage.includes('verify your email')) {
-              showNotification({
+              showToast({
                   type: 'warning',
                   title: 'Email Not Verified',
                   message: 'Please check your inbox and verify your email address to continue.',
                   duration: 8000
               });
           } else {
-              showNotification({
+              showToast({
                   type: 'error',
                   title: 'Login Failed',
                   message: errorMessage,
@@ -266,7 +266,7 @@
             ...prev,
             email: 'Please enter a valid email address'
         }));
-        showNotification({
+        showToast({
             type: 'error',
             title: 'Invalid Email',
             message: 'Please enter a valid email address',
@@ -281,7 +281,7 @@
             ...prev,
             password: passwordCheck.messages
         }));
-        showNotification({
+        showToast({
             type: 'error',
             title: 'Weak Password',
             message: 'Please create a stronger password',
@@ -292,7 +292,7 @@
 
     if (registerForm.password !== registerForm.confirmPassword) {
         setError('Passwords do not match');
-        showNotification({
+        showToast({
             type: 'error',
             title: 'Password Mismatch',
             message: 'Please make sure your passwords match.',
@@ -311,7 +311,7 @@
         closeSignUpModal();
 
         // Initial success notification
-        showNotification({
+        showToast({
             type: 'success',
             title: 'Welcome to NeighborNet! 🎉',
             message: 'Registration successful! Please check your email to verify your account.',
@@ -320,7 +320,7 @@
 
         // First follow-up notification about email verification
         setTimeout(() => {
-            showNotification({
+           showToast({
                 type: 'info',
                 title: '📧 Check Your Email',
                 message: `We've sent a verification link to ${registerForm.email}`,
@@ -330,7 +330,7 @@
 
         // Second follow-up notification about spam folder
         setTimeout(() => {
-            showNotification({
+            showToast({
                 type: 'info',
                 title: '📝 Important Note',
                 message: `Can't find the email? Please check your spam/junk folder and mark us as 'not spam' to ensure you receive our communications.`,
@@ -341,7 +341,7 @@
         setIsSignInOpen(true);
     } catch (err) {
         setError(err.response?.data || 'An error occurred during registration');
-        showNotification({
+        showToast({
             type: 'error',
             title: 'Registration Failed',
             message: err.response?.data || 'An error occurred during registration',

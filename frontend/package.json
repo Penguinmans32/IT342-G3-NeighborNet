@@ -25,6 +25,7 @@
     "react-hot-toast": "^2.5.2",
     "react-icons": "^5.4.0",
     "react-router-dom": "^7.1.5",
+    "react-timeago": "^8.0.0",
     "react-tooltip": "^5.28.0",
     "sockjs-client": "^1.6.1",
     "styled-components": "^6.1.15",
