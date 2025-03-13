@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import BorrowingAgreementForm from './BorrowingAgreementForm';
+import { MdImage, MdClose } from 'react-icons/md';
+import ImageGalleryModal from './ImageGalleryModal';
 
 
 const formatMessageTime = (timestamp) => {
@@ -66,6 +68,16 @@ const Chat = ({ senderId, receiverId, receiverName, onMessageSent, stompClient }
   const [showAgreementForm, setShowAgreementForm] = useState(false);
   const fileInputRef = useRef(null);
   const [isTyping, setIsTyping] = useState(false);
+  const [selectedGalleryImages, setSelectedGalleryImages] = useState([]);
+  const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+  const [galleryStartIndex, setGalleryStartIndex] = useState(0);
+
+
+  const handleOpenGallery = (images, startIndex = 0) => {
+    setSelectedGalleryImages(images);
+    setGalleryStartIndex(startIndex);
+    setIsGalleryOpen(true);
+  };
 
   const handleAgreementResponse = async (agreementId, status) => {
     try {
@@ -499,9 +511,87 @@ const Chat = ({ senderId, receiverId, receiverName, onMessageSent, stompClient }
                       return null;
                     }
                   })()
-                ) : (
-                  <span>{msg.content}</span>
-                )}
+                ) : msg.messageType === 'TEXT' ? (
+                  <div className="flex flex-col gap-2">
+                  {msg.item && (
+                    <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                      <div className="aspect-[4/3] relative overflow-hidden bg-gray-100 mb-3">
+                        {msg.item.imageUrls && msg.item.imageUrls.length > 0 ? (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 p-2 h-full">
+                            {/* Main Image */}
+                            <div className="col-span-2 h-48 relative rounded-lg overflow-hidden">
+                              <img
+                                src={msg.item.imageUrls[0]}
+                                alt={`${msg.item.name} - Main`}
+                                className="w-full h-full object-cover cursor-pointer"
+                                onClick={() => handleOpenGallery(msg.item.imageUrls, 0)}
+                                onError={(e) => {
+                                  e.target.onerror = null;
+                                  e.target.src = 'https://via.placeholder.com/400x300?text=No+Image';
+                                }}
+                              />
+                            </div>
+                            
+                            {/* Thumbnail Images */}
+                            {msg.item.imageUrls.length > 1 && (
+                              <div className="grid grid-cols-3 gap-2 col-span-2">
+                                {msg.item.imageUrls.slice(1, 4).map((url, index) => (
+                                  <div 
+                                    key={index} 
+                                    className="aspect-square relative rounded-lg overflow-hidden cursor-pointer"
+                                    onClick={() => handleOpenGallery(msg.item.imageUrls, index + 1)}
+                                  >
+                                    <img
+                                      src={url}
+                                      alt={`${msg.item.name} - ${index + 2}`}
+                                      className="w-full h-full object-cover"
+                                      onError={(e) => {
+                                        e.target.onerror = null;
+                                        e.target.src = 'https://via.placeholder.com/150?text=No+Image';
+                                      }}
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center h-full p-4">
+                            <MdImage className="text-4xl text-gray-400 mb-2" />
+                            <p className="text-gray-500 text-sm text-center">No images available</p>
+                          </div>
+                        )}
+                      </div>
+              
+                      {/* Item Details */}
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h4 className="font-medium text-gray-900">{msg.item.name}</h4>
+                          <p className="text-sm text-gray-500">{msg.item.category}</p>
+                          <p className="text-xs text-gray-400">
+                            Available: {Array.isArray(msg.item.availableFrom) ? 
+                              new Date(msg.item.availableFrom[0], msg.item.availableFrom[1] - 1, msg.item.availableFrom[2]).toLocaleDateString() : 
+                              new Date(msg.item.availableFrom).toLocaleDateString()} - 
+                            {Array.isArray(msg.item.availableUntil) ? 
+                              new Date(msg.item.availableUntil[0], msg.item.availableUntil[1] - 1, msg.item.availableUntil[2]).toLocaleDateString() : 
+                              new Date(msg.item.availableUntil).toLocaleDateString()}
+                          </p>
+                          {msg.item.description && (
+                            <p className="text-sm text-gray-600 mt-2">
+                              {msg.item.description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  <div className={msg.item ? "mt-2" : ""}>
+                    {msg.content}
+                  </div>
+                </div>
+              ) : (
+                <span>{msg.content}</span>
+              )}
               </div>
               <div className="flex items-center space-x-2 mt-1 text-xs text-gray-500">
               <span>{formatMessageTime(msg.timestamp)}</span>
@@ -632,7 +722,18 @@ const Chat = ({ senderId, receiverId, receiverName, onMessageSent, stompClient }
           </button>
         </div>
       </div>
-  
+
+      <AnimatePresence>
+        {isGalleryOpen && (
+          <ImageGalleryModal
+            images={selectedGalleryImages}
+            isOpen={isGalleryOpen}
+            onClose={() => setIsGalleryOpen(false)}
+            currentIndex={galleryStartIndex}
+          />
+        )}
+      </AnimatePresence>
+        
       {/* Agreement Form Modal */}
       <AnimatePresence>
       {showAgreementForm && (

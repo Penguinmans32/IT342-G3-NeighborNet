@@ -23,15 +23,24 @@ import {
 import { ArrowLeft } from 'lucide-react';
 import axios from 'axios';
 
-const MessageModal = ({ isOpen, onClose, onSend, ownerName }) => {
+const MessageModal = ({ isOpen, onClose, onSend, ownerName, item}) => {
   const [messageType, setMessageType] = useState('custom');
   const [customMessage, setCustomMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
   
   const predefinedMessages = [
-    { id: 'interest', text: `Hi! I'm interested in borrowing your item.` },
-    { id: 'availability', text: 'Is this item still available?' },
-    { id: 'details', text: 'Could you provide more details about this item?' },
+    { 
+      id: 'interest', 
+      text: `Hi! I'm interested in borrowing your ${item?.name}.` 
+    },
+    { 
+      id: 'availability', 
+      text: `Is "${item?.name}" still available?` 
+    },
+    { 
+      id: 'details', 
+      text: `Could you provide more details about "${item?.name}"?` 
+    },
   ];
 
   const handleSubmit = async (e) => {
@@ -43,7 +52,7 @@ const MessageModal = ({ isOpen, onClose, onSend, ownerName }) => {
     if (messageToSend) {
       setIsSending(true);
       try {
-        await onSend(messageToSend);
+        await onSend(messageToSend, item);
         onClose();
       } catch (error) {
         console.error('Error sending message:', error);
@@ -58,6 +67,26 @@ const MessageModal = ({ isOpen, onClose, onSend, ownerName }) => {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+
+      {item && (
+          <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+            <div className="flex items-center gap-3">
+              {item.imageUrls?.[0] && (
+                <img 
+                  src={item.imageUrls[0]} 
+                  alt={item.name}
+                  className="w-16 h-16 object-cover rounded-lg"
+                />
+              )}
+              <div>
+                <h4 className="font-medium text-gray-900">{item.name}</h4>
+                <p className="text-sm text-gray-500">{item.category}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+
         <h3 className="text-xl font-semibold mb-4">
           Message to {ownerName}
         </h3>
@@ -315,6 +344,7 @@ const Borrowing = () => {
     isOpen: false,
     ownerId: null,
     ownerName: '',
+    item: null,
   });
 
   const fetchBorrowedItemsStatus = async () => {
@@ -412,59 +442,92 @@ const Borrowing = () => {
     }
   }, [items]);
 
-  const handleMessageClick = (ownerId, ownerName) => {
+  const handleMessageClick = (ownerId, ownerName, item) => {
     setMessageModal({
       isOpen: true,
       ownerId,
       ownerName,
+      item,
     });
   };
 
- const handleSendMessage = async (message) => {
-  try {
-    if (stompClient?.connected) {
-      const chatMessage = {
-        senderId: user.id,
-        receiverId: messageModal.ownerId,
-        content: message,
-        messageType: 'TEXT',  
-        timestamp: new Date().toISOString()
-      };
+  const handleSendMessage = async (message, item) => {
+    try {
+      // Add check for user
+      if (!user) {
+        console.error('User not authenticated');
+        return;
+      }
+  
+      // Add check for messageModal
+      if (!messageModal.ownerId) {
+        console.error('No owner ID specified');
+        return;
+      }
+  
+      // Add check for item
+      if (!item) {
+        console.error('No item specified');
+        return;
+      }
+  
+      if (stompClient?.connected) {
+        const chatMessage = {
+          senderId: user.id,
+          receiverId: messageModal.ownerId,
+          content: message,
+          messageType: 'TEXT',  
+          timestamp: new Date().toISOString(),
+          item: {  
+            id: item.id,
+            name: item.name,
+            imageUrls: item.imageUrls || [],
+            category: item.category,
+            description: item.description,
+            location: item.location,
+            availableFrom: item.availableFrom,
+            availableUntil: item.availableUntil
+          }
+        };
 
-      stompClient.publish({
-        destination: '/app/chat',
-        body: JSON.stringify(chatMessage)
-      });
-
-      await new Promise(resolve => setTimeout(resolve, 100));
-
+        console.log("Message being sent:", chatMessage);
+  
+        stompClient.publish({
+          destination: '/app/chat',
+          body: JSON.stringify(chatMessage)
+        });
+  
+        await new Promise(resolve => setTimeout(resolve, 100));
+  
+        navigate('/messages', {
+          state: {
+            selectedContact: {
+              id: messageModal.ownerId,
+              username: messageModal.ownerName
+            },
+            newMessage: {
+              ...chatMessage,
+              temporary: true
+            },
+            selectedItem: item
+          }
+        });
+      } else {
+        throw new Error('WebSocket not connected');
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
       navigate('/messages', {
         state: {
           selectedContact: {
             id: messageModal.ownerId,
             username: messageModal.ownerName
           },
-          newMessage: {
-            ...chatMessage,
-            temporary: true
-          }
+          selectedItem: item
         }
       });
-    } else {
-      throw new Error('WebSocket not connected');
     }
-  } catch (error) {
-    console.error('Error sending message:', error);
-    navigate('/messages', {
-      state: {
-        selectedContact: {
-          id: messageModal.ownerId,
-          username: messageModal.ownerName
-        }
-      }
-    });
-  }
-};
+  };
 
   const extractCategories = (items) => {
     // Get unique categories
@@ -822,7 +885,7 @@ const Borrowing = () => {
                           <motion.button
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
-                            onClick={() => handleMessageClick(item.owner.id, item.owner.username)}
+                            onClick={() => handleMessageClick(item.owner.id, item.owner.username, item)}
                             className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium
                                       hover:bg-blue-600 transition-colors"
                           >
@@ -848,9 +911,15 @@ const Borrowing = () => {
 
       <MessageModal
         isOpen={messageModal.isOpen}
-        onClose={() => setMessageModal({ isOpen: false, ownerId: null, ownerName: '' })}
+        onClose={() => setMessageModal({ 
+          isOpen: false, 
+          ownerId: null, 
+          ownerName: '', 
+          item: null  // Add this line
+        })}
         onSend={handleSendMessage}
         ownerName={messageModal.ownerName}
+        item={messageModal.item}
       />
 
       <ImageGalleryModal
