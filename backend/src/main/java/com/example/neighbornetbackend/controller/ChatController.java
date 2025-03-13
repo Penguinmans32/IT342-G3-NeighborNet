@@ -5,6 +5,7 @@ import com.example.neighbornetbackend.dto.ConversationDTO;
 import com.example.neighbornetbackend.dto.ErrorResponse;
 import com.example.neighbornetbackend.model.BorrowingAgreement;
 import com.example.neighbornetbackend.model.ChatMessage;
+import com.example.neighbornetbackend.model.Item;
 import com.example.neighbornetbackend.service.BorrowingAgreementService;
 import com.example.neighbornetbackend.service.ChatImageStorageService;
 import com.example.neighbornetbackend.service.ChatService;
@@ -101,7 +102,16 @@ public class ChatController {
     public List<ChatMessage> findChatMessages(
             @PathVariable Long senderId,
             @PathVariable Long receiverId) {
-        return chatService.findChatMessages(senderId, receiverId);
+        List<ChatMessage> messages = chatService.findChatMessages(senderId, receiverId);
+
+        messages.forEach(message -> {
+            if (message.getItem() != null) {
+                Item item = message.getItem();
+                item.getImageUrls().size();
+            }
+        });
+
+        return messages;
     }
 
     @GetMapping("/conversations/{userId}")

@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import BorrowingAgreementForm from './BorrowingAgreementForm';
+import { MdImage, MdClose } from 'react-icons/md';
+import ImageGalleryModal from './ImageGalleryModal';
 
 
 const formatMessageTime = (timestamp) => {
@@ -65,6 +67,17 @@ const Chat = ({ senderId, receiverId, receiverName, onMessageSent, stompClient }
   const [imagePreview, setImagePreview] = useState(null);
   const [showAgreementForm, setShowAgreementForm] = useState(false);
   const fileInputRef = useRef(null);
+  const [isTyping, setIsTyping] = useState(false);
+  const [selectedGalleryImages, setSelectedGalleryImages] = useState([]);
+  const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+  const [galleryStartIndex, setGalleryStartIndex] = useState(0);
+
+
+  const handleOpenGallery = (images, startIndex = 0) => {
+    setSelectedGalleryImages(images);
+    setGalleryStartIndex(startIndex);
+    setIsGalleryOpen(true);
+  };
 
   const handleAgreementResponse = async (agreementId, status) => {
     try {
@@ -363,39 +376,84 @@ const Chat = ({ senderId, receiverId, receiverName, onMessageSent, stompClient }
     }
   };
 
+  const TypingIndicator = () => (
+    <div className="flex items-center space-x-1 p-2">
+      <div className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '0ms' }}></div>
+      <div className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '150ms' }}></div>
+      <div className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '300ms' }}></div>
+    </div>
+  );
+
   return (
     <div className="flex flex-col h-full">
+      <div className="bg-white border-b border-gray-200 p-4 flex items-center space-x-4">
+      <div className="relative">
+        <div className="h-10 w-10 rounded-full bg-gradient-to-r from-purple-400 to-indigo-500 flex items-center justify-center text-white text-lg font-semibold shadow-md">
+          {receiverName.charAt(0).toUpperCase()}
+        </div>
+        <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-400 border-2 border-white"></div>
+      </div>
+      <div className="flex-1">
+        <h3 className="font-semibold text-gray-900">{receiverName}</h3>
+        <p className="text-xs text-green-500">Online</p>
+      </div>
+      <div className="flex items-center space-x-3">
+      </div>
+    </div>
       {/* Chat Messages */}
-      <div className="flex-1 overflow-y-auto p-4">
+      <div className="flex-1 overflow-y-auto p-4 bg-gray-50" 
+        style={{
+          backgroundImage: `
+            radial-gradient(circle at 100% 100%, #e5e7eb 2px, transparent 2px),
+            radial-gradient(circle at 0% 100%, #e5e7eb 2px, transparent 2px)
+          `,
+          backgroundSize: '40px 40px'
+        }}
+      >
         {messages.map((msg) => (
-          <div key={msg.id} className={`mb-4 ${msg.senderId === senderId ? 'text-right' : 'text-left'}`}>
-            <div className={`inline-block ${msg.senderId === senderId ? 'bg-blue-500 text-white' : 'bg-gray-200'} rounded-lg px-4 py-2 max-w-xs lg:max-w-md`}>
-              {msg.messageType === 'IMAGE' ? (
-                <div className="rounded-lg overflow-hidden">
-                  <img 
-                    src={msg.imageUrl} 
-                    alt="Shared" 
-                    className="max-w-full h-auto cursor-pointer" 
-                    loading="lazy"
-                    onClick={() => window.open(msg.imageUrl, '_blank')}
-                  />
+          <div key={msg.id} className="mb-4 flex items-end">
+            {/* Receiver's Avatar - Only show for received messages */}
+            {msg.senderId !== senderId && (
+              <div className="flex-shrink-0 mr-2">
+                <div className="h-8 w-8 rounded-full bg-gradient-to-r from-gray-400 to-gray-500 flex items-center justify-center text-white text-sm font-medium shadow-sm">
+                  {receiverName.charAt(0).toUpperCase()}
                 </div>
-              ) : msg.messageType === 'FORM' ? (
-                (() => {
-                  try {
-                    const formData = JSON.parse(msg.formData);
-                    const isLender = senderId === formData.lenderId;
-                    const isBorrower = senderId === formData.borrowerId;
-                    const isPending = formData.status === 'PENDING';
-                    const canRespond = isPending && isLender && msg.senderId === formData.borrowerId;
+              </div>
+            )}
 
-                    return (
-                      <div className="bg-white/90 p-4 rounded-lg">
-                        <h4 className="font-semibold text-gray-900">📋 Borrowing Agreement</h4>
-                        <div className="text-sm mt-2">
-                          <div className="mb-2">
-                            <p><strong>Item:</strong> {formData.itemName}</p>
-                            <p><strong>Period:</strong> {(() => {
+            {/* Message Content */}
+            <div className={`flex flex-col ${msg.senderId === senderId ? 'items-end ml-auto' : 'items-start'}`}>
+              <div className={`inline-block ${
+                msg.senderId === senderId 
+                  ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-2xl rounded-br-none' 
+                  : 'bg-white border border-gray-200 rounded-2xl rounded-bl-none'
+              } px-4 py-2 max-w-xs lg:max-w-md shadow-sm hover:shadow-md transition-shadow duration-200`}>
+                {msg.messageType === 'IMAGE' ? (
+                  <div className="rounded-lg overflow-hidden">
+                    <img 
+                      src={msg.imageUrl} 
+                      alt="Shared" 
+                      className="max-w-full h-auto cursor-pointer" 
+                      loading="lazy"
+                      onClick={() => window.open(msg.imageUrl, '_blank')}
+                    />
+                  </div>
+                ) : msg.messageType === 'FORM' ? (
+                  (() => {
+                    try {
+                      const formData = JSON.parse(msg.formData);
+                      const isLender = senderId === formData.lenderId;
+                      const isBorrower = senderId === formData.borrowerId;
+                      const isPending = formData.status === 'PENDING';
+                      const canRespond = isPending && isLender && msg.senderId === formData.borrowerId;
+
+                      return (
+                        <div className="bg-white/90 p-4 rounded-lg">
+                          <h4 className="font-semibold text-gray-900">📋 Borrowing Agreement</h4>
+                          <div className="text-sm mt-2">
+                            <div className="mb-2">
+                              <p><strong>Item:</strong> {formData.itemName}</p>
+                              <p><strong>Period:</strong> {(() => {
                                 try {
                                   const formatDateTime = (dateString) => {
                                     const date = new Date(dateString);
@@ -418,50 +476,156 @@ const Chat = ({ senderId, receiverId, receiverName, onMessageSent, stompClient }
                                   return 'Invalid Date Range';
                                 }
                               })()}</p>
-                            <p><strong>Terms:</strong> {formData.terms}</p>
-                          </div>
-                          <div className={`font-medium ${
-                            formData.status === 'PENDING' ? 'text-yellow-600' :
-                            formData.status === 'ACCEPTED' ? 'text-green-600' :
-                            'text-red-600'
-                          }`}>
-                            {formData.status === 'PENDING' ? '⏳ Pending Response' :
-                            formData.status === 'ACCEPTED' ? '✅ Accepted' :
-                            '❌ Rejected'}
-                          </div>
-                          {canRespond && (
-                            <div className="mt-2 flex gap-2">
-                              <button
-                                onClick={() => handleAgreementResponse(formData.id, 'ACCEPTED')}
-                                className="px-3 py-1 bg-green-500 text-white rounded-md hover:bg-green-600 text-sm"
-                              >
-                                Accept
-                              </button>
-                              <button
-                                onClick={() => handleAgreementResponse(formData.id, 'REJECTED')}
-                                className="px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 text-sm"
-                              >
-                                Reject
-                              </button>
+                              <p><strong>Terms:</strong> {formData.terms}</p>
                             </div>
+                            <div className={`font-medium ${
+                              formData.status === 'PENDING' ? 'text-yellow-600' :
+                              formData.status === 'ACCEPTED' ? 'text-green-600' :
+                              'text-red-600'
+                            }`}>
+                              {formData.status === 'PENDING' ? '⏳ Pending Response' :
+                              formData.status === 'ACCEPTED' ? '✅ Accepted' :
+                              '❌ Rejected'}
+                            </div>
+                            {canRespond && (
+                              <div className="mt-2 flex gap-2">
+                                <button
+                                  onClick={() => handleAgreementResponse(formData.id, 'ACCEPTED')}
+                                  className="px-3 py-1 bg-green-500 text-white rounded-md hover:bg-green-600 text-sm"
+                                >
+                                  Accept
+                                </button>
+                                <button
+                                  onClick={() => handleAgreementResponse(formData.id, 'REJECTED')}
+                                  className="px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 text-sm"
+                                >
+                                  Reject
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    } catch (error) {
+                      console.error('Error parsing agreement data:', error);
+                      return null;
+                    }
+                  })()
+                ) : msg.messageType === 'TEXT' ? (
+                  <div className="flex flex-col gap-2">
+                  {msg.item && (
+                    <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                      <div className="aspect-[4/3] relative overflow-hidden bg-gray-100 mb-3">
+                        {msg.item.imageUrls && msg.item.imageUrls.length > 0 ? (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 p-2 h-full">
+                            {/* Main Image */}
+                            <div className="col-span-2 h-48 relative rounded-lg overflow-hidden">
+                              <img
+                                src={msg.item.imageUrls[0]}
+                                alt={`${msg.item.name} - Main`}
+                                className="w-full h-full object-cover cursor-pointer"
+                                onClick={() => handleOpenGallery(msg.item.imageUrls, 0)}
+                                onError={(e) => {
+                                  e.target.onerror = null;
+                                  e.target.src = 'https://via.placeholder.com/400x300?text=No+Image';
+                                }}
+                              />
+                            </div>
+                            
+                            {/* Thumbnail Images */}
+                            {msg.item.imageUrls.length > 1 && (
+                              <div className="grid grid-cols-3 gap-2 col-span-2">
+                                {msg.item.imageUrls.slice(1, 4).map((url, index) => (
+                                  <div 
+                                    key={index} 
+                                    className="aspect-square relative rounded-lg overflow-hidden cursor-pointer"
+                                    onClick={() => handleOpenGallery(msg.item.imageUrls, index + 1)}
+                                  >
+                                    <img
+                                      src={url}
+                                      alt={`${msg.item.name} - ${index + 2}`}
+                                      className="w-full h-full object-cover"
+                                      onError={(e) => {
+                                        e.target.onerror = null;
+                                        e.target.src = 'https://via.placeholder.com/150?text=No+Image';
+                                      }}
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center h-full p-4">
+                            <MdImage className="text-4xl text-gray-400 mb-2" />
+                            <p className="text-gray-500 text-sm text-center">No images available</p>
+                          </div>
+                        )}
+                      </div>
+              
+                      {/* Item Details */}
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h4 className="font-medium text-gray-900">{msg.item.name}</h4>
+                          <p className="text-sm text-gray-500">{msg.item.category}</p>
+                          <p className="text-xs text-gray-400">
+                            Available: {Array.isArray(msg.item.availableFrom) ? 
+                              new Date(msg.item.availableFrom[0], msg.item.availableFrom[1] - 1, msg.item.availableFrom[2]).toLocaleDateString() : 
+                              new Date(msg.item.availableFrom).toLocaleDateString()} - 
+                            {Array.isArray(msg.item.availableUntil) ? 
+                              new Date(msg.item.availableUntil[0], msg.item.availableUntil[1] - 1, msg.item.availableUntil[2]).toLocaleDateString() : 
+                              new Date(msg.item.availableUntil).toLocaleDateString()}
+                          </p>
+                          {msg.item.description && (
+                            <p className="text-sm text-gray-600 mt-2">
+                              {msg.item.description}
+                            </p>
                           )}
                         </div>
                       </div>
-                    );
-                  } catch (error) {
-                    console.error('Error parsing agreement data:', error);
-                    return null;
-                  }
-                })()
+                    </div>
+                  )}
+                  <div className={msg.item ? "mt-2" : ""}>
+                    {msg.content}
+                  </div>
+                </div>
               ) : (
                 <span>{msg.content}</span>
               )}
+              </div>
+              <div className="flex items-center space-x-2 mt-1 text-xs text-gray-500">
+              <span>{formatMessageTime(msg.timestamp)}</span>
+                {msg.senderId === senderId && (
+                  <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+              </div>
             </div>
-            <div className="text-xs text-gray-500 mt-1">
-              {formatMessageTime(msg.timestamp)}
-            </div>
+
+            {/* Sender's Avatar - Only show for sent messages */}
+            {msg.senderId === senderId && (
+              <div className="flex-shrink-0 ml-2">
+                <div className="h-8 w-8 rounded-full bg-gradient-to-r from-blue-400 to-blue-600 flex items-center justify-center text-white text-sm font-medium shadow-sm">
+                  {'You'}
+                </div>
+              </div>
+            )}
           </div>
         ))}
+
+          {isTyping && (
+            <div className="flex items-start mb-4">
+              <div className="flex-shrink-0 mr-2">
+                <div className="h-8 w-8 rounded-full bg-gradient-to-r from-gray-400 to-gray-500 flex items-center justify-center text-white text-sm font-medium shadow-sm">
+                  {receiverName.charAt(0).toUpperCase()}
+                </div>
+              </div>
+              <div className="bg-white border border-gray-200 rounded-2xl rounded-bl-none px-4 py-2 shadow-sm">
+                <TypingIndicator />
+              </div>
+            </div>
+          )}
         <div ref={messagesEndRef} />
       </div>
   
@@ -558,7 +722,18 @@ const Chat = ({ senderId, receiverId, receiverName, onMessageSent, stompClient }
           </button>
         </div>
       </div>
-  
+
+      <AnimatePresence>
+        {isGalleryOpen && (
+          <ImageGalleryModal
+            images={selectedGalleryImages}
+            isOpen={isGalleryOpen}
+            onClose={() => setIsGalleryOpen(false)}
+            currentIndex={galleryStartIndex}
+          />
+        )}
+      </AnimatePresence>
+        
       {/* Agreement Form Modal */}
       <AnimatePresence>
       {showAgreementForm && (

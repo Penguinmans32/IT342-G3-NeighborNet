@@ -2,6 +2,7 @@ package com.example.neighbornetbackend.model;
 
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
@@ -41,6 +42,11 @@ public class ChatMessage {
         this.timestamp = LocalDateTime.now();
         this.is_read = false;
     }
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "item_id")
+    @JsonIgnoreProperties({"borrowRequests", "owner"})
+    private Item item;
 
     public Long getId() {
         return id;
@@ -112,5 +118,13 @@ public class ChatMessage {
 
     public void setFormData(String formData) {
         this.formData = formData;
+    }
+
+    public Item getItem() {
+        return item;
+    }
+
+    public void setItem(Item item) {
+        this.item = item;
     }
 }
