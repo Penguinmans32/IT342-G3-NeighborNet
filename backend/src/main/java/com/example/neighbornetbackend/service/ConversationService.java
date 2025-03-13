@@ -1,7 +1,9 @@
 package com.example.neighbornetbackend.service;
 
 import com.example.neighbornetbackend.dto.ConversationDTO;
+import com.example.neighbornetbackend.dto.ItemDTO;
 import com.example.neighbornetbackend.model.ChatMessage;
+import com.example.neighbornetbackend.model.Item;
 import com.example.neighbornetbackend.model.User;
 import com.example.neighbornetbackend.repository.ChatMessageRepository;
 import com.example.neighbornetbackend.repository.UserRepository;
@@ -19,6 +21,11 @@ public class ConversationService {
 
     @Autowired
     private UserRepository userRepository;
+
+    private ItemDTO convertToItemDTO(Item item) {
+        if (item == null) return null;
+        return ItemDTO.fromItem(item);
+    }
 
     public List<ConversationDTO> findConversationsForUser(Long userId) {  // Changed parameter type to Long
         List<ChatMessage> allMessages = chatMessageRepository.findBySenderIdOrReceiverId(userId, userId);
@@ -56,8 +63,12 @@ public class ConversationService {
                     dto.setParticipant(participantDTO);
 
                     if (!messages.isEmpty()) {
-                        dto.setLastMessage(messages.get(0).getContent());
-                        dto.setLastMessageTimestamp(messages.get(0).getTimestamp());
+                        ChatMessage lastMessage = messages.get(0);
+                        dto.setLastMessage(lastMessage.getContent());
+                        dto.setLastMessageTimestamp(lastMessage.getTimestamp());
+                        if (lastMessage.getItem() != null) {
+                            dto.setLastMessageItem(convertToItemDTO(lastMessage.getItem()));
+                        }
                     }
 
                     long unreadCount = messages.stream()

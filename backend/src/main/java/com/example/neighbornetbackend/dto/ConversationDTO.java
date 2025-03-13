@@ -10,6 +10,8 @@ public class ConversationDTO {
     private LocalDateTime lastMessageTimestamp;
     private int unreadCount;
 
+    private ItemDTO lastMessageItem;
+
     public Long getId() {
         return id;
     }
@@ -70,5 +72,13 @@ public class ConversationDTO {
 
     public void setLastMessageTimestamp(LocalDateTime lastMessageTimestamp) {
         this.lastMessageTimestamp = lastMessageTimestamp;
+    }
+
+    public ItemDTO getLastMessageItem() {
+        return lastMessageItem;
+    }
+
+    public void setLastMessageItem(ItemDTO lastMessageItem) {
+        this.lastMessageItem = lastMessageItem;
     }
 }

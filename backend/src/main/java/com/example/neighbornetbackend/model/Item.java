@@ -1,6 +1,7 @@
 package com.example.neighbornetbackend.model;
 
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 
 import java.time.LocalDate;
@@ -10,6 +11,7 @@ import java.util.List;
 
 @Entity
 @Table(name = "items")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Item {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
