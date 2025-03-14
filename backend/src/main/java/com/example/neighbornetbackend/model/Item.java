@@ -29,6 +29,12 @@ public class Item {
     @Column(nullable = false)
     private String location;
 
+    @Column(nullable = false)
+    private Double latitude;
+
+    @Column(nullable = false)
+    private Double longitude;
+
     private String availabilityPeriod;
 
     @Column(columnDefinition = "TEXT")
@@ -67,7 +73,7 @@ public class Item {
         createdAt = LocalDateTime.now();
     }
 
-    public Item(Long id, String name, String description, String category, String location, String availabilityPeriod, String terms, LocalDate availableFrom, LocalDate availableUntil, String email, String contactPreference, List<String> imageUrls, String phone, User owner, LocalDateTime createdAt) {
+    public Item(Long id, String name, String description, String category, String location, String availabilityPeriod, String terms, LocalDate availableFrom, LocalDate availableUntil, String email, String contactPreference, List<String> imageUrls, String phone, User owner, LocalDateTime createdAt, Double latitude, Double longitude) {
         this.id = id;
         this.name = name;
         this.description = description;
@@ -83,6 +89,8 @@ public class Item {
         this.phone = phone;
         this.owner = owner;
         this.createdAt = createdAt;
+        this.latitude = latitude;
+        this.longitude = longitude;
     }
 
     public Long getId() {
@@ -211,5 +219,21 @@ public class Item {
 
     public void setBorrowRequests(List<BorrowRequest> borrowRequests) {
         this.borrowRequests = borrowRequests;
+    }
+
+    public Double getLatitude() {
+        return latitude;
+    }
+
+    public void setLatitude(Double latitude) {
+        this.latitude = latitude;
+    }
+
+    public Double getLongitude() {
+        return longitude;
+    }
+
+    public void setLongitude(Double longitude) {
+        this.longitude = longitude;
     }
 }

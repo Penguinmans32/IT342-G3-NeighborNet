@@ -220,4 +220,23 @@ public class ItemController {
             return ResponseEntity.internalServerError().build();
         }
     }
+
+    @GetMapping("/nearby")
+    public ResponseEntity<List<ItemDTO>> getNearbyItems(
+            @RequestParam Double latitude,
+            @RequestParam Double longitude,
+            @RequestParam(defaultValue = "5.0") Double radiusInKm) {
+        List<ItemDTO> nearbyItems = itemService.findNearbyItems(latitude, longitude, radiusInKm);
+        return ResponseEntity.ok(nearbyItems);
+    }
+
+    @GetMapping("/within-bounds")
+    public ResponseEntity<List<ItemDTO>> getItemsWithinBounds(
+            @RequestParam Double minLat,
+            @RequestParam Double maxLat,
+            @RequestParam Double minLng,
+            @RequestParam Double maxLng) {
+        List<ItemDTO> items = itemService.findItemsWithinBounds(minLat, maxLat, minLng, maxLng);
+        return ResponseEntity.ok(items);
+    }
 }
