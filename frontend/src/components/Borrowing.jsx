@@ -332,7 +332,7 @@ const Borrowing = () => {
   const [ratingLoading, setRatingLoading] = useState({});
   const [searchTerm, setSearchTerm] = useState('');
   const [stompClient, setStompClient] = useState(null);
-  const [borrowedItems, setBorrowedItems] = useState(new Set());
+  const [borrowedItems, setBorrowedItems] = useState(new Map());
   const [galleryModal, setGalleryModal] = useState({
     isOpen: false,
     images: [],
@@ -347,14 +347,33 @@ const Borrowing = () => {
     item: null,
   });
 
+  const getFullProfileImageUrl = (imageUrl) => {
+    console.log("Raw imageUrl:", imageUrl);
+    if (!imageUrl) {
+      return "/images/defaultProfile.png";
+    }
+    return imageUrl.startsWith('http') 
+      ? imageUrl 
+      : `http://localhost:8080${imageUrl}`;
+  };
+
   const fetchBorrowedItemsStatus = async () => {
     try {
       const response = await axios.get('http://localhost:8080/api/borrowing/items/borrowed', {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
-      const borrowedItemIds = new Set(response.data.map(item => item.id));
-      setBorrowedItems(borrowedItemIds);
-      console.log("Borrowed items:", borrowedItemIds);
+      console.log("Full borrowed items response:", response.data);
+      const borrowedItemsMap = new Map(
+        response.data.map(item => [item.id, {
+          borrowed: true,
+          borrowerInfo: {
+            id: item.borrower?.id,
+            username: item.borrower?.username
+          }
+        }])
+      );
+      setBorrowedItems(borrowedItemsMap);
+      console.log("Borrowed items:", borrowedItemsMap);
     } catch (error) {
       console.error('Error fetching borrowed items status:', error);
     }
@@ -831,11 +850,8 @@ const Borrowing = () => {
                                         d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
                                 </svg>
                                 <span>
-                                  Currently borrowed by: {item.borrower ? (
-                                    <span className="font-medium">{item.borrower.username}</span>
-                                  ) : (
-                                    <span className="italic">another user</span>
-                                  )}
+                                  Currently borrowed by:{' '}
+                                  {borrowedItems.get(item.id)?.borrowerInfo?.username || 'Another User'}
                                 </span>
                               </div>
                             </div>
@@ -870,8 +886,21 @@ const Borrowing = () => {
                       {/* Owner Info and Contact Button */}
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
-                            <MdPerson className="text-gray-500 text-xl" />
+                          {/* Replace the MdPerson icon with actual profile image */}
+                          <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
+                            {item.owner?.imageUrl ? (
+                              <img
+                                src={getFullProfileImageUrl(item.owner.imageUrl)}
+                                alt={item.owner?.username || "Anonymous"}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  e.target.onerror = null;
+                                  e.target.src = "/images/defaultProfile.png";
+                                }}
+                              />
+                            ) : (
+                              <MdPerson className="text-gray-500 text-xl" />
+                            )}
                           </div>
                           <div className="text-sm">
                             <p className="font-medium text-gray-900">
