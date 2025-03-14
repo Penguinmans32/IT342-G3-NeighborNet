@@ -845,7 +845,7 @@ const Chat = ({ senderId, receiverId, receiverName, onMessageSent, stompClient }
           onClose={() => setShowAgreementForm(false)}
           senderId={senderId}
           receiverId={receiverId}
-          stompClient={stompClient} // Add this prop
+          stompClient={stompClient}
         />
       )}
       </AnimatePresence>

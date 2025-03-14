@@ -62,6 +62,12 @@ public class Item {
     @JoinColumn(name = "user_id")
     private User owner;
 
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "borrower_id")
+    private User borrower;
+
+
+
     private LocalDateTime createdAt;
 
     public Item() {
@@ -235,5 +241,13 @@ public class Item {
 
     public void setLongitude(Double longitude) {
         this.longitude = longitude;
+    }
+
+    public User getBorrower() {
+        return borrower;
+    }
+
+    public void setBorrower(User borrower) {
+        this.borrower = borrower;
     }
 }

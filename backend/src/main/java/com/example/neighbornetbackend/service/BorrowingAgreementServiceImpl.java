@@ -3,8 +3,12 @@ package com.example.neighbornetbackend.service;
 import com.example.neighbornetbackend.dto.ItemDTO;
 import com.example.neighbornetbackend.model.BorrowingAgreement;
 import com.example.neighbornetbackend.model.Item;
+import com.example.neighbornetbackend.model.User;
 import com.example.neighbornetbackend.repository.BorrowingAgreementRepository;
 import com.example.neighbornetbackend.repository.ItemRepository;
+import com.example.neighbornetbackend.repository.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
@@ -18,7 +22,12 @@ public class BorrowingAgreementServiceImpl implements BorrowingAgreementService 
     @Autowired
     private BorrowingAgreementRepository borrowingAgreementRepository;
 
+    @Autowired
+    private UserRepository userRepository;
+
     private final ItemRepository itemRepository;
+
+    private static final Logger log = LoggerFactory.getLogger(BorrowingAgreementServiceImpl.class);
 
     public BorrowingAgreementServiceImpl(ItemRepository itemRepository) {
         this.itemRepository = itemRepository;
@@ -87,11 +96,28 @@ public class BorrowingAgreementServiceImpl implements BorrowingAgreementService 
         return agreements.stream()
                 .map(agreement -> {
                     Item item = itemRepository.findById(agreement.getItemId()).orElse(null);
-                    return item != null ? ItemDTO.fromItem(item) : null;
+                    if (item != null) {
+                        // Set the borrower information from the agreement
+                        User borrower = userRepository.findById(agreement.getBorrowerId()).orElse(null);
+                        item.setBorrower(borrower); // Make sure you've added setBorrower to Item class
+
+                        // Create ItemDTO with borrower information
+                        ItemDTO dto = ItemDTO.fromItem(item);
+
+                        // Log for debugging
+                        log.debug("Processing borrowed item: ItemId={}, BorrowerId={}, BorrowerName={}",
+                                item.getId(),
+                                borrower != null ? borrower.getId() : "null",
+                                borrower != null ? borrower.getUsername() : "null");
+
+                        return dto;
+                    }
+                    return null;
                 })
                 .filter(item -> item != null)
                 .collect(Collectors.toList());
     }
+
     @Override
     public List<ItemDTO> getLentItems(Long userId) {
         List<BorrowingAgreement> agreements = borrowingAgreementRepository.findByLenderId(userId)
