@@ -42,15 +42,19 @@ public class ItemService {
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         List<String> imageUrls = itemImageStorageService.storeItemImages(images);
-
         item.setImageUrls(imageUrls);
         item.setOwner(user);
 
-        // Save the item
         Item savedItem = itemRepository.save(item);
 
-        // Convert to DTO and return
         return convertToDTO(savedItem);
+    }
+
+    public List<ItemDTO> findNearbyItems(double latitude, double longitude, double radiusInKm) {
+        return itemRepository.findItemsWithinRadius(latitude, longitude, radiusInKm)
+                .stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
@@ -71,6 +75,13 @@ public class ItemService {
                 .toList();
     }
 
+    public List<ItemDTO> findItemsWithinBounds(double minLat, double maxLat, double minLng, double maxLng) {
+        return itemRepository.findItemsWithinBounds(minLat, maxLat, minLng, maxLng)
+                .stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
     private ItemDTO convertToDTO(Item item) {
         ItemDTO dto = new ItemDTO();
         dto.setId(item.getId());
@@ -88,7 +99,8 @@ public class ItemService {
         // Force initialization of the collection
         dto.setImageUrls(new ArrayList<>(item.getImageUrls()));
         dto.setCreatedAt(item.getCreatedAt());
-
+        dto.setLatitude(item.getLatitude());
+        dto.setLongitude(item.getLongitude());
         if (item.getOwner() != null) {
             dto.setOwner(CreatorDTO.fromUser(item.getOwner()));
         }

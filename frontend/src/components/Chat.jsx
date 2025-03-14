@@ -71,6 +71,7 @@ const Chat = ({ senderId, receiverId, receiverName, onMessageSent, stompClient }
   const [selectedGalleryImages, setSelectedGalleryImages] = useState([]);
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
   const [galleryStartIndex, setGalleryStartIndex] = useState(0);
+  const [showItemDetails, setShowItemDetails] = useState(false);
 
 
   const handleOpenGallery = (images, startIndex = 0) => {
@@ -386,20 +387,122 @@ const Chat = ({ senderId, receiverId, receiverName, onMessageSent, stompClient }
 
   return (
     <div className="flex flex-col h-full">
-      <div className="bg-white border-b border-gray-200 p-4 flex items-center space-x-4">
-      <div className="relative">
-        <div className="h-10 w-10 rounded-full bg-gradient-to-r from-purple-400 to-indigo-500 flex items-center justify-center text-white text-lg font-semibold shadow-md">
-          {receiverName.charAt(0).toUpperCase()}
+   <div className="bg-white border-b border-gray-200 p-4">
+    <div className="flex items-center justify-between">
+      {/* Left side - User info */}
+      <div className="flex items-center space-x-4">
+        <div className="relative">
+          <div className="h-12 w-12 rounded-full bg-gradient-to-r from-purple-400 to-indigo-500 
+                      flex items-center justify-center text-white text-lg font-semibold shadow-md
+                      border-2 border-white">
+            {receiverName.charAt(0).toUpperCase()}
+          </div>
+          <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-400 border-2 border-white"></div>
         </div>
-        <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-400 border-2 border-white"></div>
+        <div className="flex flex-col">
+          <h3 className="font-semibold text-gray-900">{receiverName}</h3>
+          <div className="flex items-center space-x-2">
+            <span className="flex items-center text-xs text-green-500">
+              <div className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1"></div>
+              Online
+            </span>
+            <span className="text-xs text-gray-500">•</span>
+            <span className="text-xs text-gray-500">Local Time: {
+              new Date().toLocaleTimeString('en-US', {
+                hour: 'numeric',
+                minute: 'numeric',
+                hour12: true,
+                timeZone: 'Asia/Singapore'
+              })
+            }</span>
+          </div>
+        </div>
       </div>
-      <div className="flex-1">
-        <h3 className="font-semibold text-gray-900">{receiverName}</h3>
-        <p className="text-xs text-green-500">Online</p>
-      </div>
-      <div className="flex items-center space-x-3">
-      </div>
+
+      {/* Right side - Item info button */}
+      <button 
+        className="text-gray-400 hover:text-gray-600"
+        onClick={() => setShowItemDetails(prev => !prev)} // Add this state
+      >
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </button>
     </div>
+
+    {/* Expandable item details section */}
+    <AnimatePresence>
+      {showItemDetails && messages[0]?.item && (
+        <motion.div
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: 'auto', opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          className="mt-4 bg-gray-50 rounded-lg p-4 border border-gray-200"
+        >
+          <div className="flex space-x-4">
+            {/* Item image */}
+            <div className="flex-shrink-0">
+              <img
+                src={messages[0].item.imageUrls?.[0] || 'https://via.placeholder.com/100?text=No+Image'}
+                alt={messages[0].item.name}
+                className="w-20 h-20 rounded-lg object-cover"
+              />
+            </div>
+
+            {/* Item details */}
+            <div className="flex-1">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h4 className="font-medium text-gray-900">{messages[0].item.name}</h4>
+                  <p className="text-sm text-gray-500">{messages[0].item.category}</p>
+                </div>
+                <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                  {messages[0].item.availabilityPeriod}
+                </span>
+              </div>
+
+              <div className="mt-2 grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-gray-500">Available Period</p>
+                  <p className="font-medium">
+                    {Array.isArray(messages[0].item.availableFrom) ? 
+                      new Date(
+                        messages[0].item.availableFrom[0], 
+                        messages[0].item.availableFrom[1] - 1, 
+                        messages[0].item.availableFrom[2]
+                      ).toLocaleDateString() : 
+                      new Date(messages[0].item.availableFrom).toLocaleDateString()
+                    } - {
+                      Array.isArray(messages[0].item.availableUntil) ? 
+                      new Date(
+                        messages[0].item.availableUntil[0], 
+                        messages[0].item.availableUntil[1] - 1, 
+                        messages[0].item.availableUntil[2]
+                      ).toLocaleDateString() : 
+                      new Date(messages[0].item.availableUntil).toLocaleDateString()
+                    }
+                  </p>
+                </div>
+                <div>
+                  <p className="text-gray-500">Location</p>
+                  <p className="font-medium">{messages[0].item.location}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500">Contact Preference</p>
+                  <p className="font-medium">{messages[0].item.contactPreference}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500">Terms</p>
+                  <p className="font-medium line-clamp-1">{messages[0].item.terms}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  </div>
       {/* Chat Messages */}
       <div className="flex-1 overflow-y-auto p-4 bg-gray-50" 
         style={{
