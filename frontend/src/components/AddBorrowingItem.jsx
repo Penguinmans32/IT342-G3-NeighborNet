@@ -17,6 +17,7 @@ import {
   MdCheck, 
 } from 'react-icons/md';
 import axios from 'axios';
+import LocationInput from './LocationInput';
 
 const AddBorrowingItem = () => {
   const navigate = useNavigate();
@@ -24,7 +25,11 @@ const AddBorrowingItem = () => {
     name: '',
     description: '',
     category: '',
-    location: '',
+    location: 'Cebu City, Cebu, Philippines',
+    coordinates: {
+      lat: null,
+      lng: null
+    },
     availabilityPeriod: '',
     terms: '',
     availableFrom: '',
@@ -120,29 +125,60 @@ const AddBorrowingItem = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-
+  
     try {
       const formData = new FormData();
-      Object.keys(itemData).forEach(key => {
-        if (key === 'images') {
-          itemData.images.forEach((img, index) => {
-            formData.append(`images`, img.file);
-          });
-        } else if (itemData[key] !== null && itemData[key] !== undefined) {
-          formData.append(key, itemData[key]);
-        }
+      
+      // Add basic fields
+      formData.append('name', itemData.name);
+      formData.append('description', itemData.description);
+      formData.append('category', itemData.category);
+      formData.append('location', itemData.location);
+      
+      // Ensure coordinates are numbers and not null
+      if (itemData.coordinates.lat && itemData.coordinates.lng) {
+        formData.append('latitude', itemData.coordinates.lat);
+        formData.append('longitude', itemData.coordinates.lng);
+      } else {
+        // Use default Cebu coordinates if none selected
+        formData.append('latitude', 10.3157);
+        formData.append('longitude', 123.8854);
+      }
+  
+      // Add other fields
+      formData.append('availabilityPeriod', itemData.availabilityPeriod);
+      formData.append('terms', itemData.terms);
+      formData.append('availableFrom', itemData.availableFrom);
+      formData.append('availableUntil', itemData.availableUntil);
+      formData.append('contactPreference', itemData.contactPreference);
+      formData.append('email', itemData.email);
+      formData.append('phone', itemData.phone);
+  
+      // Add images
+      itemData.images.forEach((img, index) => {
+        formData.append(`images`, img.file);
       });
-
-      await axios.post('http://localhost:8080/api/borrowing/items', formData, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'multipart/form-data'
-        }
+  
+      console.log('Submitting form data:', {
+        location: itemData.location,
+        latitude: formData.get('latitude'),
+        longitude: formData.get('longitude')
       });
-
+  
+      const response = await axios.post('http://localhost:8080/api/borrowing/items', 
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'multipart/form-data'
+          }
+        }
+      );
+  
       navigate('/borrowing');
     } catch (error) {
       console.error('Error adding item:', error);
+      alert('Error adding item. Please ensure all fields are filled correctly.');
     } finally {
       setLoading(false);
     }
@@ -442,16 +478,23 @@ const AddBorrowingItem = () => {
                           <MdLocationOn className="text-blue-500" />
                           Location
                         </label>
-                        <input
-                          type="text"
-                          name="location"
-                          value={itemData.location}
-                          onChange={handleChange}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 
-                                  focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                          placeholder="Where can borrowers pick up the item?"
-                          required
-                        />
+                        <p className="text-sm text-gray-500 mb-2">
+                          Please enter a specific location (e.g., "SM City Cebu, Cebu City" or "Basak Pardo, Cebu City") or maybe use your own location
+                        </p>
+                        <LocationInput
+                            value={itemData.location} // Pass the current location value
+                            onChange={(location) => {
+                              console.log('Location selected:', location); // Debug log
+                              setItemData(prev => ({
+                                ...prev,
+                                location: location.address,
+                                coordinates: {
+                                  lat: location.lat,
+                                  lng: location.lng
+                                }
+                              }));
+                            }}
+                          />
                       </div>
                     </div>
                   </div>
