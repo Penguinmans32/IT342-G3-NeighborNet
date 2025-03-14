@@ -25,6 +25,7 @@ public class ItemDTO {
     private LocalDateTime createdAt;
     private Double latitude;
     private Double longitude;
+    private CreatorDTO borrower;
 
     public static ItemDTO fromItem(Item item) {
         ItemDTO dto = new ItemDTO();
@@ -42,6 +43,9 @@ public class ItemDTO {
         dto.setPhone(item.getPhone());
         dto.setImageUrls(item.getImageUrls());
         dto.setCreatedAt(item.getCreatedAt());
+        if (item.getBorrower() != null) {
+            dto.setBorrower(CreatorDTO.fromUser(item.getBorrower()));
+        }
 
         if (item.getOwner() != null) {
             dto.setOwner(CreatorDTO.fromUser(item.getOwner()));
@@ -209,5 +213,12 @@ public class ItemDTO {
 
     public void setLongitude(Double longitude) {
         this.longitude = longitude;
+    }
+    public CreatorDTO getBorrower() {
+        return borrower;
+    }
+
+    public void setBorrower(CreatorDTO borrower) {
+        this.borrower = borrower;
     }
 }
