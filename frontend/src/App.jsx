@@ -24,6 +24,13 @@ import YourItems from "./components/YourItems";
 import BorrowedItems from "./components/BorrowedItems";
 import Dashboard from "./components/Dashboard";
 import SkillsMap from "./components/SkillsMap";
+import TeachingCenter from "./components/TeachingCenter";
+import Support from "./components/Support";
+import LearningRoadmap from "./components/LearningRoadmap";
+import Careers from "./components/Careers";
+import PrivacyPolicy from "./components/PrivacyPolicy";
+import Documentation from "./components/Documentation";
+import Blog from "./components/Blog";
 
 function App() {
   return (
@@ -44,6 +51,13 @@ function App() {
             <Route path="/" element={<SignIn />} />
             <Route path="/verify-email" element={<VerifyEmail />} />
             <Route path="/about" element={<AboutUs />} />
+            <Route path="/support" element={<Support />} />
+            <Route path="/teaching-center" element={<TeachingCenter />} /> 
+            <Route path="/roadmap" element={<LearningRoadmap />} />
+            <Route path="/careers" element={<Careers />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/docs" element={<Documentation />} />
+            <Route path="/blog" element={<Blog />} />
             <Route path="/oauth2/redirect" element={<OAuth2RedirectHandler />} />
             <Route 
               path="/homepage" 
