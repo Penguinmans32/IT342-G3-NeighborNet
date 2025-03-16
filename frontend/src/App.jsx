@@ -31,6 +31,7 @@ import Careers from "./components/Careers";
 import PrivacyPolicy from "./components/PrivacyPolicy";
 import Documentation from "./components/Documentation";
 import Blog from "./components/Blog";
+import SearchResults from "./components/SearchResults";
 
 function App() {
   return (
@@ -58,6 +59,7 @@ function App() {
             <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/docs" element={<Documentation />} />
             <Route path="/blog" element={<Blog />} />
+            <Route path="/search" element={<SearchResults />} />
             <Route path="/oauth2/redirect" element={<OAuth2RedirectHandler />} />
             <Route 
               path="/homepage" 
@@ -69,11 +71,7 @@ function App() {
             />
             <Route 
               path="/class/:classId"
-              element={
-                <ProtectedRoute>
-                  <ClassDetails />
-                </ProtectedRoute>
-              }
+              element={<ClassDetails />}
             />
             <Route 
               path="/create-class"
