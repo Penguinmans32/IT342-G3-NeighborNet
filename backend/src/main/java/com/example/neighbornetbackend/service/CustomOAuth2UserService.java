@@ -6,36 +6,34 @@ import com.example.neighbornetbackend.model.OAuth2UserInfoFactory;
 import com.example.neighbornetbackend.model.User;
 import com.example.neighbornetbackend.repository.UserRepository;
 import com.example.neighbornetbackend.security.UserPrincipal;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.user.OAuth2User;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-
-import java.util.Optional;
-
-
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
-    private static final Logger log = LoggerFactory.getLogger(CustomOAuth2UserService.class);
     @Autowired
     private UserRepository userRepository;
+
+    private static final Logger logger = LoggerFactory.getLogger(CustomOAuth2UserService.class);
 
     @Override
     public OAuth2User loadUser(OAuth2UserRequest oAuth2UserRequest) throws OAuth2AuthenticationException {
         OAuth2User oAuth2User = super.loadUser(oAuth2UserRequest);
-        log.info("OAuth2User attributes: {}", oAuth2User.getAttributes());
+        logger.info("OAuth2User attributes: {}", oAuth2User.getAttributes());
 
         try {
             return processOAuth2User(oAuth2UserRequest, oAuth2User);
         } catch (Exception ex) {
+            logger.error("Error processing OAuth2 user", ex);
             try {
-                log.error("Error processing OAuth2 user", ex);
                 throw new OAuth2AuthenticationProcessingException("Failed to process OAuth2 user");
             } catch (OAuth2AuthenticationProcessingException e) {
                 throw new RuntimeException(e);
@@ -43,9 +41,10 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         }
     }
 
-    private OAuth2User processOAuth2User(OAuth2UserRequest oAuth2UserRequest, OAuth2User oAuth2User) throws OAuth2AuthenticationProcessingException {
+    @Transactional
+    protected OAuth2User processOAuth2User(OAuth2UserRequest oAuth2UserRequest, OAuth2User oAuth2User) throws OAuth2AuthenticationProcessingException {
         String registrationId = oAuth2UserRequest.getClientRegistration().getRegistrationId();
-        log.info("Processing OAuth2 user for provider: {}", registrationId);
+        logger.info("Processing OAuth2 user for provider: {}", registrationId);
 
         OAuth2UserInfo oAuth2UserInfo = OAuth2UserInfoFactory.getOAuth2UserInfo(
                 registrationId,
@@ -53,60 +52,92 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         );
 
         String email = oAuth2UserInfo.getEmail();
-        log.info("OAuth2 user email: {}", email);
-        String currentProvider = oAuth2UserRequest.getClientRegistration().getRegistrationId();
-        Optional<User> userOptional = userRepository.findByEmail(email);
-
-        User user;
-        if (userOptional.isPresent()) {
-            user = userOptional.get();
-            log.info("Existing user found with email: {}", email);
-            if(!currentProvider.equals(user.getProviderId())) {
-                user.setProviderId(currentProvider);
-                user.setProvider(oAuth2UserInfo.getId());
-            }
-            user = updateExistingUser(user, oAuth2UserInfo);
-        } else {
-            log.info("Creating new user with email: {}", email);
-            user = registerNewUser(oAuth2UserRequest, oAuth2UserInfo);
+        if (email == null) {
+            throw new OAuth2AuthenticationProcessingException("Email not found from OAuth2 provider");
         }
 
-        User savedUser = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Failed to save user"));
-
-        log.info("Saved user ID: {}, Provider: {}", savedUser.getId(), savedUser.getProvider());
+        User user = userRepository.findByEmail(email)
+                .map(existingUser -> {
+                    try {
+                        return updateExistingUser(existingUser, oAuth2UserRequest, oAuth2UserInfo);
+                    } catch (OAuth2AuthenticationProcessingException e) {
+                        throw new RuntimeException(e);
+                    }
+                })
+                .orElseGet(() -> {
+                    try {
+                        return registerNewUser(oAuth2UserRequest, oAuth2UserInfo);
+                    } catch (OAuth2AuthenticationProcessingException e) {
+                        throw new RuntimeException(e);
+                    }
+                });
 
         return UserPrincipal.create(user, oAuth2User.getAttributes());
     }
 
-    private User registerNewUser(OAuth2UserRequest oAuth2UserRequest, OAuth2UserInfo oAuth2UserInfo) {
+    @Transactional
+    protected User registerNewUser(OAuth2UserRequest oAuth2UserRequest, OAuth2UserInfo oAuth2UserInfo) throws OAuth2AuthenticationProcessingException {
+        logger.info("Registering new OAuth2 user: {}", oAuth2UserInfo.getEmail());
+
         User user = new User();
         user.setProvider(oAuth2UserRequest.getClientRegistration().getRegistrationId());
         user.setProviderId(oAuth2UserInfo.getId());
-        user.setUsername(oAuth2UserInfo.getName());
         user.setEmail(oAuth2UserInfo.getEmail());
         user.setEmailVerified(true);
-        user.setPassword(""); // Set empty password for OAuth2 users
+
+        // Generate a unique username if needed
+        String baseUsername = oAuth2UserInfo.getName() != null ?
+                oAuth2UserInfo.getName() :
+                oAuth2UserInfo.getEmail().substring(0, oAuth2UserInfo.getEmail().indexOf('@'));
+        user.setUsername(generateUniqueUsername(baseUsername));
+
         user.setImageUrl(oAuth2UserInfo.getImageUrl());
+        user.setPassword(""); // Empty password for OAuth2 users
         user.setRole("ROLE_USER");
-        User savedUser = userRepository.save(user);
-        log.info("New user registered - ID: {}, Email: {}, Provider: {}",
-                savedUser.getId(), savedUser.getEmail(), savedUser.getProvider());  // Debug log
-        return savedUser;
+
+        try {
+            return userRepository.save(user);
+        } catch (Exception e) {
+            logger.error("Error saving new OAuth2 user", e);
+            throw new OAuth2AuthenticationProcessingException("Failed to save OAuth2 user");
+        }
     }
 
-    private User updateExistingUser(User user, OAuth2UserInfo oAuth2UserInfo) {
-        if (oAuth2UserInfo.getName() != null) {
-            user.setUsername(oAuth2UserInfo.getName());
+    @Transactional
+    protected User updateExistingUser(User user, OAuth2UserRequest oAuth2UserRequest, OAuth2UserInfo oAuth2UserInfo) throws OAuth2AuthenticationProcessingException {
+        logger.info("Updating existing OAuth2 user: {}", user.getEmail());
+
+        String currentProvider = oAuth2UserRequest.getClientRegistration().getRegistrationId();
+        if (!currentProvider.equals(user.getProvider())) {
+            user.setProvider(currentProvider);
+            user.setProviderId(oAuth2UserInfo.getId());
         }
+
+        if (oAuth2UserInfo.getName() != null && !oAuth2UserInfo.getName().equals(user.getUsername())) {
+            String newUsername = generateUniqueUsername(oAuth2UserInfo.getName());
+            user.setUsername(newUsername);
+        }
+
         if (oAuth2UserInfo.getImageUrl() != null) {
             user.setImageUrl(oAuth2UserInfo.getImageUrl());
         }
 
-        User savedUser = userRepository.save(user);
-        log.info("User updated - ID: {}, Email: {}, Provider: {}",
-                savedUser.getId(), savedUser.getEmail(), savedUser.getProvider());
+        try {
+            return userRepository.save(user);
+        } catch (Exception e) {
+            logger.error("Error updating OAuth2 user", e);
+            throw new OAuth2AuthenticationProcessingException("Failed to update OAuth2 user");
+        }
+    }
 
-        return savedUser;
+    private String generateUniqueUsername(String baseUsername) {
+        String username = baseUsername;
+        int counter = 1;
+
+        while (userRepository.existsByUsername(username)) {
+            username = baseUsername + counter++;
+        }
+
+        return username;
     }
 }
