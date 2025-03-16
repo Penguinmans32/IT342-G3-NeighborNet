@@ -273,4 +273,18 @@ public class ClassService {
                 .map(ClassEnrollment::getCourseClass)
                 .collect(Collectors.toList());
     }
+
+    public List<ClassResponse> searchClasses(String query, String category) {
+        List<CourseClass> results;
+
+        if (category != null && !category.isEmpty()) {
+            results = classRepository.searchClassesByCategory(category.toLowerCase(), query);
+        } else {
+            results = classRepository.searchClasses(query);
+        }
+
+        return results.stream()
+                .map(ClassResponse::fromEntity)
+                .collect(Collectors.toList());
+    }
 }

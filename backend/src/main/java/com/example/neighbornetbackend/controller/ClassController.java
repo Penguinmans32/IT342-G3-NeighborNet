@@ -105,9 +105,18 @@ public class ClassController {
     }
 
     @GetMapping("/{classId}")
-    public ResponseEntity<ClassResponse> getClass(@PathVariable Long classId) {
+    public ResponseEntity<ClassResponse> getClass(
+            @PathVariable Long classId,
+            @CurrentUser UserPrincipal currentUser) {
         try {
             ClassResponse classResponse = classService.getClassById(classId);
+
+            // If user is not authenticated, remove sensitive/protected data
+            if (currentUser == null) {
+                classResponse.setLessons(null);
+                // Add other restrictions as needed
+            }
+
             return ResponseEntity.ok(classResponse);
         } catch (ResourceNotFoundException e) {
             return ResponseEntity.notFound().build();
@@ -341,6 +350,19 @@ public class ClassController {
                     })
                     .collect(Collectors.toList());
             return ResponseEntity.ok(responses);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<List<ClassResponse>> searchClasses(
+            @RequestParam String query,
+            @RequestParam(required = false) String category) {
+        try {
+            List<ClassResponse> searchResults = classService.searchClasses(query, category);
+            return ResponseEntity.ok(searchResults);
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.badRequest().build();
