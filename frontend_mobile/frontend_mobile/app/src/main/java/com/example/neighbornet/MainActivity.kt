@@ -38,11 +38,13 @@ import dagger.hilt.android.AndroidEntryPoint
 import androidx.navigation.compose.composable
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
+import com.example.neighbornet.utils.PreferencesManager
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     private var verificationState by mutableStateOf<VerificationState>(VerificationState.Idle)
     private val authViewModel: AuthViewModel by viewModels()
+    private lateinit var preferencesManager: PreferencesManager
 
     sealed class VerificationState {
         object Idle : VerificationState()
@@ -63,12 +65,24 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+        preferencesManager = PreferencesManager(this)
+
         setContent {
             NeighbornetTheme {
                 val snackbarHostState = remember { SnackbarHostState() }
-                var currentScreen by remember { mutableStateOf("landing") }
+                var currentScreen by remember { 
+                    mutableStateOf(
+                        if (preferencesManager.isFirstTimeLaunch()) "landing" else "login"
+                    )
+                }
                 val authState by authViewModel.authState.collectAsState()
                 val navController = rememberNavController()
+
+                LaunchedEffect(currentScreen) {
+                    if (currentScreen != "landing" && preferencesManager.isFirstTimeLaunch()) {
+                        preferencesManager.setFirstTimeLaunch(false)
+                    }
+                }
 
                 LaunchedEffect(authState.isLoggedIn) {
                     if (!authState.isLoggedIn && currentScreen == "home") {
