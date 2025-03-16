@@ -174,8 +174,16 @@ data class LessonProgressDTO(
 )
 
 data class LessonProgress(
+    val id: Long? = null,
     val lessonId: Long,
-    val completed: Boolean
+    val classId: Long? = null,
+    val completed: Boolean,
+    val lastWatchedPosition: Long? = null,
+    @SerializedName("completedAt")
+    val completedAt: ArrayDate? = null,
+    @SerializedName("updatedAt")
+    val updatedAt: ArrayDate? = null,
+    val lessons: LessonResponse? = null
 )
 
 data class FeedbackResponse(
@@ -219,3 +227,10 @@ data class CategoryInfo(
     @DrawableRes val iconResId: Int,
     val backgroundColor: Color
 )
+
+data class UpdateProgressRequest(
+    val lastWatchedPosition: Long? = null,
+    val completed: Boolean,
+    val progress: Double
+)
+

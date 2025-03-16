@@ -87,4 +87,8 @@ dependencies {
     implementation("androidx.security:security-crypto-ktx:1.1.0-alpha06")
     implementation("com.squareup.okhttp3:logging-interceptor:4.9.3")
     implementation("com.squareup.retrofit2:converter-scalars:2.9.0")
+
+    implementation("androidx.media3:media3-exoplayer:1.2.0")
+    implementation("androidx.media3:media3-ui:1.2.0")
+    implementation("androidx.media3:media3-common:1.1.1")
 }

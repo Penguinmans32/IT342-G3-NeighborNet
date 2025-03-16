@@ -26,6 +26,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
+import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import com.example.neighbornet.auth.ClassViewModel
 import com.example.neighbornet.network.LessonProgress
@@ -36,15 +37,30 @@ import com.example.neighbornet.utils.UrlUtils
 fun ClassDetailsScreen(
     classId: Long,
     onBackClick: () -> Unit,
+    navController: NavHostController,
     viewModelStoreOwner: ViewModelStoreOwner = checkNotNull(LocalViewModelStoreOwner.current) {
         "No ViewModelStoreOwner was provided via LocalViewModelStoreOwner"
     }
 ) {
 
     val viewModel = hiltViewModel<ClassViewModel>(viewModelStoreOwner)
+    val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val startLearningSuccess by viewModel.startLearningSuccess.collectAsStateWithLifecycle()
 
     LaunchedEffect(classId) {
         viewModel.initializeWithClassId(classId)
+    }
+
+    LaunchedEffect(startLearningSuccess) {
+        startLearningSuccess?.let {
+            if (it) {
+                snackbarHostState.showSnackbar(
+                    message = "Successfully started your learning journey!",
+                    actionLabel = "OK"
+                )
+            }
+        }
     }
 
 
@@ -56,7 +72,33 @@ fun ClassDetailsScreen(
     var showRatingDialog by remember { mutableStateOf(false) }
     var showFeedbackDialog by remember { mutableStateOf(false) }
 
-    Scaffold { padding ->
+    Scaffold(
+        floatingActionButton = {
+            if (!isLearning) {
+                FloatingActionButton(
+                    onClick = { viewModel.startLearning() },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.PlayArrow, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Begin Your Journey")
+                    }
+                }
+            }
+        },
+        floatingActionButtonPosition = FabPosition.End,
+        snackbarHost = {
+            SnackbarHost(
+                hostState = snackbarHostState
+            )
+        }
+    ) { padding ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -172,7 +214,9 @@ fun ClassDetailsScreen(
                     lessons = lessons,
                     progress = progress,
                     isLearning = isLearning,
-                    onLessonClick = { /* Navigate to lesson */ }
+                    onLessonClick = { lessonId ->
+                        navController.navigate(Screen.Lesson.createRoute(classId, lessonId))
+                    }
                 )
             }
 
@@ -201,6 +245,11 @@ fun ClassDetailsScreen(
                     onRateClick = { showRatingDialog = true },
                     onFeedbackClick = { showFeedbackDialog = true }
                 )
+            }
+
+            // Add extra padding at the bottom to account for FAB
+            item {
+                Spacer(modifier = Modifier.height(80.dp))
             }
         }
     }
