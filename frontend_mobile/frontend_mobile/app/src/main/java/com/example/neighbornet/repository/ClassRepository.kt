@@ -13,6 +13,7 @@ import com.example.neighbornet.network.LessonResponse
 import com.example.neighbornet.network.RatingRequest
 import com.example.neighbornet.network.FeedbackResponse
 import com.example.neighbornet.network.RatingResponse
+import com.example.neighbornet.network.UpdateProgressRequest
 
 @Singleton
 class ClassRepository @Inject constructor(
@@ -128,6 +129,67 @@ class ClassRepository @Inject constructor(
         val response = classApiService.submitFeedback(classId, FeedbackRequest(content, rating))
         if (!response.isSuccessful) {
             throw Exception("Failed to submit feedback: ${response.message()}")
+        }
+    }
+
+    suspend fun getLessonById(classId: Long, lessonId: Long): LessonResponse {
+        val response = classApiService.getLessonById(classId, lessonId)
+        if (response.isSuccessful) {
+            return response.body() ?: throw Exception("Lesson not found")
+        } else {
+            throw Exception("Failed to fetch lesson: ${response.message()}")
+        }
+    }
+
+    suspend fun getLessonProgress(classId: Long, lessonId: Long): LessonProgress {
+        val response = classApiService.getProgress(classId)
+        if (response.isSuccessful) {
+            return response.body()?.find { it.lessonId == lessonId }
+                ?: LessonProgress(
+                    lessonId = lessonId,
+                    completed = false,
+                    lastWatchedPosition = null,
+                    classId = classId
+                )
+        } else {
+            throw Exception("Failed to fetch lesson progress: ${response.message()}")
+        }
+    }
+
+    suspend fun markLessonComplete(classId: Long, lessonId: Long) {
+        val response = classApiService.updateProgress(
+            classId = classId,
+            lessonId = lessonId,
+            UpdateProgressRequest(
+                completed = true,
+                progress = 100.0,
+                lastWatchedPosition = null
+            )
+        )
+        if (!response.isSuccessful) {
+            throw Exception("Failed to mark lesson as complete: ${response.message()}")
+        }
+    }
+
+    suspend fun rateLessonProgress(classId: Long, lessonId: Long, rating: Double) {
+        val response = classApiService.rateLessonProgress(
+            classId = classId,
+            lessonId = lessonId,
+            ratingRequest = RatingRequest(rating = rating)
+        )
+        if (!response.isSuccessful) {
+            throw Exception("Failed to rate lesson: ${response.message()}")
+        }
+    }
+
+
+    suspend fun getLessonRating(classId: Long, lessonId: Long): Double? {
+        val response = classApiService.getLessonRating(classId, lessonId)
+        if (response.isSuccessful) {
+            return response.body()?.rating
+        } else {
+            if (response.code() == 404) return null
+            throw Exception("Failed to get lesson rating: ${response.message()}")
         }
     }
 }

@@ -8,6 +8,7 @@ import com.example.neighbornet.network.LessonProgress
 import com.example.neighbornet.network.LessonResponse
 import com.example.neighbornet.network.RatingRequest
 import com.example.neighbornet.network.RatingResponse
+import com.example.neighbornet.network.UpdateProgressRequest
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
@@ -56,4 +57,30 @@ interface ClassApiService {
         @Path("classId") classId: Long,
         @Body feedback: FeedbackRequest
     ): Response<Unit>
+
+    @GET("api/classes/{classId}/lessons/{lessonId}")
+    suspend fun getLessonById(
+        @Path("classId") classId: Long,
+        @Path("lessonId") lessonId: Long
+    ): Response<LessonResponse>
+
+    @POST("api/classes/{classId}/progress/lessons/{lessonId}")
+    suspend fun updateProgress(
+        @Path("classId") classId: Long,
+        @Path("lessonId") lessonId: Long,
+        @Body request: UpdateProgressRequest
+    ): Response<LessonProgress>
+
+    @POST("api/classes/{classId}/lessons/{lessonId}/rate")
+    suspend fun rateLessonProgress(
+        @Path("classId") classId: Long,
+        @Path("lessonId") lessonId: Long,
+        @Body ratingRequest: RatingRequest
+    ): Response<LessonResponse>
+
+    @GET("api/classes/{classId}/lessons/{lessonId}/rating")
+    suspend fun getLessonRating(
+        @Path("classId") classId: Long,
+        @Path("lessonId") lessonId: Long
+    ): Response<RatingResponse>
 }

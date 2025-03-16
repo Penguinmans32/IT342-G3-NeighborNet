@@ -53,12 +53,110 @@ class ClassViewModel @Inject constructor(
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
+    private val _startLearningSuccess = MutableStateFlow<Boolean?>(null)
+    val startLearningSuccess = _startLearningSuccess.asStateFlow()
+
+    private val _currentLesson = MutableStateFlow<LessonResponse?>(null)
+    val currentLesson = _currentLesson.asStateFlow()
+
+    private val _nextLesson = MutableStateFlow<LessonResponse?>(null)
+    val nextLesson = _nextLesson.asStateFlow()
+
+    private val _prevLesson = MutableStateFlow<LessonResponse?>(null)
+    val prevLesson = _prevLesson.asStateFlow()
+
+    private val _isLessonCompleted = MutableStateFlow(false)
+    val isLessonCompleted = _isLessonCompleted.asStateFlow()
+
+    private val _videoProgress = MutableStateFlow(0f)
+    val videoProgress = _videoProgress.asStateFlow()
+
+    private val _lessonRating = MutableStateFlow<Double?>(null)
+    val lessonRating = _lessonRating.asStateFlow()
+
+    private val _isRatingLoading = MutableStateFlow(false)
+    val isRatingLoading = _isRatingLoading.asStateFlow()
+
+    fun submitLessonRating(classId: Long, lessonId: Long, rating: Double) {
+        viewModelScope.launch {
+            try {
+                _isRatingLoading.value = true
+                classRepository.rateLessonProgress(classId, lessonId, rating)
+                _lessonRating.value = rating
+                loadLesson(classId, lessonId)
+            } catch (e: Exception) {
+                _error.value = "Failed to submit rating: ${e.message}"
+            } finally {
+                _isRatingLoading.value = false
+            }
+        }
+    }
+
+    fun loadLessonRating(classId: Long, lessonId: Long) {
+        viewModelScope.launch {
+            try {
+                val rating = classRepository.getLessonRating(classId, lessonId)
+                _lessonRating.value = rating
+            } catch (e: Exception) {
+                // Handle error if needed
+            }
+        }
+    }
+
+
     fun initializeWithClassId(classId: Long) {
         if (_classId.value != classId) {
             _classId.value = classId
             loadClassDetails()
         }
     }
+
+    fun loadLesson(classId: Long, lessonId: Long) {
+        viewModelScope.launch {
+            try {
+                _isLoading.value = true
+                val lesson = classRepository.getLessonById(classId, lessonId)
+                _currentLesson.value = lesson
+
+                val rating = classRepository.getLessonRating(classId, lessonId)
+                _lessonRating.value = rating
+
+
+                // Load next and previous lessons
+                lesson.nextLessonId?.let { nextId ->
+                    _nextLesson.value = classRepository.getLessonById(classId, nextId)
+                }
+                lesson.prevLessonId?.let { prevId ->
+                    _prevLesson.value = classRepository.getLessonById(classId, prevId)
+                }
+
+                // Check completion status
+                val progress = classRepository.getLessonProgress(classId, lessonId)
+                _isLessonCompleted.value = progress.completed
+            } catch (e: Exception) {
+                _error.value = e.message
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    fun markLessonAsComplete(classId: Long, lessonId: Long) {
+        viewModelScope.launch {
+            try {
+                classRepository.markLessonComplete(classId, lessonId)
+                _isLessonCompleted.value = true
+                loadClassDetails()
+            } catch (e: Exception) {
+                _error.value = e.message
+            }
+        }
+    }
+
+    fun updateVideoProgress(progress: Float) {
+        _videoProgress.value = progress
+    }
+
 
     private fun loadClassDetails() {
         viewModelScope.launch {
@@ -104,9 +202,11 @@ class ClassViewModel @Inject constructor(
                     val updatedClass = classRepository.startLearning(id)
                     _classDetails.value = updatedClass
                     _isLearning.value = true
+                    _startLearningSuccess.value = true
                     _error.value = null
                 } catch (e: Exception) {
                     _error.value = e.message
+                    _startLearningSuccess.value = false
                 }
             }
         }

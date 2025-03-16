@@ -150,6 +150,26 @@ class MainActivity : ComponentActivity() {
                                         ) {
                                             ClassDetailsScreen(
                                                 classId = classId,
+                                                onBackClick = { navController.navigateUp() },
+                                                navController = navController
+                                            )
+                                        }
+                                    }
+                                    composable(
+                                        route = "lesson/{classId}/{lessonId}",
+                                        arguments = listOf(
+                                            navArgument("classId") { type = NavType.LongType },
+                                            navArgument("lessonId") { type = NavType.LongType }
+                                        )
+                                    ) { backStackEntry ->
+                                        val classId = backStackEntry.arguments?.getLong("classId") ?: return@composable
+                                        val lessonId = backStackEntry.arguments?.getLong("lessonId") ?: return@composable
+                                        CompositionLocalProvider(
+                                            LocalViewModelStoreOwner provides this@MainActivity
+                                        ) {
+                                            LessonViewScreen(
+                                                classId = classId,
+                                                lessonId = lessonId,
                                                 onBackClick = { navController.navigateUp() }
                                             )
                                         }
