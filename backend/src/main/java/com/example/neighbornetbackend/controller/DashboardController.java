@@ -24,6 +24,8 @@ public class DashboardController {
 
     @GetMapping("/stats")
     public ResponseEntity<DashboardStatsDTO> getDashboardStats(@CurrentUser UserPrincipal currentUser) {
-        return ResponseEntity.ok(dashboardService.getDashboardStats(currentUser.getId()));
+        // For public access, pass null or a default value
+        Long userId = currentUser != null ? currentUser.getId() : null;
+        return ResponseEntity.ok(dashboardService.getDashboardStats(userId));
     }
 }

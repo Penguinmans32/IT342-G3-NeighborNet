@@ -522,6 +522,18 @@ const ClassDetails = () => {
   };
 
   const startLearning = async () => {
+    if (!isAuthenticated) {
+      // Navigate to sign in with return URL
+      navigate('/', {
+        state: {
+          showSignUp: true,
+          redirectAfterAuth: `/class/${classId}`,
+          className: classData?.title
+        }
+      });
+      return;
+    }
+  
     try {
       const token = localStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
@@ -594,12 +606,14 @@ const ClassDetails = () => {
   useEffect(() => {
     const fetchClassDetails = async () => {
       try {
-        const token = localStorage.getItem('token');
-        const headers = { Authorization: `Bearer ${token}` };
+        const headers = isAuthenticated ? 
+        { Authorization: `Bearer ${localStorage.getItem('token')}` } : {};
 
         const [classResponse, lessonsResponse] = await Promise.all([
           axios.get(`http://localhost:8080/api/classes/${classId}`, { headers }),
-          axios.get(`http://localhost:8080/api/classes/${classId}/lessons`, { headers })
+          isAuthenticated ? 
+            axios.get(`http://localhost:8080/api/classes/${classId}/lessons`, { headers }) :
+            Promise.resolve({ data: [] }) // Empty lessons for unauthenticated users
         ]);
 
         const classResponseData = classResponse.data;
@@ -1299,39 +1313,42 @@ const ClassDetails = () => {
             )}
 
             {/* Quick Actions Card */}
-            {!isOwner && ( // Only show if not owner
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl shadow-lg p-6 text-white"
-              >
-                <h3 className="text-xl font-semibold mb-4">Ready to Start Learning?</h3>
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <MdCheckCircle className="text-blue-200" />
-                    <p className="text-blue-100">Self-paced learning</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <MdCheckCircle className="text-blue-200" />
-                    <p className="text-blue-100">Access to all materials</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <MdCheckCircle className="text-blue-200" />
-                    <p className="text-blue-100">Certificate upon completion</p>
-                  </div>
-                  
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={startLearning}
-                    className={`w-full py-3 px-6 bg-white text-blue-600 rounded-xl font-medium
-                      hover:bg-blue-50 transition-colors duration-300 mt-6
-                      flex items-center justify-center gap-2
-                      ${isLearning ? 'opacity-50 cursor-not-allowed' : ''}`}
-                      disabled={isLearning}
-                  >
-                    {isLearning ? (
+              {!isOwner && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl shadow-lg p-6 text-white"
+                >
+                  <h3 className="text-xl font-semibold mb-4">Ready to Start Learning?</h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <MdCheckCircle className="text-blue-200" />
+                      <p className="text-blue-100">Self-paced learning</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <MdCheckCircle className="text-blue-200" />
+                      <p className="text-blue-100">Access to all materials</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <MdCheckCircle className="text-blue-200" />
+                      <p className="text-blue-100">Certificate upon completion</p>
+                    </div>
+                    
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={startLearning}
+                      className="w-full py-3 px-6 bg-white text-blue-600 rounded-xl font-medium
+                                hover:bg-blue-50 transition-colors duration-300 mt-6
+                                flex items-center justify-center gap-2"
+                    >
+                      {!isAuthenticated ? (
+                        <>
+                          <MdLock className="text-xl" />
+                          Sign Up to Begin
+                        </>
+                      ) : isLearning ? (
                         <>
                           <MdCheckCircle className="text-xl" />
                           Journey Started
@@ -1345,7 +1362,7 @@ const ClassDetails = () => {
                     </motion.button>
                   </div>
                 </motion.div>
-            )}
+              )}
 
             {/* Progress Card */}
             <motion.div

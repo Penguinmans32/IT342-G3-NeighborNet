@@ -24,6 +24,20 @@ public interface ClassRepository extends JpaRepository<CourseClass, Long> {
 
     long countByCreatedAtBefore(LocalDateTime date);
 
+    @Query("SELECT c FROM CourseClass c WHERE " +
+            "LOWER(c.title) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+            "LOWER(c.description) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+            "LOWER(c.category) LIKE LOWER(CONCAT('%', :query, '%'))")
+    List<CourseClass> searchClasses(@Param("query") String query);
+
+    @Query("SELECT c FROM CourseClass c WHERE " +
+            "LOWER(c.category) = LOWER(:category) AND " +
+            "(LOWER(c.title) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+            "LOWER(c.description) LIKE LOWER(CONCAT('%', :query, '%')))")
+    List<CourseClass> searchClassesByCategory(
+            @Param("category") String category,
+            @Param("query") String query
+    );
 }
 
 
