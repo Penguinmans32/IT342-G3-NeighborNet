@@ -34,12 +34,11 @@ import {
   MdEdit,
   MdFilterList,
   MdInventory,
-  MdPlayArrow,
   MdClose,
   MdStar,
-  MdChevronRight,
   MdBookmark,
   MdBookmarkBorder,
+  MdDeleteSweep,
   MdOutlineWbSunny,
 } from "react-icons/md"
 import axios from "axios"
@@ -55,7 +54,7 @@ const Homepage = () => {
   const [isSearchFocused, setIsSearchFocused] = useState(false)
   const [profileData, setProfileData] = useState(null)
   const [showOnlyUserClasses, setShowOnlyUserClasses] = useState(false)
-  const { notifications, unreadCount, markAsRead, markAllAsRead, fetchNotifications } = useNotification()
+  const { notifications, unreadCount, markAsRead, markAllAsRead, fetchNotifications, deleteAllNotifications } = useNotification()
 
   const [availableCategories, setAvailableCategories] = useState([])
   const [categoryCounts, setCategoryCounts] = useState({})
@@ -82,6 +81,34 @@ const Homepage = () => {
   // Refs for click outside handling
   const profileMenuRef = useRef(null)
   const notificationsRef = useRef(null)
+
+  const getRelativeTime = (date) => {
+    const now = new Date();
+    const then = new Date(date);
+    const diffInSeconds = Math.floor((now - then) / 1000);
+    const diffInMinutes = Math.floor(diffInSeconds / 60);
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    const diffInDays = Math.floor(diffInHours / 24);
+
+    if (diffInSeconds < 60) {
+        return 'Just now';
+    } else if (diffInMinutes < 60) {
+        return `${diffInMinutes} ${diffInMinutes === 1 ? 'minute' : 'minutes'} ago`;
+    } else if (diffInHours < 24) {
+        return `${diffInHours} ${diffInHours === 1 ? 'hour' : 'hours'} ago`;
+    } else if (diffInDays < 7) {
+        return `${diffInDays} ${diffInDays === 1 ? 'day' : 'days'} ago`;
+    } else {
+        return then.toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+    }
+};
 
   const categories = [
     { id: "all", name: "All Classes", icon: <MdApps className="text-blue-500" /> },
@@ -1140,27 +1167,38 @@ const Homepage = () => {
               {/* Header */}
               <div className={`p-4 border-b ${isDarkMode ? "border-gray-700" : "border-gray-100"}`}>
                 <div className="flex items-center justify-between">
-                  <h2 className={`text-lg font-semibold ${isDarkMode ? "text-white" : "text-gray-900"}`}>
-                    Notifications
-                  </h2>
-                  <div className="flex items-center gap-4">
-                    {unreadCount > 0 && (
-                      <button
-                        onClick={markAllAsRead}
-                        className={`text-sm ${isDarkMode ? "text-indigo-400 hover:text-indigo-300" : "text-blue-600 hover:text-blue-800"}`}
-                      >
-                        Mark all as read
-                      </button>
-                    )}
-                    <button
-                      onClick={() => setNotificationsOpen(false)}
-                      className={`p-2 ${isDarkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"} rounded-full`}
-                    >
-                      <MdClose className={`text-xl ${isDarkMode ? "text-white" : "text-gray-900"}`} />
-                    </button>
-                  </div>
+                    <h2 className={`text-lg font-semibold ${isDarkMode ? "text-white" : "text-gray-900"}`}>
+                        Notifications
+                    </h2>
+                    <div className="flex items-center gap-4">
+                        {notifications.length > 0 && (
+                            <>
+                                {unreadCount > 0 && (
+                                    <button
+                                        onClick={markAllAsRead}
+                                        className={`text-sm ${isDarkMode ? "text-indigo-400 hover:text-indigo-300" : "text-blue-600 hover:text-blue-800"}`}
+                                    >
+                                        Mark all as read
+                                    </button>
+                                )}
+                                <button
+                                    onClick={deleteAllNotifications}
+                                    className={`text-sm ${isDarkMode ? "text-red-400 hover:text-red-300" : "text-red-600 hover:text-red-800"} flex items-center gap-1`}
+                                    title="Delete all notifications"
+                                >
+                                    <MdDeleteSweep className="text-lg" />
+                                </button>
+                            </>
+                        )}
+                        <button
+                            onClick={() => setNotificationsOpen(false)}
+                            className={`p-2 ${isDarkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"} rounded-full`}
+                        >
+                            <MdClose className={`text-xl ${isDarkMode ? "text-white" : "text-gray-900"}`} />
+                        </button>
+                    </div>
                 </div>
-              </div>
+            </div>
 
               {/* Notifications List */}
               <div className="overflow-y-auto h-[calc(100vh-64px)]">
@@ -1216,7 +1254,7 @@ const Homepage = () => {
                                 {notification.title}
                               </p>
                               <span className={`text-xs ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}>
-                                {new Date(notification.createdAt).toLocaleString()}
+                                {getRelativeTime(notification.formattedCreatedAt)}
                               </span>
                             </div>
                             <p className={`text-sm ${isDarkMode ? "text-gray-300" : "text-gray-500"} mt-1`}>

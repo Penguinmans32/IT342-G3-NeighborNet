@@ -24,17 +24,20 @@ public class FeedbackService {
     private final ClassRepository classRepository;
     private final UserRepository userRepository;
     private final RatingService ratingService;
+    private final NotificationService notificationService;
 
     public FeedbackService(
             FeedbackRepository feedbackRepository,
             ClassRepository classRepository,
             UserRepository userRepository,
-            RatingService ratingService
+            RatingService ratingService,
+            NotificationService notificationService
     ) {
         this.feedbackRepository = feedbackRepository;
         this.classRepository = classRepository;
         this.userRepository = userRepository;
         this.ratingService = ratingService;
+        this.notificationService = notificationService;
     }
 
     public List<FeedbackResponse> getClassFeedbacks(Long classId) {
@@ -95,6 +98,15 @@ public class FeedbackService {
                 }
             }
         }
+
+        String title = "New Feedback";
+        String message = user.getUsername() + " provided feedback on your class: " + courseClass.getTitle();
+        notificationService.createAndSendNotification(
+                courseClass.getCreator().getId(),
+                title,
+                message,
+                "FEEDBACK"
+        );
 
         feedback = feedbackRepository.save(feedback);
         return FeedbackResponse.fromEntity(feedback, userId);

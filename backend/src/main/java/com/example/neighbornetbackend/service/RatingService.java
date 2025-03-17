@@ -4,8 +4,10 @@ import com.example.neighbornetbackend.dto.RatingResponse;
 import com.example.neighbornetbackend.exception.ResourceNotFoundException;
 import com.example.neighbornetbackend.model.ClassRating;
 import com.example.neighbornetbackend.model.CourseClass;
+import com.example.neighbornetbackend.model.User;
 import com.example.neighbornetbackend.repository.ClassRepository;
 import com.example.neighbornetbackend.repository.RatingRepository;
+import com.example.neighbornetbackend.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,46 +21,61 @@ public class RatingService {
 
     private final RatingRepository ratingRepository;
     private final ClassRepository classRepository;
+    private final NotificationService notificationService;
+    private final UserRepository userRepository;
 
     @Autowired
-    public RatingService(RatingRepository ratingRepository, ClassRepository classRepository) {
-        this.ratingRepository = ratingRepository;
+    public RatingService(NotificationService notificationService,
+                         ClassRepository classRepository,
+                         UserRepository userRepository,
+                         RatingRepository ratingRepository) {
+        this.notificationService = notificationService;
         this.classRepository = classRepository;
+        this.userRepository = userRepository;
+        this.ratingRepository = ratingRepository;
     }
 
-    /**
-     * Rate a class or update an existing rating
-     */
     @Transactional
     public RatingResponse rateClass(Long classId, Long userId, Double ratingValue) {
-        // Ensure the rating value is valid (1-5)
         if (ratingValue < 1.0 || ratingValue > 5.0) {
             throw new IllegalArgumentException("Rating must be between 1 and 5");
         }
 
-        // Find the class
         CourseClass courseClass = classRepository.findById(classId)
                 .orElseThrow(() -> new ResourceNotFoundException("Class not found with id " + classId));
 
-        // Check if user has already rated this class
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
         ClassRating rating = ratingRepository.findByClassIdAndUserId(classId, userId)
                 .orElse(new ClassRating(courseClass, userId, ratingValue));
 
-        // Update the rating value and updated timestamp
         rating.setRating(ratingValue);
         rating.setUpdatedAt(Instant.now());
 
         rating = ratingRepository.save(rating);
 
-        // Update class average rating
         updateClassAverageRating(classId);
+
+        String formattedRating = String.format("%.1f", rating.getRating());
+
+        String title = "New Rating";
+        String message = String.format("%s rated your class '%s' with %s stars",
+                user.getUsername(),
+                courseClass.getTitle(),
+                formattedRating
+        );
+
+        notificationService.createAndSendNotification(
+                courseClass.getCreator().getId(),
+                title,
+                message,
+                "RATING"
+        );
 
         return convertToRatingResponse(rating);
     }
 
-    /**
-     * Get a user's rating for a class
-     */
     public RatingResponse getUserRating(Long classId, Long userId) {
         try {
             ClassRating rating = ratingRepository.findByClassIdAndUserId(classId, userId)
@@ -66,16 +83,11 @@ public class RatingService {
 
             return convertToRatingResponse(rating);
         } catch (ResourceNotFoundException e) {
-            // If no rating exists, return a default response with 0 rating
             return new RatingResponse(null, classId, userId, 0.0, null, null);
         }
     }
 
-    /**
-     * Get all ratings for a class
-     */
     public List<RatingResponse> getClassRatings(Long classId) {
-        // Check if class exists
         if (!classRepository.existsById(classId)) {
             throw new ResourceNotFoundException("Class not found with id " + classId);
         }
@@ -86,9 +98,6 @@ public class RatingService {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Update the average rating for a class
-     */
     @Transactional
     protected void updateClassAverageRating(Long classId) {
         Double averageRating = ratingRepository.findAverageRatingByClassId(classId);
@@ -104,9 +113,6 @@ public class RatingService {
         }
     }
 
-    /**
-     * Convert ClassRating entity to RatingResponse DTO
-     */
     private RatingResponse convertToRatingResponse(ClassRating rating) {
         return new RatingResponse(
                 rating.getId(),

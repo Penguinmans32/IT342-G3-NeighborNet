@@ -36,4 +36,10 @@ public class NotificationController {
         notificationService.markAllAsRead(currentUser.getId());
         return ResponseEntity.ok().build();
     }
+
+    @DeleteMapping
+    public ResponseEntity<?> deleteAllNotifications(@CurrentUser UserPrincipal currentUser) {
+        notificationService.deleteAllNotifications(currentUser.getId());
+        return ResponseEntity.ok().build();
+    }
 }

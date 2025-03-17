@@ -31,6 +31,7 @@ public class ClassService {
     private final LessonRepository lessonRepository;
     private final LessonProgressRepository lessonProgressRepository;
     private final ClassEnrollmentRepository enrollmentRepository;
+    private final NotificationService notificationService;
 
     private final String THUMBNAIL_DIRECTORY = "thumbnails";
 
@@ -45,13 +46,19 @@ public class ClassService {
 
     public ClassService(ClassRepository classRepository,
                         UserRepository userRepository,
-                        FileStorageService fileStorageService, LessonRepository lessonRepository, LessonProgressRepository lessonProgressRepository, ClassEnrollmentRepository enrollmentRepository) {
+                        FileStorageService fileStorageService, LessonRepository lessonRepository, LessonProgressRepository lessonProgressRepository, ClassEnrollmentRepository enrollmentRepository, NotificationService notificationService) {
         this.classRepository = classRepository;
         this.userRepository = userRepository;
         this.fileStorageService = fileStorageService;
         this.lessonRepository = lessonRepository;
         this.lessonProgressRepository = lessonProgressRepository;
         this.enrollmentRepository = enrollmentRepository;
+        this.notificationService = notificationService;
+    }
+
+    private void notifyClassCreator(CourseClass courseClass, String title, String message, String type) {
+        Long creatorId = courseClass.getCreator().getId();
+        notificationService.createAndSendNotification(creatorId, title, message, type);
     }
 
     private String calculateTotalDuration(List<CourseClass.Section> sections) {
@@ -243,12 +250,20 @@ public class ClassService {
         CourseClass courseClass = classRepository.findById(classId)
                 .orElseThrow(() -> new ResourceNotFoundException("Class not found"));
 
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
         if (!enrollmentRepository.existsByCourseClassIdAndUserId(classId, userId)) {
             ClassEnrollment enrollment = new ClassEnrollment();
             enrollment.setCourseClass(courseClass);
             enrollment.setUserId(userId);
             enrollment.setEnrolledAt(LocalDateTime.now());
             enrollmentRepository.save(enrollment);
+
+            // Send notification to class creator
+            String title = "New Enrollment";
+            String message = user.getUsername() + " has enrolled in your class: " + courseClass.getTitle();
+            notifyClassCreator(courseClass, title, message, "ENROLLMENT");
 
             // Update enrolled count
             long enrolledCount = enrollmentRepository.countByCourseClassId(classId);

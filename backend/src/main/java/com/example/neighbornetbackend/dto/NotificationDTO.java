@@ -1,7 +1,10 @@
-// NotificationDTO.java
 package com.example.neighbornetbackend.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 public class NotificationDTO {
     private Long id;
@@ -9,7 +12,9 @@ public class NotificationDTO {
     private String message;
     private String type;
     private boolean is_read;
-    private LocalDateTime createdAt;
+
+    @JsonIgnore // Ignore the actual Instant field during serialization
+    private Instant createdAt;
 
     public NotificationDTO() {
     }
@@ -19,10 +24,10 @@ public class NotificationDTO {
         this.message = message;
         this.type = type;
         this.is_read = false;
-        this.createdAt = LocalDateTime.now();
+        this.createdAt = Instant.now();
     }
 
-    public NotificationDTO(Long id, String title, String message, String type, boolean is_read, LocalDateTime createdAt) {
+    public NotificationDTO(Long id, String title, String message, String type, boolean is_read, Instant createdAt) {
         this.id = id;
         this.title = title;
         this.message = message;
@@ -31,7 +36,15 @@ public class NotificationDTO {
         this.createdAt = createdAt;
     }
 
-    // Getters and Setters
+    // Add this method to format the date for JSON
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    public String getFormattedCreatedAt() {
+        if (createdAt == null) return null;
+        return LocalDateTime.ofInstant(createdAt, ZoneId.systemDefault())
+                .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+    }
+
+    // Regular getters and setters
     public String getTitle() {
         return title;
     }
@@ -56,11 +69,12 @@ public class NotificationDTO {
         this.type = type;
     }
 
-    public LocalDateTime getCreatedAt() {
+    @JsonIgnore // Ignore this getter during serialization
+    public Instant getCreatedAt() {
         return createdAt;
     }
 
-    public void setCreatedAt(LocalDateTime createdAt) {
+    public void setCreatedAt(Instant createdAt) {
         this.createdAt = createdAt;
     }
 

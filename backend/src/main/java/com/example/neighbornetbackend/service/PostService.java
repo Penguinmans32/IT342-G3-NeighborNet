@@ -26,10 +26,12 @@ import java.util.stream.Collectors;
 public class PostService {
     private final PostRepository postRepository;
     private final UserService userService;
+    private final NotificationService notificationService;
 
-    public PostService(PostRepository postRepository, UserService userService) {
+    public PostService(PostRepository postRepository, UserService userService, NotificationService notificationService) {
         this.postRepository = postRepository;
         this.userService = userService;
+        this.notificationService = notificationService;
     }
 
     private UserDTO convertToAuthorDTO(User user) {
@@ -117,9 +119,18 @@ public class PostService {
                 .orElseThrow(() -> new ResourceNotFoundException("Post not found"));
         User user = userService.getUserById(userId);
 
-        boolean isLiked = post.getLikes().removeIf(likedUser -> likedUser.getId().equals(userId));
-        if (!isLiked) {
+        boolean wasLiked = post.getLikes().removeIf(likedUser -> likedUser.getId().equals(userId));
+        if (!wasLiked) {
             post.getLikes().add(user);
+            // Send notification to post owner
+            if (!post.getUser().getId().equals(userId)) {
+                notificationService.createAndSendNotification(
+                        post.getUser().getId(),
+                        "New Like",
+                        user.getUsername() + " liked your post: " + truncateContent(post.getContent()),
+                        "POST_LIKE"
+                );
+            }
         }
 
         Post savedPost = postRepository.save(post);
@@ -168,6 +179,15 @@ public class PostService {
         comment.setPost(post);
         post.getComments().add(comment);
 
+        if (!post.getUser().getId().equals(userId)) {
+            notificationService.createAndSendNotification(
+                    post.getUser().getId(),
+                    "New Comment",
+                    user.getUsername() + " commented on your post: " + truncateContent(content),
+                    "POST_COMMENT"
+            );
+        }
+
         Post savedPost = postRepository.save(post);
         return convertToDTO(savedPost, userId);
     }
@@ -202,9 +222,17 @@ public class PostService {
                 .findFirst()
                 .orElseThrow(() -> new ResourceNotFoundException("Comment not found"));
 
-        boolean isLiked = comment.getLikes().removeIf(likedUser -> likedUser.getId().equals(userId));
-        if (!isLiked) {
+        boolean wasLiked = comment.getLikes().removeIf(likedUser -> likedUser.getId().equals(userId));
+        if (!wasLiked) {
             comment.getLikes().add(user);
+            if (!comment.getUser().getId().equals(userId)) {
+                notificationService.createAndSendNotification(
+                        comment.getUser().getId(),
+                        "Comment Liked",
+                        user.getUsername() + " liked your comment: " + truncateContent(comment.getContent()),
+                        "COMMENT_LIKE"
+                );
+            }
         }
 
         Post savedPost = postRepository.save(post);
@@ -225,6 +253,13 @@ public class PostService {
         sharedPost.setUser(user);
         sharedPost.setContent(content);
         sharedPost.setOriginalPost(originalPost);
+
+        notificationService.createAndSendNotification(
+                originalPost.getUser().getId(),
+                "Post Shared",
+                user.getUsername() + " shared your post: " + truncateContent(originalPost.getContent()),
+                "POST_SHARE"
+        );
 
         Post savedPost = postRepository.save(sharedPost);
         return convertToDTO(savedPost, userId);
@@ -285,5 +320,13 @@ public class PostService {
         comment.setContent(content);
         Post savedPost = postRepository.save(post);
         return convertToDTO(savedPost, userId);
+    }
+
+    private String truncateContent(String content) {
+        if (content == null) return "";
+        int maxLength = 50;
+        return content.length() > maxLength
+                ? content.substring(0, maxLength) + "..."
+                : content;
     }
 }
