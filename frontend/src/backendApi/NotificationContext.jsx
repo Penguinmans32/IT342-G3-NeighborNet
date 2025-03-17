@@ -135,6 +135,21 @@ export const NotificationProvider = ({ children }) => {
         }
     }, []);
 
+    const deleteAllNotifications = useCallback(async () => {
+        try {
+            await axios.delete('http://localhost:8080/api/notifications', {
+                headers: {
+                    Authorization: `Bearer ${localStorage.getItem('token')}`
+                }
+            });
+            setNotifications([]);
+            setUnreadCount(0);
+        } catch (error) {
+            console.error('Error deleting all notifications:', error);
+        }
+    }, []);
+
+
     const markAllAsRead = useCallback(async () => {
         try {
             await axios.put('http://localhost:8080/api/notifications/mark-all-read', null, {
@@ -169,6 +184,7 @@ export const NotificationProvider = ({ children }) => {
         markAsRead,        
         markAllAsRead,    
         deleteNotification, 
+        deleteAllNotifications,
         fetchNotifications 
     };
 

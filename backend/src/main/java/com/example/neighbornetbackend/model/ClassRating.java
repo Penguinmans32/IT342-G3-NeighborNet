@@ -31,6 +31,11 @@ public class ClassRating {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt = Instant.now();
 
+    @Override
+    public String toString() {
+        return rating != null ? String.format("%.1f", rating) : "0.0";
+    }
+
     // Default constructor
     public ClassRating() {
     }

@@ -11,6 +11,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
@@ -23,13 +25,17 @@ public class BorrowingAgreementServiceImpl implements BorrowingAgreementService 
     private BorrowingAgreementRepository borrowingAgreementRepository;
 
     @Autowired
+    private final NotificationService notificationService;
+
+    @Autowired
     private UserRepository userRepository;
 
     private final ItemRepository itemRepository;
 
     private static final Logger log = LoggerFactory.getLogger(BorrowingAgreementServiceImpl.class);
 
-    public BorrowingAgreementServiceImpl(ItemRepository itemRepository) {
+    public BorrowingAgreementServiceImpl(NotificationService notificationService, ItemRepository itemRepository) {
+        this.notificationService = notificationService;
         this.itemRepository = itemRepository;
     }
 
@@ -58,11 +64,57 @@ public class BorrowingAgreementServiceImpl implements BorrowingAgreementService 
                 .orElseThrow(() -> new RuntimeException("Agreement not found"));
     }
 
-    @Override
-    public BorrowingAgreement updateStatus(Long id, String status) {
-        BorrowingAgreement agreement = getById(id);
+    @Transactional
+    public BorrowingAgreement updateStatus(Long agreementId, String status) {
+        BorrowingAgreement agreement = borrowingAgreementRepository.findById(agreementId)
+                .orElseThrow(() -> new RuntimeException("Agreement not found"));
+
+        Item item = itemRepository.findById(agreement.getItemId())
+                .orElseThrow(() -> new RuntimeException("Item not found"));
+
+        User borrower = userRepository.findById(agreement.getBorrowerId())
+                .orElseThrow(() -> new RuntimeException("Borrower not found"));
+
         agreement.setStatus(status);
-        return borrowingAgreementRepository.save(agreement);
+        BorrowingAgreement updatedAgreement = borrowingAgreementRepository.save(agreement);
+
+        // Send notification based on status
+        String title;
+        String message;
+        String type;
+        Long recipientId;
+
+        switch (status.toUpperCase()) {
+            case "ACCEPTED":
+                title = "Borrowing Request Accepted";
+                message = "Your request to borrow '" + item.getName() + "' has been accepted";
+                type = "BORROW_ACCEPTED";
+                recipientId = agreement.getBorrowerId();
+                break;
+            case "REJECTED":
+                title = "Borrowing Request Rejected";
+                message = "Your request to borrow '" + item.getName() + "' has been rejected";
+                type = "BORROW_REJECTED";
+                recipientId = agreement.getBorrowerId();
+                break;
+            case "CANCELLED":
+                title = "Borrowing Request Cancelled";
+                message = borrower.getUsername() + " cancelled their request to borrow '" + item.getName() + "'";
+                type = "BORROW_CANCELLED";
+                recipientId = agreement.getLenderId();
+                break;
+            default:
+                return updatedAgreement;
+        }
+
+        notificationService.createAndSendNotification(
+                recipientId,
+                title,
+                message,
+                type
+        );
+
+        return updatedAgreement;
     }
 
     @Override
