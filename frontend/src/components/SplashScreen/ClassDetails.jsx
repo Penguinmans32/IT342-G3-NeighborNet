@@ -7,7 +7,8 @@ import {
   MdOutlineLightbulb, MdOutlineTimer, MdOutlinePeople, MdOutlineFeedback,
   MdOutlineChatBubbleOutline, MdThumbUp, MdFlag, MdRateReview, MdSend,
   MdArrowForward, MdCheckCircle, MdPerson, MdEmail, MdPhone, MdOutlineSchool,
-  MdOutlineLink, MdLanguage, MdCategory, MdSignalCellularAlt, MdAccessAlarm
+  MdOutlineLink, MdLanguage, MdCategory, MdSignalCellularAlt, MdAccessAlarm, MdMoreVert,
+  MdEdit, MdDelete,
 } from 'react-icons/md';
 import axios from 'axios';
 import { useAuth } from '../../backendApi/AuthContext';
@@ -66,7 +67,35 @@ const formatDate = (dateString) => {
   }).format(date);
 };
 
-const FeedbackItemEnhanced = ({ feedback }) => {
+const FeedbackItemEnhanced = ({ feedback, currentUserId, onHelpful, onReport, onEdit, onDelete }) => {
+  const [isHelpfulLoading, setIsHelpfulLoading] = useState(false);
+  const [isReportLoading, setIsReportLoading] = useState(false);
+  const [showActionsMenu, setShowActionsMenu] = useState(false);
+
+  const handleHelpful = async () => {
+    setIsHelpfulLoading(true);
+    try {
+      await onHelpful(feedback.id);
+      toast.success('Marked as helpful!');
+    } catch (error) {
+      toast.error('Failed to mark as helpful');
+    } finally {
+      setIsHelpfulLoading(false);
+    }
+  };
+
+  const handleReport = async () => {
+    setIsReportLoading(true);
+    try {
+      await onReport(feedback.id);
+      toast.success('Feedback reported');
+    } catch (error) {
+      toast.error('Failed to report feedback');
+    } finally {
+      setIsReportLoading(false);
+    }
+  };
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all duration-300">
       <div className="p-6">
@@ -103,14 +132,93 @@ const FeedbackItemEnhanced = ({ feedback }) => {
               </div>
             </div>
           </div>
+
+          {/* Action buttons for feedback owner */}
+          {feedback.canEdit && (
+            <div className="relative">
+              <button
+                onClick={() => setShowActionsMenu(!showActionsMenu)}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <MdMoreVert className="text-xl text-gray-500" />
+              </button>
+
+              {showActionsMenu && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10">
+                  <button
+                    onClick={() => {
+                      onEdit(feedback);
+                      setShowActionsMenu(false);
+                    }}
+                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                  >
+                    <MdEdit className="text-lg" /> Edit Feedback
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (window.confirm('Are you sure you want to delete this feedback?')) {
+                        onDelete(feedback.id);
+                      }
+                      setShowActionsMenu(false);
+                    }}
+                    className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                  >
+                    <MdDelete className="text-lg" /> Delete Feedback
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
-        
+
+
         <div className="mt-4 relative">
           <div className="absolute -left-3 top-0 bottom-0 w-1 bg-blue-100 rounded-full"></div>
           <div className="pl-4">
             <p className="text-gray-700 leading-relaxed">
               {feedback.content}
             </p>
+            
+            {/* Feedback Actions */}
+            <div className="mt-4 flex items-center gap-4">
+              <button
+                onClick={handleHelpful}
+                disabled={isHelpfulLoading}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm
+                  ${feedback.isHelpful
+                    ? 'bg-green-100 text-green-700'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  } transition-colors`}
+              >
+                {isHelpfulLoading ? (
+                  <div className="w-4 h-4 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <MdThumbUp className={feedback.isHelpful ? 'text-green-500' : ''} />
+                    <span>{feedback.helpfulCount || 0} Helpful</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                onClick={handleReport}
+                disabled={isReportLoading}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm
+                  ${feedback.isReported
+                    ? 'bg-red-100 text-red-700'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  } transition-colors`}
+              >
+                {isReportLoading ? (
+                  <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <MdFlag className={feedback.isReported ? 'text-red-500' : ''} />
+                    <span>Report</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -118,7 +226,7 @@ const FeedbackItemEnhanced = ({ feedback }) => {
   );
 };
 
-const FeedbackFormEnhanced = ({ onSubmit, value, onChange, isSubmitting, onCancel, rating }) => {
+const FeedbackFormEnhanced = ({ onSubmit, value, onChange, isSubmitting, onCancel, rating, editingFeedback}) => {
   const [charCount, setCharCount] = useState(value?.length || 0);
   
   const handleChange = (e) => {
@@ -130,10 +238,10 @@ const FeedbackFormEnhanced = ({ onSubmit, value, onChange, isSubmitting, onCance
     <form onSubmit={onSubmit} className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
       <div className="p-6">
         <div className="flex justify-between items-center mb-6">
-          <h3 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-            <MdRateReview className="text-blue-600" />
-            Share Your Experience
-          </h3>
+        <h3 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+          <MdRateReview className="text-blue-600" />
+          {editingFeedback ? 'Edit Your Feedback' : 'Share Your Experience'}
+        </h3>
           <div className="flex">
             {[1, 2, 3, 4, 5].map((star) => (
               <MdStar 
@@ -192,13 +300,13 @@ const FeedbackFormEnhanced = ({ onSubmit, value, onChange, isSubmitting, onCance
             >
               {isSubmitting ? (
                 <>
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   <span>Submitting...</span>
                 </>
               ) : (
                 <>
                   <MdSend />
-                  <span>Submit Feedback</span>
+                  <span>{editingFeedback ? 'Update Feedback' : 'Submit Feedback'}</span>
                 </>
               )}
             </motion.button>
@@ -417,7 +525,9 @@ const ClassDetails = () => {
   const [classFeedbacks, setClassFeedbacks] = useState([]);
   const [relatedClasses, setRelatedClasses] = useState([]);
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+  const [editingFeedback, setEditingFeedback] = useState(null);
 
+  
   const fetchClassFeedbacks = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -428,7 +538,14 @@ const ClassDetails = () => {
         { headers }
       );
       
-      setClassFeedbacks(response.data);
+      // Add userId from the user object in the feedback
+      const feedbacksWithUserId = response.data.map(feedback => ({
+        ...feedback,
+        userId: feedback.user?.id || null  // Make sure to handle null case
+      }));
+      
+      console.log('Class Feedbacks:', feedbacksWithUserId);
+      setClassFeedbacks(feedbacksWithUserId);
     } catch (error) {
       console.error("Error fetching class feedbacks:", error);
     }
@@ -465,44 +582,128 @@ const ClassDetails = () => {
     }
   };
 
-  const handleSubmitFeedback = async (e) => {
-    e.preventDefault();
-    
-    if (!feedbackText.trim()) {
-      toast.error('Please enter your feedback');
-      return;
-    }
-    
-    setIsSubmittingFeedback(true);
-    
+  const handleHelpfulFeedback = async (feedbackId) => {
     try {
+        const token = localStorage.getItem('token');
+        const headers = { Authorization: `Bearer ${token}` };
+        
+        await axios.post(
+            `http://localhost:8080/api/classes/${feedbackId}/react`,
+            { helpful: true },
+            { headers }
+        );
+        
+        await fetchClassFeedbacks();
+    } catch (error) {
+        console.error('Failed to mark as helpful:', error);
+        throw error;
+    }
+};
+
+const handleReportFeedback = async (feedbackId) => {
+  try {
       const token = localStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
       
       await axios.post(
-        `http://localhost:8080/api/classes/${classId}/feedback`,
-        {
-          content: feedbackText,
-          rating: userRating // Using the existing rating
-        },
-        { headers }
+          `http://localhost:8080/api/classes/${feedbackId}/react`, 
+          { helpful: false },
+          { headers }
       );
       
-      // Refresh feedbacks
       await fetchClassFeedbacks();
+  } catch (error) {
+      console.error('Failed to report feedback:', error);
+      throw error;
+  }
+};
+
+const handleEditFeedback = async (feedback) => {
+  setFeedbackText(feedback.content);
+  setEditingFeedback(feedback);
+  setShowFeedbackForm(true);
+};
+
+  const handleCancelFeedback = () => {
+    setFeedbackText('');
+    setShowFeedbackForm(false);
+    setEditingFeedback(null);
+  };
+
+  const handleDeleteFeedback = async (feedbackId) => {
+    if (!window.confirm('Are you sure you want to delete this feedback?')) {
+        return;
+    }
+
+    try {
+        const token = localStorage.getItem('token');
+        const headers = { Authorization: `Bearer ${token}` };
+        
+        await axios.delete(
+            `http://localhost:8080/api/classes/${classId}/feedback/${feedbackId}`,
+            { headers }
+        );
+        
+        await fetchClassFeedbacks();
+        toast.success('Feedback deleted successfully');
+    } catch (error) {
+        console.error('Failed to delete feedback:', error);
+        toast.error('Failed to delete feedback');
+    }
+};
+  
+
+const handleSubmitFeedback = async (e) => {
+  e.preventDefault();
+  
+  if (!feedbackText.trim()) {
+      toast.error('Please enter your feedback');
+      return;
+  }
+  
+  setIsSubmittingFeedback(true);
+  
+  try {
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
       
-      // Reset form
+      if (editingFeedback) {
+          // Update existing feedback
+          await axios.put(
+              `http://localhost:8080/api/classes/${classId}/feedback/${editingFeedback.id}`,  // Updated path
+              {
+                  content: feedbackText,
+                  rating: userRating
+              },
+              { headers }
+          );
+          toast.success('Feedback updated successfully!');
+      } else {
+          // Create new feedback
+          await axios.post(
+              `http://localhost:8080/api/classes/${classId}/feedback`,
+              {
+                  content: feedbackText,
+                  rating: userRating
+              },
+              { headers }
+          );
+          toast.success('Feedback submitted successfully!');
+      }
+      
+      // Reset states
+      await fetchClassFeedbacks();
       setFeedbackText('');
       setShowFeedbackForm(false);
+      setEditingFeedback(null);
       
-      toast.success('Feedback submitted successfully!');
-    } catch (error) {
+  } catch (error) {
       console.error("Error submitting feedback:", error);
       toast.error('Failed to submit feedback');
-    } finally {
+  } finally {
       setIsSubmittingFeedback(false);
-    }
-  };
+  }
+};
 
   const checkLearningStatus = async () => {
     try {
@@ -1499,8 +1700,9 @@ const ClassDetails = () => {
                     value={feedbackText}
                     onChange={setFeedbackText}
                     isSubmitting={isSubmittingFeedback}
-                    onCancel={() => setShowFeedbackForm(false)}
+                    onCancel={handleCancelFeedback}
                     rating={userRating}
+                    editingFeedback={editingFeedback}
                   />
                 </motion.div>
               )}
@@ -1521,7 +1723,14 @@ const ClassDetails = () => {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.1 }}
                   >
-                    <FeedbackItemEnhanced feedback={feedback} />
+                    <FeedbackItemEnhanced 
+                      feedback={feedback}
+                      currentUserId={user?.id}
+                      onHelpful={handleHelpfulFeedback}
+                      onReport={handleReportFeedback}
+                      onEdit={handleEditFeedback}
+                      onDelete={handleDeleteFeedback}
+                    />
                   </motion.div>
                 ))}
               </motion.div>

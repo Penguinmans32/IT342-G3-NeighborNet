@@ -13,8 +13,15 @@ public class FeedbackResponse {
     private String userImage;
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS")
     private LocalDateTime createdAt;
+    private Integer helpfulCount = 0;
+    private Integer reportCount = 0;
+    private boolean isHelpful;
+    private boolean isReported;
+    private boolean canEdit;
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS")
+    private LocalDateTime updatedAt;
 
-    public static FeedbackResponse fromEntity(Feedback feedback) {
+    public static FeedbackResponse fromEntity(Feedback feedback, Long currentUserId) {
         FeedbackResponse response = new FeedbackResponse();
         response.setId(feedback.getId());
         response.setContent(feedback.getContent());
@@ -22,12 +29,32 @@ public class FeedbackResponse {
         if (feedback.getUser() != null) {
             response.setUserName(feedback.getUser().getUsername());
             response.setUserImage(feedback.getUser().getImageUrl());
+            response.setCanEdit(feedback.getUser().getId().equals(currentUserId));
         }
         response.setCreatedAt(feedback.getCreatedAt());
+        response.setUpdatedAt(feedback.getUpdatedAt());
+
+        // Handle null counts
+        response.setHelpfulCount(feedback.getHelpfulCount() != null ? feedback.getHelpfulCount() : 0);
+        response.setReportCount(feedback.getReportCount() != null ? feedback.getReportCount() : 0);
+
+        if (currentUserId != null) {
+            feedback.getReactions().stream()
+                    .filter(reaction -> reaction.getUser().getId().equals(currentUserId))
+                    .findFirst()
+                    .ifPresent(reaction -> {
+                        if (reaction.isHelpful()) {
+                            response.setHelpful(true);
+                        } else {
+                            response.setReported(true);
+                        }
+                    });
+        }
+
         return response;
     }
 
-    // Getters and setters
+
     public Long getId() {
         return id;
     }
@@ -74,5 +101,53 @@ public class FeedbackResponse {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public boolean isCanEdit() {
+        return canEdit;
+    }
+
+    public void setCanEdit(boolean canEdit) {
+        this.canEdit = canEdit;
+    }
+
+    public boolean isHelpful() {
+        return isHelpful;
+    }
+
+    public void setHelpful(boolean helpful) {
+        isHelpful = helpful;
+    }
+
+    public boolean isReported() {
+        return isReported;
+    }
+
+    public void setReported(boolean reported) {
+        isReported = reported;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    public Integer getHelpfulCount() {
+        return helpfulCount;
+    }
+
+    public void setHelpfulCount(Integer helpfulCount) {
+        this.helpfulCount = helpfulCount;
+    }
+
+    public Integer getReportCount() {
+        return reportCount;
+    }
+
+    public void setReportCount(Integer reportCount) {
+        this.reportCount = reportCount;
     }
 }

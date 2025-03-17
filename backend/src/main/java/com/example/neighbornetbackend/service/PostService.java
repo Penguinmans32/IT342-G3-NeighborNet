@@ -267,4 +267,23 @@ public class PostService {
         Post updatedPost = postRepository.save(post);
         return convertToDTO(updatedPost, userId);
     }
+
+    @Transactional
+    public PostDTO updateComment(Long postId, Long commentId, String content, Long userId) {
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new ResourceNotFoundException("Post not found"));
+
+        Comment comment = post.getComments().stream()
+                .filter(c -> c.getId().equals(commentId))
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException("Comment not found"));
+
+        if (!comment.getUser().getId().equals(userId)) {
+            throw new UnauthorizedException("You can only edit your own comments");
+        }
+
+        comment.setContent(content);
+        Post savedPost = postRepository.save(post);
+        return convertToDTO(savedPost, userId);
+    }
 }

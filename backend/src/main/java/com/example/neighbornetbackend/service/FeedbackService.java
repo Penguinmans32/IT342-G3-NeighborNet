@@ -3,8 +3,10 @@ package com.example.neighbornetbackend.service;
 import com.example.neighbornetbackend.dto.FeedbackRequest;
 import com.example.neighbornetbackend.dto.FeedbackResponse;
 import com.example.neighbornetbackend.exception.ResourceNotFoundException;
+import com.example.neighbornetbackend.exception.UnauthorizedException;
 import com.example.neighbornetbackend.model.CourseClass;
 import com.example.neighbornetbackend.model.Feedback;
+import com.example.neighbornetbackend.model.FeedbackReaction;
 import com.example.neighbornetbackend.model.User;
 import com.example.neighbornetbackend.repository.ClassRepository;
 import com.example.neighbornetbackend.repository.FeedbackRepository;
@@ -36,13 +38,23 @@ public class FeedbackService {
     }
 
     public List<FeedbackResponse> getClassFeedbacks(Long classId) {
-        // Check if class exists
         if (!classRepository.existsById(classId)) {
             throw new ResourceNotFoundException("Class not found");
         }
 
-        return feedbackRepository.findByClassEntityIdOrderByCreatedAtDesc(classId).stream()
-                .map(FeedbackResponse::fromEntity)
+        List<Feedback> feedbacks = feedbackRepository.findByClassEntityIdOrderByCreatedAtDesc(classId);
+
+        feedbacks.forEach(feedback -> {
+            if (feedback.getHelpfulCount() == null) {
+                feedback.setHelpfulCount(0);
+            }
+            if (feedback.getReportCount() == null) {
+                feedback.setReportCount(0);
+            }
+        });
+
+        return feedbacks.stream()
+                .map(feedback -> FeedbackResponse.fromEntity(feedback, null))
                 .collect(Collectors.toList());
     }
 
@@ -85,12 +97,87 @@ public class FeedbackService {
         }
 
         feedback = feedbackRepository.save(feedback);
-        return FeedbackResponse.fromEntity(feedback);
+        return FeedbackResponse.fromEntity(feedback, userId);
     }
 
     public FeedbackResponse getUserFeedback(Long classId, Long userId) {
         return feedbackRepository.findByClassEntityIdAndUserId(classId, userId)
-                .map(FeedbackResponse::fromEntity)
+                .map(feedback -> FeedbackResponse.fromEntity(feedback, userId))
                 .orElse(null);
+    }
+
+    @Transactional
+    public FeedbackResponse updateFeedback(Long feedbackId, Long userId, FeedbackRequest request) {
+        Feedback feedback = feedbackRepository.findById(feedbackId)
+                .orElseThrow(() -> new ResourceNotFoundException("Feedback not found"));
+
+        if (!feedback.getUser().getId().equals(userId)) {
+            throw new UnauthorizedException("You can only edit your own feedback");
+        }
+
+        feedback.setContent(request.getContent());
+        if (request.getRating() != null) {
+            feedback.setRating(request.getRating());
+        }
+
+        feedback = feedbackRepository.save(feedback);
+        return FeedbackResponse.fromEntity(feedback, userId);
+    }
+
+    @Transactional
+    public void deleteFeedback(Long feedbackId, Long userId) {
+        Feedback feedback = feedbackRepository.findById(feedbackId)
+                .orElseThrow(() -> new ResourceNotFoundException("Feedback not found"));
+
+        if (!feedback.getUser().getId().equals(userId)) {
+            throw new UnauthorizedException("You can only delete your own feedback");
+        }
+
+        feedbackRepository.delete(feedback);
+    }
+
+    @Transactional
+    public FeedbackResponse handleReaction(Long feedbackId, Long userId, boolean isHelpful) {
+        Feedback feedback = feedbackRepository.findById(feedbackId)
+                .orElseThrow(() -> new ResourceNotFoundException("Feedback not found"));
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        if (feedback.getHelpfulCount() == null) {
+            feedback.setHelpfulCount(0);
+        }
+        if (feedback.getReportCount() == null) {
+            feedback.setReportCount(0);
+        }
+
+        // Remove existing reaction if any
+        boolean hadPreviousReaction = feedback.getReactions().removeIf(reaction ->
+                reaction.getUser().getId().equals(userId)
+        );
+
+        FeedbackReaction reaction = new FeedbackReaction();
+        reaction.setFeedback(feedback);
+        reaction.setUser(user);
+        reaction.setHelpful(isHelpful);
+        feedback.getReactions().add(reaction);
+
+        // Recalculate counts
+        recalculateReactionCounts(feedback);
+
+        feedback = feedbackRepository.save(feedback);
+        return FeedbackResponse.fromEntity(feedback, userId);
+    }
+
+    private void recalculateReactionCounts(Feedback feedback) {
+        int helpfulCount = (int) feedback.getReactions().stream()
+                .filter(FeedbackReaction::isHelpful)
+                .count();
+        int reportCount = (int) feedback.getReactions().stream()
+                .filter(r -> !r.isHelpful())
+                .count();
+
+        feedback.setHelpfulCount(helpfulCount);
+        feedback.setReportCount(reportCount);
     }
 }

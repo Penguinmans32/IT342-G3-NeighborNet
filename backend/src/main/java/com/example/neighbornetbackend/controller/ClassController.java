@@ -3,7 +3,9 @@ package com.example.neighbornetbackend.controller;
 import com.example.neighbornetbackend.dto.*;
 import com.example.neighbornetbackend.exception.ResourceNotFoundException;
 import com.example.neighbornetbackend.model.CourseClass;
+import com.example.neighbornetbackend.model.Feedback;
 import com.example.neighbornetbackend.repository.ClassRepository;
+import com.example.neighbornetbackend.repository.FeedbackRepository;
 import com.example.neighbornetbackend.security.CurrentUser;
 import com.example.neighbornetbackend.security.UserPrincipal;
 import com.example.neighbornetbackend.service.ClassService;
@@ -34,13 +36,15 @@ public class ClassController {
     private final RatingService ratingService;
     private final FeedbackService feedbackService;
     private final LessonProgressService progressService;
+    private final FeedbackRepository feedbackRepository;
 
-    public ClassController(ClassService classService, ClassRepository classRepository, RatingService ratingService, FeedbackService feedbackService, LessonProgressService progressService) {
+    public ClassController(ClassService classService, ClassRepository classRepository, RatingService ratingService, FeedbackService feedbackService, LessonProgressService progressService, FeedbackRepository feedbackRepository) {
         this.classService = classService;
         this.classRepository = classRepository;
         this.ratingService = ratingService;
         this.feedbackService = feedbackService;
         this.progressService = progressService;
+        this.feedbackRepository = feedbackRepository;
     }
 
     @Operation(summary = "Create a new class")
@@ -274,9 +278,21 @@ public class ClassController {
     }
 
     @GetMapping("/{classId}/feedbacks")
-    public ResponseEntity<List<FeedbackResponse>> getClassFeedbacks(@PathVariable Long classId) {
+    public ResponseEntity<List<FeedbackResponse>> getClassFeedbacks(
+            @PathVariable Long classId,
+            @CurrentUser UserPrincipal currentUser) {
         try {
             List<FeedbackResponse> feedbacks = feedbackService.getClassFeedbacks(classId);
+            if (currentUser != null) {
+                Long userId = currentUser.getId();
+                feedbacks = feedbacks.stream()
+                        .map(feedback -> {
+                            Feedback entity = feedbackRepository.findById(feedback.getId())
+                                    .orElse(null);
+                            return entity != null ? FeedbackResponse.fromEntity(entity, userId) : feedback;
+                        })
+                        .collect(Collectors.toList());
+            }
             return ResponseEntity.ok(feedbacks);
         } catch (ResourceNotFoundException e) {
             return ResponseEntity.notFound().build();
@@ -299,6 +315,56 @@ public class ClassController {
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @PutMapping("/{classId}/feedback/{feedbackId}")
+    public ResponseEntity<FeedbackResponse> updateFeedback(
+            @PathVariable Long classId,
+            @PathVariable Long feedbackId,
+            @RequestBody FeedbackRequest request,
+            @CurrentUser UserPrincipal currentUser
+    ) {
+        try {
+            FeedbackResponse feedback = feedbackService.updateFeedback(
+                    feedbackId,
+                    currentUser.getId(),
+                    request
+            );
+            return ResponseEntity.ok(feedback);
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @DeleteMapping("/{classId}/feedback/{feedbackId}")
+    public ResponseEntity<?> deleteFeedback(
+            @PathVariable Long feedbackId,
+            @CurrentUser UserPrincipal currentUser
+    ) {
+        try {
+            feedbackService.deleteFeedback(feedbackId, currentUser.getId());
+            return ResponseEntity.ok().build();
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @PostMapping("/{feedbackId}/react")
+    public ResponseEntity<FeedbackResponse> reactToFeedback(
+            @PathVariable Long feedbackId,
+            @RequestBody ReactionRequest request,
+            @CurrentUser UserPrincipal currentUser
+    ) {
+        try {
+            FeedbackResponse feedback = feedbackService.handleReaction(
+                    feedbackId,
+                    currentUser.getId(),
+                    request.isHelpful()
+            );
+            return ResponseEntity.ok(feedback);
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.notFound().build();
         }
     }
 
