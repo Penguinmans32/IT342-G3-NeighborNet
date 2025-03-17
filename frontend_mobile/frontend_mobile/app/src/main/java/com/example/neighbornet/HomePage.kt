@@ -1,9 +1,23 @@
 package com.example.neighbornet
 
 import androidx.annotation.DrawableRes
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.ui.graphics.BlendMode
+import com.valentinilk.shimmer.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -12,20 +26,30 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.navigation.NavHostController
+import androidx.navigation.compose.rememberNavController
 import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
 import com.example.neighbornet.auth.AuthViewModel
@@ -44,101 +68,229 @@ fun HomePage(
     var selectedTab by remember { mutableStateOf(0) }
     var selectedCategory by remember { mutableStateOf<String?>(null) }
 
+    val backgroundGradient = Brush.verticalGradient(
+        colors = listOf(
+            MaterialTheme.colorScheme.background,
+            MaterialTheme.colorScheme.background.copy(alpha = 0.95f),
+            MaterialTheme.colorScheme.surface
+        )
+    )
+
     Scaffold(
+        containerColor = Color.Transparent,
         bottomBar = {
-            NavigationBar(
-                containerColor = MaterialTheme.colorScheme.surface,
-                tonalElevation = 8.dp
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(80.dp),
+                shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+                tonalElevation = 8.dp,
+                shadowElevation = 16.dp,
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
             ) {
-                NavigationBarItem(
-                    selected = selectedTab == 0,
-                    onClick = { selectedTab = 0 },
-                    icon = {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_home),
-                            contentDescription = "Home"
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            brush = Brush.verticalGradient(
+                                colors = listOf(
+                                    MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
+                                    MaterialTheme.colorScheme.surface
+                                )
+                            )
                         )
-                    },
-                    label = { Text("Home") }
-                )
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                brush = Brush.radialGradient(
+                                    colors = listOf(
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.05f),
+                                        Color.Transparent
+                                    )
+                                )
+                            )
+                    )
 
-                // Add Categories tab
-                NavigationBarItem(
-                    selected = selectedTab == 1,
-                    onClick = { selectedTab = 1 },
-                    icon = {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_category),
-                            contentDescription = "Categories"
+                    NavigationBar(
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        containerColor = Color.Transparent,
+                        tonalElevation = 0.dp
+                    ) {
+                        val items = listOf(
+                            Triple(R.drawable.ic_home, "Home", 0),
+                            Triple(R.drawable.ic_category, "Categories", 1),
+                            Triple(R.drawable.ic_chat, "Chat", 2),
+                            Triple(R.drawable.ic_profile, "Profile", 3)
                         )
-                    },
-                    label = { Text("Categories") }
-                )
 
-                NavigationBarItem(
-                    selected = selectedTab == 2,
-                    onClick = { selectedTab = 2 },
-                    icon = {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_chat),
-                            contentDescription = "Chat"
-                        )
-                    },
-                    label = { Text("Chat") }
-                )
-
-                NavigationBarItem(
-                    selected = selectedTab == 3,
-                    onClick = { selectedTab = 3 },
-                    icon = {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_profile),
-                            contentDescription = "Profile"
-                        )
-                    },
-                    label = { Text("Profile") }
-                )
+                        items.forEach { (icon, label, index) ->
+                            val isSelected = selectedTab == index
+                            NavigationBarItem(
+                                selected = isSelected,
+                                onClick = { selectedTab = index },
+                                icon = {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(if (isSelected) 48.dp else 42.dp)
+                                            .background(
+                                                color = if (isSelected) {
+                                                    MaterialTheme.colorScheme.primaryContainer
+                                                } else {
+                                                    MaterialTheme.colorScheme.surface
+                                                },
+                                                shape = CircleShape
+                                            )
+                                            .border(
+                                                width = if (isSelected) 2.dp else 1.dp,
+                                                brush = if (isSelected) {
+                                                    Brush.sweepGradient(
+                                                        listOf(
+                                                            MaterialTheme.colorScheme.primary,
+                                                            MaterialTheme.colorScheme.tertiary,
+                                                            MaterialTheme.colorScheme.primary
+                                                        )
+                                                    )
+                                                } else {
+                                                    Brush.sweepGradient(
+                                                        listOf(
+                                                            MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                                                            MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                                                        )
+                                                    )
+                                                },
+                                                shape = CircleShape
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(id = icon),
+                                            contentDescription = label,
+                                            modifier = Modifier.size(24.dp),
+                                            tint = if (isSelected) {
+                                                MaterialTheme.colorScheme.primary
+                                            } else {
+                                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                            }
+                                        )
+                                    }
+                                },
+                                label = {
+                                    Text(
+                                        text = label,
+                                        style = MaterialTheme.typography.labelMedium.copy(
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                            shadow = if (isSelected) {
+                                                Shadow(
+                                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                                                    offset = Offset(0f, 2f),
+                                                    blurRadius = 4f
+                                                )
+                                            } else null
+                                        ),
+                                        color = if (isSelected) {
+                                            MaterialTheme.colorScheme.primary
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                        }
+                                    )
+                                }
+                            )
+                        }
+                    }
+                }
             }
         }
     ) { paddingValues ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .background(backgroundGradient)
                 .padding(paddingValues)
         ) {
-            when {
-                selectedCategory != null -> {
-                    CategoryDetailScreen(
-                        category = selectedCategory!!,
-                        onBackClick = { selectedCategory = null }
-                    )
-                }
-                else -> {
-                    when (selectedTab) {
-                        0 -> {
-                            val viewModel = hiltViewModel<ClassListViewModel>(
-                                viewModelStoreOwner = LocalViewModelStoreOwner.current ?: return@Box
-                            )
-                            HomeScreenContent(
-                                viewModel = viewModel,
-                                onClassClick = { classId ->
-                                    navController.navigate(Screen.ClassDetails.createRoute(classId))
+            BackgroundPatterns()
+
+            AnimatedVisibility(
+                visible = true,
+                enter = fadeIn() + expandVertically(),
+                modifier = Modifier.fillMaxSize()
+            ) {
+                when {
+                    selectedCategory != null -> {
+                        CategoryDetailScreen(
+                            category = selectedCategory!!,
+                            onBackClick = { selectedCategory = null }
+                        )
+                    }
+                    else -> {
+                        when (selectedTab) {
+                            0 -> {
+                                val viewModel = hiltViewModel<ClassListViewModel>(
+                                    viewModelStoreOwner = LocalViewModelStoreOwner.current ?: return@AnimatedVisibility
+                                )
+                                HomeScreenContent(
+                                    viewModel = viewModel,
+                                    onClassClick = { classId ->
+                                        navController.navigate(Screen.ClassDetails.createRoute(classId))
+                                    }
+                                )
+                            }
+                            1 -> CategoriesContent(
+                                onCategoryClick = { category ->
+                                    selectedCategory = category
                                 }
                             )
+                            2 -> ChatContent()
+                            3 -> ProfileContent(onLogoutSuccess = {
+                                selectedTab = 0
+                            })
                         }
-                        1 -> CategoriesContent(
-                            onCategoryClick = { category ->
-                                selectedCategory = category
-                            }
-                        )
-                        2 -> ChatContent()
-                        3 -> ProfileContent(onLogoutSuccess = {
-                            selectedTab = 0
-                        })
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun BackgroundPatterns() {
+    val primaryColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.05f)
+    val tertiaryColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.05f)
+
+    Canvas(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        val canvasWidth = size.width
+        val canvasHeight = size.height
+
+        val primaryGradient = Brush.radialGradient(
+            colors = listOf(
+                primaryColor,
+                Color.Transparent
+            )
+        )
+
+        val tertiaryGradient = Brush.radialGradient(
+            colors = listOf(
+                tertiaryColor,
+                Color.Transparent
+            )
+        )
+
+        drawCircle(
+            brush = primaryGradient,
+            radius = canvasWidth * 0.8f,
+            center = Offset(canvasWidth * 0.8f, -canvasHeight * 0.2f)
+        )
+
+        drawCircle(
+            brush = tertiaryGradient,
+            radius = canvasWidth * 0.6f,
+            center = Offset(0f, canvasHeight)
+        )
     }
 }
 
@@ -255,82 +407,206 @@ fun ClassCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 2.dp,
+            pressedElevation = 8.dp,
+            hoveredElevation = 4.dp
+        ),
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column {
-            // Thumbnail
-            AsyncImage(
-                model = UrlUtils.getFullThumbnailUrl(classItem.thumbnailUrl),
-                contentDescription = null,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(200.dp),
-                contentScale = ContentScale.Crop,
-                error = rememberAsyncImagePainter(R.drawable.default_class_image)
-            )
-
-            Column(
-                modifier = Modifier.padding(16.dp)
+            Box(
+                modifier = Modifier.fillMaxWidth()
             ) {
-                // Category and Duration
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                // Thumbnail with gradient overlay
+                AsyncImage(
+                    model = UrlUtils.getFullThumbnailUrl(classItem.thumbnailUrl),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(180.dp),
+                    contentScale = ContentScale.Crop,
+                    error = rememberAsyncImagePainter(R.drawable.default_class_image)
+                )
+
+                // Gradient overlay
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(180.dp)
+                        .background(
+                            brush = Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    Color.Black.copy(alpha = 0.7f)
+                                ),
+                                startY = 0f,
+                                endY = Float.POSITIVE_INFINITY
+                            )
+                        )
+                )
+
+                // Category chip
+                Surface(
+                    modifier = Modifier
+                        .padding(12.dp)
+                        .align(Alignment.TopStart),
+                    shape = RoundedCornerShape(20.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f)
                 ) {
                     Text(
                         text = classItem.category,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                         style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Text(
-                        text = classItem.duration,
-                        style = MaterialTheme.typography.labelMedium
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                // Duration chip
+                Surface(
+                    modifier = Modifier
+                        .padding(12.dp)
+                        .align(Alignment.TopEnd),
+                    shape = RoundedCornerShape(20.dp),
+                    color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.9f)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_time),
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.onTertiaryContainer
+                        )
+                        Text(
+                            text = classItem.duration,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer
+                        )
+                    }
+                }
+            }
 
-                // Title
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                // Title with animation
                 Text(
                     text = classItem.title,
-                    style = MaterialTheme.typography.titleLarge
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontWeight = FontWeight.Bold
+                    ),
+                    color = MaterialTheme.colorScheme.onSurface
                 )
 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
-                // Description
+                // Description with custom styling
                 Text(
                     text = classItem.description,
                     style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-                // Creator Info
+                // Divider with gradient
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(1.dp)
+                        .background(
+                            brush = Brush.horizontalGradient(
+                                colors = listOf(
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                                    MaterialTheme.colorScheme.tertiary.copy(alpha = 0.5f)
+                                )
+                            )
+                        )
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Enhanced Creator Info
                 Row(
-                    verticalAlignment = Alignment.CenterVertically
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    AsyncImage(
-                        model = UrlUtils.getFullImageUrl(classItem.creatorImageUrl),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(32.dp)
-                            .clip(CircleShape),
-                        error = rememberAsyncImagePainter(R.drawable.default_profile)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Column {
-                        Text(
-                            text = classItem.creatorName,
-                            style = MaterialTheme.typography.labelMedium
-                        )
-                        Text(
-                            text = "${classItem.sectionsCount} sections",
-                            style = MaterialTheme.typography.labelSmall
-                        )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .border(
+                                    width = 2.dp,
+                                    brush = Brush.sweepGradient(
+                                        listOf(
+                                            MaterialTheme.colorScheme.primary,
+                                            MaterialTheme.colorScheme.tertiary
+                                        )
+                                    ),
+                                    shape = CircleShape
+                                )
+                        ) {
+                            AsyncImage(
+                                model = UrlUtils.getFullImageUrl(classItem.creatorImageUrl),
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(CircleShape),
+                                error = rememberAsyncImagePainter(R.drawable.default_profile)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                text = classItem.creatorName,
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Instructor",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    // Sections indicator
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.secondaryContainer
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_sections),
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                            Text(
+                                text = "${classItem.sectionsCount} sections",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                        }
                     }
                 }
             }
@@ -444,40 +720,144 @@ fun CategoryChip(
     isSelected: Boolean,
     onSelected: () -> Unit
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.95f else 1f,
+        label = "scale"
+    )
+
+    val shimmerEffect = rememberShimmer(
+        shimmerBounds = ShimmerBounds.Window,
+        theme = shimmerTheme(isSelected)
+    )
+
     Surface(
-        modifier = Modifier.clickable(onClick = onSelected),
-        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier
+            .scale(scale)
+            .shimmer(shimmerEffect)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = rememberRipple(bounded = true),
+                onClick = onSelected
+            )
+            .graphicsLayer {
+                clip = true
+                shape = RoundedCornerShape(20.dp)
+            },
+        shape = RoundedCornerShape(20.dp),
         color = if (isSelected) {
             MaterialTheme.colorScheme.primaryContainer
         } else {
             MaterialTheme.colorScheme.surface
         },
         border = BorderStroke(
-            1.dp,
-            if (isSelected) {
-                MaterialTheme.colorScheme.primary
+            width = 1.dp,
+            brush = if (isSelected) {
+                Brush.horizontalGradient(
+                    colors = listOf(
+                        MaterialTheme.colorScheme.primary,
+                        MaterialTheme.colorScheme.tertiary,
+                        MaterialTheme.colorScheme.primary
+                    ),
+                    startX = 0f,
+                    endX = 300f
+                )
             } else {
-                MaterialTheme.colorScheme.outline
+                Brush.linearGradient(
+                    colors = listOf(
+                        MaterialTheme.colorScheme.outline,
+                        MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                    )
+                )
             }
-        )
+        ),
+        tonalElevation = if (isSelected) 4.dp else 0.dp,
+        shadowElevation = if (isSelected) 8.dp else 0.dp
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            modifier = Modifier
+                .padding(horizontal = 16.dp, vertical = 10.dp)
+                .background(
+                    brush = if (isSelected) {
+                        Brush.horizontalGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.primaryContainer,
+                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.8f),
+                                MaterialTheme.colorScheme.primaryContainer
+                            )
+                        )
+                    } else {
+                        Brush.linearGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.surface,
+                                MaterialTheme.colorScheme.surface
+                            )
+                        )
+                    }
+                ),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Icon(
-                painter = painterResource(id = iconResId),
-                contentDescription = null,
-                tint = if (isSelected) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.onSurface
-                }
-            )
+            // Animated icon container
+            Box(
+                modifier = Modifier
+                    .size(24.dp)
+                    .background(
+                        color = if (isSelected) {
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                        } else {
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f)
+                        },
+                        shape = CircleShape
+                    )
+                    .border(
+                        width = 1.dp,
+                        brush = if (isSelected) {
+                            Brush.sweepGradient(
+                                colors = listOf(
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.0f)
+                                )
+                            )
+                        } else {
+                            Brush.sweepGradient(
+                                colors = listOf(
+                                    MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+                                    MaterialTheme.colorScheme.outline.copy(alpha = 0.0f)
+                                )
+                            )
+                        },
+                        shape = CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    painter = painterResource(id = iconResId),
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = if (isSelected) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurface
+                    }
+                )
+            }
+
             Text(
                 text = category.replaceFirstChar { it.uppercase() },
-                style = MaterialTheme.typography.labelLarge,
+                style = MaterialTheme.typography.labelLarge.copy(
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                    letterSpacing = 0.5.sp,
+                    shadow = if (isSelected) {
+                        Shadow(
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                            offset = Offset(0f, 2f),
+                            blurRadius = 4f
+                        )
+                    } else null
+                ),
                 color = if (isSelected) {
                     MaterialTheme.colorScheme.primary
                 } else {
@@ -487,6 +867,34 @@ fun CategoryChip(
         }
     }
 }
+
+private fun shimmerTheme(isSelected: Boolean) = ShimmerTheme(
+    animationSpec = infiniteRepeatable(
+        animation = tween(
+            durationMillis = 1000,
+            delayMillis = 300,
+            easing = LinearEasing
+        ),
+        repeatMode = RepeatMode.Restart
+    ),
+    rotation = 25f,
+    shaderColors = if (isSelected) {
+        listOf(
+            Color.White.copy(0.0f),
+            Color.White.copy(0.2f),
+            Color.White.copy(0.0f)
+        )
+    } else {
+        listOf(
+            Color.White.copy(0.0f),
+            Color.White.copy(0.05f),
+            Color.White.copy(0.0f)
+        )
+    },
+    shaderColorStops = listOf(0.0f, 0.5f, 1.0f),
+    shimmerWidth = 400.dp,
+    blendMode = BlendMode.Hardlight
+)
 
 @Composable
 fun CategoryItem(
@@ -701,5 +1109,113 @@ fun ProfileContent(
                 Text("Logout")
             }
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun HomePagePreview() {
+    MaterialTheme {
+        HomePage(navController = rememberNavController())
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun ClassCardPreview() {
+    MaterialTheme {
+        ClassCard(
+            classItem = Class(
+                id = 1L,
+                title = "Introduction to Kotlin Programming",
+                description = "Learn the basics of Kotlin programming language with hands-on examples and projects.",
+                category = "Programming",
+                duration = "8 hours",
+                thumbnailUrl = "",
+                creatorName = "John Doe",
+                creatorImageUrl = "",
+                sectionsCount = 12
+            ),
+            onClick = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun CategoryChipPreview() {
+    MaterialTheme {
+        Row(
+            modifier = Modifier.padding(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            CategoryChip(
+                category = "programming",
+                iconResId = R.drawable.ic_code,
+                isSelected = true,
+                onSelected = {}
+            )
+            CategoryChip(
+                category = "design",
+                iconResId = R.drawable.ic_design,
+                isSelected = false,
+                onSelected = {}
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun CategoryItemPreview() {
+    MaterialTheme {
+        CategoryItem(
+            title = "Programming",
+            icon = R.drawable.ic_code,
+            backgroundColor = Color(0xFFE3F2FD),
+            onClick = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun ErrorViewPreview() {
+    MaterialTheme {
+        ErrorView(
+            error = "Something went wrong!",
+            onRetry = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun ProfileContentPreview() {
+    MaterialTheme {
+        ProfileContent(
+            onLogoutSuccess = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun CategoryRowPreview() {
+    MaterialTheme {
+        CategoryRow(
+            selectedCategory = "programming",
+            onCategorySelected = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, showSystemUi = true)
+@Composable
+fun CategoriesContentPreview() {
+    MaterialTheme {
+        CategoriesContent(
+            onCategoryClick = {}
+        )
     }
 }

@@ -2,6 +2,8 @@ package com.example.neighbornetbackend.model;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "feedbacks")
@@ -37,12 +39,27 @@ public class Feedback {
         updatedAt = LocalDateTime.now();
     }
 
+    @OneToMany(mappedBy = "feedback", cascade = CascadeType.ALL)
+    private List<FeedbackReaction> reactions = new ArrayList<>();
+
+    @Column(name = "helpful_count")
+    private Integer  helpfulCount = 0;
+
+    @Column(name = "report_count")
+    private Integer reportCount = 0;
+
+
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
     }
 
-    // Getters and setters
+    public Feedback() {
+        this.helpfulCount = 0;
+        this.reportCount = 0;
+        this.reactions = new ArrayList<>();
+    }
+
     public Long getId() {
         return id;
     }
@@ -97,5 +114,29 @@ public class Feedback {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public List<FeedbackReaction> getReactions() {
+        return reactions;
+    }
+
+    public void setReactions(List<FeedbackReaction> reactions) {
+        this.reactions = reactions;
+    }
+
+    public Integer getHelpfulCount() {
+        return helpfulCount;
+    }
+
+    public void setHelpfulCount(Integer helpfulCount) {
+        this.helpfulCount = helpfulCount;
+    }
+
+    public Integer getReportCount() {
+        return reportCount;
+    }
+
+    public void setReportCount(Integer reportCount) {
+        this.reportCount = reportCount;
     }
 }

@@ -113,6 +113,8 @@ const Dashboard = () => {
   const [editingPostId, setEditingPostId] = useState(null)
   const [editedContent, setEditedContent] = useState("")
   const [recentClasses, setRecentClasses] = useState([])
+  const [editingCommentId, setEditingCommentId] = useState(null);
+  const [editedCommentContent, setEditedCommentContent] = useState('');
   const [recentActivities, setRecentActivities] = useState([])
   const [stats, setStats] = useState({
     skillsShared: 0,
@@ -218,6 +220,43 @@ const Dashboard = () => {
 
     fetchPosts()
   }, [navigate])
+
+  const handleEditComment = async (postId, commentId, content) => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+      
+      await axios.put(
+        `http://localhost:8080/api/posts/${postId}/comments/${commentId}`,
+        { content: editedCommentContent },
+        { headers }
+      );
+  
+      // Reset states and refresh comments
+      setEditingCommentId(null);
+      setEditedCommentContent('');
+      setPosts(prev => prev.map(p => {
+        if (p.id === postId) {
+          return {
+            ...p,
+            comments: p.comments.map(c => {
+              if (c.id === commentId) {
+                return { ...c, content: editedCommentContent };
+              }
+              return c;
+            })
+          };
+        }
+        return p;
+      }));
+  
+    } catch (error) {
+      console.error('Error updating comment:', error);
+      if (error.response?.status === 401) {
+        navigate('/login');
+      }
+    }
+  };
 
   const handleDeletePost = async (postId) => {
     if (!window.confirm("Are you sure you want to delete this post?")) return
@@ -1033,29 +1072,65 @@ const Dashboard = () => {
                                           {formatDate(comment.createdAt)}
                                         </span>
                                       </div>
-                                      <p className="text-indigo-800 mt-1">{comment.content}</p>
+                                      {editingCommentId === comment.id ? (
+                                        <div className="mt-2">
+                                          <input
+                                            type="text"
+                                            value={editedCommentContent}
+                                            onChange={(e) => setEditedCommentContent(e.target.value)}
+                                            className="w-full px-3 py-2 border border-indigo-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                          />
+                                          <div className="flex justify-end gap-2 mt-2">
+                                            <button
+                                              onClick={() => {
+                                                setEditingCommentId(null);
+                                                setEditedCommentContent('');
+                                              }}
+                                              className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                                            >
+                                              Cancel
+                                            </button>
+                                            <button
+                                              onClick={() => handleEditComment(post.id, comment.id)}
+                                              className="px-3 py-1 text-sm text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+                                            >
+                                              Save
+                                            </button>
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <p className="text-indigo-800 mt-1">{comment.content}</p>
+                                      )}
                                     </div>
                                     <div className="flex items-center gap-4 mt-2 text-sm">
                                       <button
                                         onClick={() => handleLikeComment(post.id, comment.id)}
                                         className={`flex items-center gap-1 transition-colors
-                                                ${
-                                                  comment.isLiked
-                                                    ? "text-red-600"
-                                                    : "text-indigo-500 hover:text-red-600"
-                                                }`}
+                                          ${comment.isLiked ? "text-red-600" : "text-indigo-500 hover:text-red-600"}`}
                                       >
                                         <Heart className={`w-4 h-4 ${comment.isLiked ? "fill-current" : ""}`} />
                                         <span>{comment.likesCount}</span>
                                       </button>
-                                      {(user?.id === comment.author.id || user?.id === post.author.id) && (
-                                        <button
-                                          onClick={() => handleDeleteComment(post.id, comment.id)}
-                                          className="text-red-500 hover:text-red-600 transition-colors flex items-center gap-1"
-                                        >
-                                          <Trash2 className="w-3.5 h-3.5" />
-                                          Delete
-                                        </button>
+                                      {user?.id === comment.author.id && (
+                                        <>
+                                          <button
+                                            onClick={() => {
+                                              setEditingCommentId(comment.id);
+                                              setEditedCommentContent(comment.content);
+                                            }}
+                                            className="text-blue-500 hover:text-blue-600 transition-colors flex items-center gap-1"
+                                          >
+                                            <Edit className="w-3.5 h-3.5" />
+                                            Edit
+                                          </button>
+                                          <button
+                                            onClick={() => handleDeleteComment(post.id, comment.id)}
+                                            className="text-red-500 hover:text-red-600 transition-colors flex items-center gap-1"
+                                          >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                            Delete
+                                          </button>
+                                        </>
                                       )}
                                     </div>
                                   </div>

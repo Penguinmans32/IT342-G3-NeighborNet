@@ -181,4 +181,19 @@ public class PostController {
         PostDTO updatedPost = postService.updatePost(postId, request.getContent(), userPrincipal.getId());
         return ResponseEntity.ok(updatedPost);
     }
+
+    @PutMapping("/{postId}/comments/{commentId}")
+    public ResponseEntity<PostDTO> updateComment(
+            @PathVariable Long postId,
+            @PathVariable Long commentId,
+            @RequestBody CreateCommentRequest request,
+            @AuthenticationPrincipal UserPrincipal userPrincipal
+    ) {
+        if (userPrincipal == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        PostDTO post = postService.updateComment(postId, commentId, request.getContent(), userPrincipal.getId());
+        return ResponseEntity.ok(post);
+    }
 }
