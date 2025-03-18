@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="200dp"
+    android:height="200dp"
+    android:viewportWidth="200"
+    android:viewportHeight="200">
+
+    <!-- Robot Body -->
+    <path
+        android:fillColor="#FF4B4B"
+        android:pathData="M50,80 L150,80 Q160,80 160,90 L160,160 Q160,170 150,170 L50,170 Q40,170 40,160 L40,90 Q40,80 50,80 Z" />
+
+    <!-- Robot Head -->
+    <path
+        android:fillColor="#FF6B6B"
+        android:pathData="M70,30 L130,30 Q140,30 140,40 L140,70 L60,70 L60,40 Q60,30 70,30 Z" />
+
+    <!-- Robot Antenna -->
+    <path
+        android:strokeColor="#FF4B4B"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:pathData="M100,10 L100,30" />
+
+    <!-- Robot Eyes -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M75,45 L95,45 Q100,45 100,50 L95,55 L75,55 Q70,55 70,50 L75,45 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M105,45 L125,45 Q130,45 130,50 L125,55 L105,55 Q100,55 100,50 L105,45 Z" />
+
+    <!-- Robot Mouth (Sad) -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:pathData="M80,140 Q100,130 120,140" />
+
+    <!-- Robot Arms -->
+    <path
+        android:strokeColor="#FF4B4B"
+        android:strokeWidth="10"
+        android:strokeLineCap="round"
+        android:pathData="M30,100 L40,100 M160,100 L170,100" />
+
+    <!-- Error Circles -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3"
+        android:pathData="M85,110 A5,5 0 1,1 85,109.9"
+        android:strokeLineCap="round">
+        <animate
+            android:name="circleAnimation1"
+            android:duration="2000"
+            android:repeatCount="infinite"
+            android:valueFrom="0"
+            android:valueTo="360"
+            android:valueType="floatType"
+            android:propertyName="rotation"/>
+    </path>
+
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3"
+        android:pathData="M115,110 A5,5 0 1,1 115,109.9"
+        android:strokeLineCap="round">
+        <animate
+            android:name="circleAnimation2"
+            android:duration="2000"
+            android:repeatCount="infinite"
+            android:valueFrom="0"
+            android:valueTo="360"
+            android:valueType="floatType"
+            android:propertyName="rotation"/>
+    </path>
+
+    <!-- Static Effect Lines -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:pathData="M60,90 L70,100 M90,90 L100,100 M120,90 L130,100" />
+</vector>

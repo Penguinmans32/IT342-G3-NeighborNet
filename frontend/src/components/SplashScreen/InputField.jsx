@@ -1,4 +1,11 @@
-// components/InputField.jsx
+import { MdError } from 'react-icons/md';
+import { useState } from 'react';
+
+const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+};
+
 const InputField = ({ 
     label, 
     fieldName, 
@@ -11,6 +18,8 @@ const InputField = ({
     setFormData,
     touched
 }) => {
+    const [isValidEmail, setIsValidEmail] = useState(true);
+
     const ErrorMessage = ({ message }) => (
         <div className="absolute -bottom-6 left-0 flex items-center gap-1.5">
             <MdError className="text-lg text-red-500" />
@@ -20,7 +29,7 @@ const InputField = ({
 
     const inputClassName = `
         w-full px-4 ${isTextArea ? 'py-2' : 'py-3'} rounded-lg transition-all duration-200
-        ${touched && !formData[fieldName]?.trim() 
+        ${touched && !formData[fieldName]?.trim() || (type === 'email' && !isValidEmail && formData[fieldName])
             ? 'border-2 border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500' 
             : 'border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent'
         }
@@ -29,10 +38,11 @@ const InputField = ({
 
     const handleChange = (e) => {
         const value = e.target.value;
-        setFormData(prev => ({
-            ...prev,
-            [fieldName]: value
-        }));
+        setFormData(prev => ({ ...prev, [fieldName]: value }));
+
+        if (type === 'email') {
+            setIsValidEmail(value === '' || validateEmail(value));
+        }
     };
 
     return (
@@ -86,8 +96,18 @@ const InputField = ({
                     />
                 )}
                 <Icon className={`absolute left-3 ${isTextArea ? 'top-3' : 'top-1/2 transform -translate-y-1/2'} text-gray-400 text-xl`} />
+                
+                {/* Error Messages */}
                 {touched && !isOptional && !formData[fieldName]?.trim() && (
                     <ErrorMessage message={`${label} is required`} />
+                )}
+                {type === 'email' && formData[fieldName] && !isValidEmail && (
+                    <div className="absolute -bottom-6 left-0 flex items-center gap-1.5">
+                        <MdError className="text-lg text-red-500" />
+                        <span className="text-sm font-medium text-red-500">
+                            Please enter a valid email address
+                        </span>
+                    </div>
                 )}
             </div>
         </div>

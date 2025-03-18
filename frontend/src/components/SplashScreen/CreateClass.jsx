@@ -45,14 +45,19 @@ const validateBasicInfo = (formData) => {
       }
     }
   
-    if (formData.creatorEmail && !/^\S+@\S+\.\S+$/.test(formData.creatorEmail)) {
-      return { isValid: false, error: 'Please enter a valid email address' };
+    if (formData.creatorEmail && !validateEmail(formData.creatorEmail)) {
+        return { isValid: false, error: 'Please enter a valid email address' };
     }
   
     return {
       isValid: missingFields.length === 0,
       error: missingFields.length > 0 ? `Please fill in: ${missingFields.join(', ')}` : ''
     };
+  };
+
+  const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
   };
 
   const validateThumbnail = (formData) => {
@@ -254,10 +259,10 @@ const CreateClass = () => {
   };
 
   const handleNext = () => {
-    setTouched(prev => ({ ...prev, [getCurrentStepKey()]: true }));
-    if (validateStep(currentStep)) {
-      setCurrentStep(Math.min(steps.length, currentStep + 1));
+    const isValid = validateStep(currentStep);
+    if (isValid) {
       setError('');
+      setCurrentStep(prev => prev + 1);
     }
   };
 
@@ -449,6 +454,7 @@ const CreateClass = () => {
               setFormData={setFormData}
               touched={touched.basicInfo}
               error={error}
+              setError={setError}
              />
             )}
             {currentStep === 2 && (
@@ -554,8 +560,17 @@ const CreateClass = () => {
   );
 };
 
-export const BasicInformationStep = ({ formData, setFormData, touched, error }) => {
+export const BasicInformationStep = ({ formData, setFormData, touched, error, setError }) => {
     const [showCustomCategory, setShowCustomCategory] = useState(false);
+
+    const validateForm = () => {
+        if (!formData.creatorEmail || !validateEmail(formData.creatorEmail)) {
+            setError('Please enter a valid email address');
+            return false;
+        }
+        setError('');
+        return true;
+    };
 
     const categories = [
         { id: "programming", name: "Programming" },
@@ -749,25 +764,42 @@ export const BasicInformationStep = ({ formData, setFormData, touched, error }) 
 
 
 export const ThumbnailStep = ({ formData, setFormData, touched, error }) => {
+  const MAX_CHARS = 50;
+  const currentChars = formData.thumbnailDescription?.length || 0;
+
   const getInputClassName = () => `
-      w-full px-4 py-3 rounded-lg transition-all duration-200
-      ${touched && !formData.thumbnailDescription?.trim() 
-          ? 'border-2 border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500' 
-          : 'border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-      }
-      pl-10
-  `;
+  w-full px-4 py-3 rounded-lg transition-all duration-200
+  ${touched && !formData.thumbnailDescription?.trim() 
+      ? 'border-2 border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500' 
+      : 'border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+  }
+  pl-10
+`;
+
+  const handleDescriptionChange = (e) => {
+    const text = e.target.value;
+    if (text.length <= MAX_CHARS) {
+      setFormData({ ...formData, thumbnailDescription: text });
+    }
+  };
+
+  const getCharCountColor = () => {
+    if (currentChars === 0) return 'text-gray-400';
+    if (currentChars > MAX_CHARS * 0.8) return 'text-orange-500';
+    if (currentChars === MAX_CHARS) return 'text-red-500';
+    return 'text-green-500';
+  };
 
   const ErrorMessage = ({ message }) => (
-      <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex items-center gap-1.5 mt-2"
-      >
-          <MdError className="text-lg text-red-500" />
-          <span className="text-sm font-medium text-red-500">{message}</span>
-      </motion.div>
-  );
+    <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex items-center gap-1.5 mt-2"
+    >
+        <MdError className="text-lg text-red-500" />
+        <span className="text-sm font-medium text-red-500">{message}</span>
+    </motion.div>
+);
 
   return (
       <motion.div
@@ -857,12 +889,16 @@ export const ThumbnailStep = ({ formData, setFormData, touched, error }) => {
                       <div className="relative space-y-2">
                           <textarea
                               value={formData.thumbnailDescription || ''}
-                              onChange={(e) => setFormData({ ...formData, thumbnailDescription: e.target.value })}
+                              onChange={handleDescriptionChange}
                               placeholder="Add a description for your thumbnail..."
                               className={getInputClassName()}
                               rows="4"
+                              maxLength={MAX_CHARS}
                           />
                           <MdDescription className="absolute left-3 top-3 text-gray-400 text-xl" />
+                          <div className={`absolute bottom-2 right-2 text-xs font-medium ${getCharCountColor()}`}>
+                            {currentChars}/{MAX_CHARS}
+                          </div>
                           {touched && !formData.thumbnailDescription?.trim() && (
                               <ErrorMessage message="Please add a description for your thumbnail" />
                           )}

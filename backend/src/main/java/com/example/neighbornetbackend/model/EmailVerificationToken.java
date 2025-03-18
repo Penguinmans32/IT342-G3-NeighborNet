@@ -2,6 +2,8 @@ package com.example.neighbornetbackend.model;
 
 
 import jakarta.persistence.*;
+import org.springframework.security.oauth2.core.OAuth2AccessToken;
+
 import java.time.Instant;
 
 @Entity
@@ -14,7 +16,7 @@ public class EmailVerificationToken {
     @Column(nullable = false, unique = true)
     private String token;
 
-    @OneToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
@@ -24,7 +26,16 @@ public class EmailVerificationToken {
 
     private boolean verified = false;
 
+    @Enumerated(EnumType.STRING)
+    private TokenType tokenType = TokenType.EMAIL_VERIFICATION;
+
     private static final long EXPIRATION_TIME = 24 * 60 * 60 * 1000;
+    private static final long OTP_EXPIRATION_TIME = 10 * 60 * 1000;
+
+    public enum TokenType {
+        EMAIL_VERIFICATION,
+        PASSWORD_RESET
+    }
 
     public EmailVerificationToken() {
         this.expiryDate = Instant.now().plusMillis(EXPIRATION_TIME);
@@ -34,6 +45,16 @@ public class EmailVerificationToken {
         this.user = user;
         this.token = token;
         this.expiryDate = Instant.now().plusMillis(EXPIRATION_TIME);
+    }
+
+
+    public EmailVerificationToken(User user, String token, TokenType tokenType) {
+        this.user = user;
+        this.token = token;
+        this.tokenType = tokenType;
+        this.expiryDate = Instant.now().plusMillis(
+                tokenType == TokenType.PASSWORD_RESET ? OTP_EXPIRATION_TIME : EXPIRATION_TIME
+        );
     }
 
     public Long getId() {
@@ -86,5 +107,19 @@ public class EmailVerificationToken {
 
     public void setOtp(String otp) {
         this.otp = otp;
+    }
+
+    public TokenType getTokenType() {
+        return tokenType;
+    }
+
+    public void setTokenType(TokenType tokenType) {
+        this.tokenType = tokenType;
+    }
+
+    public void refreshOtpExpiry() {
+        if (this.tokenType == TokenType.PASSWORD_RESET) {
+            this.expiryDate = Instant.now().plusMillis(OTP_EXPIRATION_TIME);
+        }
     }
 }

@@ -109,6 +109,7 @@ public class SecurityConfig {
                         .requestMatchers("/messages/**").permitAll()
                         .requestMatchers("/conversations/**").permitAll()
                         .requestMatchers("/api/dashboard/stats").permitAll()
+                        .requestMatchers("/api/auth/password/**").permitAll()
                         .requestMatchers("/chat/**").permitAll()
                         .requestMatchers("/user/**").permitAll()
                         .requestMatchers("/app/**").permitAll()
