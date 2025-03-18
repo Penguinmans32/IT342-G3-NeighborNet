@@ -2,15 +2,23 @@ package com.example.neighbornet
 
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.updateTransition
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -41,6 +49,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -59,6 +68,7 @@ import com.example.neighbornet.network.Class
 import com.example.neighbornet.network.CategoryData
 import com.example.neighbornet.network.CategoryInfo
 import com.example.neighbornet.utils.UrlUtils
+import kotlinx.coroutines.delay
 
 
 @Composable
@@ -177,26 +187,6 @@ fun HomePage(
                                             }
                                         )
                                     }
-                                },
-                                label = {
-                                    Text(
-                                        text = label,
-                                        style = MaterialTheme.typography.labelMedium.copy(
-                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                            shadow = if (isSelected) {
-                                                Shadow(
-                                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
-                                                    offset = Offset(0f, 2f),
-                                                    blurRadius = 4f
-                                                )
-                                            } else null
-                                        ),
-                                        color = if (isSelected) {
-                                            MaterialTheme.colorScheme.primary
-                                        } else {
-                                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                                        }
-                                    )
                                 }
                             )
                         }
@@ -691,25 +681,152 @@ fun LoadingView() {
 @Composable
 fun ErrorView(
     error: String,
-    onRetry: () -> Unit
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(
-            text = error,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.error
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = onRetry) {
-            Text("Retry")
+    var showRetryButton by remember { mutableStateOf(false) }
+    var bounceState by remember { mutableStateOf(false) }
+
+    // Animation for the error icon
+    val bounceAnimation = updateTransition(bounceState, label = "bounce")
+    val scale by bounceAnimation.animateFloat(
+        transitionSpec = {
+            spring(
+                dampingRatio = Spring.DampingRatioMediumBouncy,
+                stiffness = Spring.StiffnessLow
+            )
+        },
+        label = "scale"
+    ) { state ->
+        if (state) 1.2f else 1f
+    }
+
+    // Launch bounce animation
+    LaunchedEffect(Unit) {
+        delay(300)
+        showRetryButton = true
+        while (true) {
+            delay(2000)
+            bounceState = true
+            delay(200)
+            bounceState = false
         }
     }
+
+    Box(
+        modifier = modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier
+                .padding(24.dp)
+                .animateContentSize()
+        ) {
+            // Error Icon with bounce animation
+            Image(
+                painter = painterResource(id = R.drawable.ic_error_robot),
+                contentDescription = "Error Illustration",
+                modifier = Modifier
+                    .size(180.dp)
+                    .scale(scale)
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Error Message with typing animation
+            Text(
+                text = "Oops!",
+                style = MaterialTheme.typography.headlineMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.error
+                ),
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = error,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(horizontal = 32.dp)
+            )
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // Animated Retry Button
+            AnimatedVisibility(
+                visible = showRetryButton,
+                enter = fadeIn() + expandVertically(),
+                modifier = Modifier.padding(16.dp)
+            ) {
+                Button(
+                    onClick = onRetry,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    ),
+                    modifier = Modifier
+                        .height(48.dp)
+                        .animateContentSize()
+                ) {
+                    Row(
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_refresh),
+                            contentDescription = "Retry",
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            "Let's Try Again",
+                            style = MaterialTheme.typography.bodyLarge.copy(
+                                fontWeight = FontWeight.Medium
+                            )
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ShimmerEffect() {
+    val transition = rememberInfiniteTransition()
+    val translateAnim by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1000f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(
+                durationMillis = 1200,
+                easing = FastOutSlowInEasing
+            ),
+            repeatMode = RepeatMode.Restart
+        )
+    )
+
+    val shimmerColorShades = listOf(
+        Color.LightGray.copy(0.9f),
+        Color.LightGray.copy(0.2f),
+        Color.LightGray.copy(0.9f)
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                brush = Brush.linearGradient(
+                    colors = shimmerColorShades,
+                    start = Offset(translateAnim - 1000f, translateAnim - 1000f),
+                    end = Offset(translateAnim, translateAnim)
+                )
+            )
+    )
 }
 
 

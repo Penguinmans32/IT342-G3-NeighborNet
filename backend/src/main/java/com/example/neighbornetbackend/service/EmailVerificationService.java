@@ -91,4 +91,12 @@ public class EmailVerificationService {
 
         logger.info("Email verified for user: {}", savedUser.getEmail());
     }
+
+    public void invalidateOtp(String email) {
+        tokenRepository.findLatestByUserEmail(email)
+                .ifPresent(token -> {
+                    token.setVerified(true);
+                    tokenRepository.save(token);
+                });
+    }
 }

@@ -1,10 +1,27 @@
 package com.example.neighbornet
 
 import android.app.Activity
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,8 +41,12 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.ImeAction
 import kotlinx.coroutines.launch
+import androidx.compose.animation.Crossfade
 
 @Composable
 fun LoginScreen(
@@ -38,11 +59,22 @@ fun LoginScreen(
 ) {
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+
+    var isPasswordVisible by remember { mutableStateOf(false) }
+    var isUsernameFocused by remember { mutableStateOf(false) }
+    var isPasswordFocused by remember { mutableStateOf(false) }
+
+
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val authState by authViewModel.authState.collectAsState()
     val context = LocalContext.current
     val activity = remember { context as Activity }
+
+    val avatarScale by animateFloatAsState(
+        targetValue = if (isUsernameFocused || isPasswordFocused) 0.95f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)
+    )
 
     // Handle errors
     LaunchedEffect(authState.error) {
@@ -102,12 +134,29 @@ fun LoginScreen(
                 value = username,
                 onValueChange = { username = it },
                 label = { Text("Username") },
-                modifier = Modifier.fillMaxWidth(),
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Outlined.Person,
+                        contentDescription = null,
+                        tint = if (isUsernameFocused)
+                            MaterialTheme.colorScheme.primary
+                        else
+                            MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                    )
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .onFocusChanged { isUsernameFocused = it.isFocused },
                 colors = OutlinedTextFieldDefaults.colors(
                     unfocusedBorderColor = Color(0xFFE0E0E0),
-                    focusedBorderColor = MaterialTheme.colorScheme.primary
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    focusedLabelColor = MaterialTheme.colorScheme.primary
                 ),
-                singleLine = true
+                shape = RoundedCornerShape(12.dp),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    imeAction = ImeAction.Next
+                )
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -117,13 +166,48 @@ fun LoginScreen(
                 value = password,
                 onValueChange = { password = it },
                 label = { Text("Password") },
-                modifier = Modifier.fillMaxWidth(),
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Outlined.Lock,
+                        contentDescription = null,
+                        tint = if (isPasswordFocused)
+                            MaterialTheme.colorScheme.primary
+                        else
+                            MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                    )
+                },
+                trailingIcon = {
+                    IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
+                        Icon(
+                            imageVector = if (isPasswordVisible)
+                                Icons.Filled.Visibility
+                            else
+                                Icons.Filled.VisibilityOff,
+                            contentDescription = if (isPasswordVisible)
+                                "Hide password"
+                            else
+                                "Show password"
+                        )
+                    }
+                },
+                visualTransformation = if (isPasswordVisible)
+                    VisualTransformation.None
+                else
+                    PasswordVisualTransformation(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .onFocusChanged { isPasswordFocused = it.isFocused },
                 colors = OutlinedTextFieldDefaults.colors(
                     unfocusedBorderColor = Color(0xFFE0E0E0),
-                    focusedBorderColor = MaterialTheme.colorScheme.primary
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    focusedLabelColor = MaterialTheme.colorScheme.primary
                 ),
-                visualTransformation = PasswordVisualTransformation(),
-                singleLine = true
+                shape = RoundedCornerShape(12.dp),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Password,
+                    imeAction = ImeAction.Done
+                )
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -140,15 +224,35 @@ fun LoginScreen(
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(50.dp),
+                        .height(56.dp)
+                        .shadow(
+                            elevation = 8.dp,
+                            shape = RoundedCornerShape(16.dp)
+                        ),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF2196F3)
+                        containerColor = MaterialTheme.colorScheme.primary
                     ),
-                    shape = RoundedCornerShape(8.dp)
+                    shape = RoundedCornerShape(16.dp),
+                    enabled = !authState.isLoading
                 ) {
-                    Text("Log In", fontSize = 16.sp)
+                    Crossfade(
+                        targetState = authState.isLoading,
+                        label = "loading button content"
+                    ) { isLoading ->
+                        if (isLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                color = Color.White
+                            )
+                        } else {
+                            Text(
+                                "Log In",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
                 }
-            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -159,7 +263,7 @@ fun LoginScreen(
                     .fillMaxWidth()
                     .height(50.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF4CAF50) // Green color to distinguish it
+                    containerColor = Color(0xFF4CAF50)
                 ),
                 shape = RoundedCornerShape(8.dp)
             ) {
@@ -169,64 +273,35 @@ fun LoginScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             // Or continue with text
-            Text(
-                text = "Or continue with",
-                fontSize = 14.sp,
-                color = Color(0xFF666666)
-            )
+                Text(
+                    text = "Or continue with",
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                )
 
             Spacer(modifier = Modifier.height(16.dp))
 
             // Social login buttons
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                // Google Login Button
-                OutlinedButton(
-                    onClick = { authViewModel.signInWithGoogle(activity) },
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(45.dp),
-                    shape = RoundedCornerShape(8.dp)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.google_icon),
-                        contentDescription = "Google",
-                        modifier = Modifier.size(24.dp)
+                    SocialLoginButton(
+                        onClick = { authViewModel.signInWithGoogle(activity) },
+                        icon = R.drawable.google_icon,
+                        contentDescription = "Google"
+                    )
+                    SocialLoginButton(
+                        onClick = { authViewModel.signInWithGitHub(activity) },
+                        icon = R.drawable.github_icon,
+                        contentDescription = "GitHub"
+                    )
+                    SocialLoginButton(
+                        onClick = { authViewModel.signInWithMicrosoft(activity) },
+                        icon = R.drawable.microsoft_icon,
+                        contentDescription = "Microsoft"
                     )
                 }
-
-                // GitHub Login Button
-                OutlinedButton(
-                    onClick = { authViewModel.signInWithGitHub(activity) },
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(45.dp),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.github_icon),
-                        contentDescription = "GitHub",
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-
-                // Microsoft Login Button
-                OutlinedButton(
-                    onClick = { authViewModel.signInWithMicrosoft(activity) },
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(45.dp),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.microsoft_icon),
-                        contentDescription = "Microsoft",
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -240,7 +315,7 @@ fun LoginScreen(
                 Text(
                     "Forgot Password?",
                     fontSize = 14.sp,
-                    fontWeight = FontWeight.Normal
+                    color = MaterialTheme.colorScheme.primary
                 )
             }
 
@@ -254,9 +329,40 @@ fun LoginScreen(
                 Text(
                     "Don't have an account? Sign up",
                     fontSize = 14.sp,
-                    fontWeight = FontWeight.Normal
+                    fontWeight = FontWeight.Normal,
+                    color = MaterialTheme.colorScheme.primary
                 )
             }
         }
     }
-} 
+
+    }
+
+}
+
+
+@Composable
+private fun RowScope.SocialLoginButton(
+    onClick: () -> Unit,
+    icon: Int,
+    contentDescription: String
+) {
+    OutlinedButton(
+        onClick = onClick,
+        modifier = Modifier
+            .weight(1f)
+            .height(45.dp)
+            .shadow(4.dp, RoundedCornerShape(8.dp)),
+        shape = RoundedCornerShape(8.dp),
+        colors = ButtonDefaults.outlinedButtonColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    ) {
+        Image(
+            painter = painterResource(id = icon),
+            contentDescription = contentDescription,
+            modifier = Modifier.size(24.dp)
+        )
+    }
+}
+

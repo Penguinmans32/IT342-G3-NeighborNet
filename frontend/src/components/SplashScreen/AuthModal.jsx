@@ -230,7 +230,9 @@
               title: 'Welcome back!',
               message: 'You have successfully logged in'
           });
-          navigate('/community');
+          setTimeout(() => {
+            navigate('/community');
+          }, 500);
       } catch (err) {
           console.error('Login error:', err);
           const errorMessage = err.response?.data?.message || err.message || 'An error occurred during login';
@@ -604,6 +606,20 @@
                     Sign Up
                   </button>
                 </p>
+
+                <p className="text-center text-gray-600">
+                  Forgot Password?{' '}
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      closeSignInModal(); // Close the modal first
+                      navigate('/forgot-password'); // Then navigate
+                    }}
+                    className="text-blue-500 hover:underline font-medium"
+                  >
+                    Click here
+                  </button>
+                </p>
               </form>
               </div>
             </div>
@@ -818,10 +834,15 @@
                   </div>
 
                   <p className="text-center text-sm text-gray-500">
-                  By signing up, you agree to our{' '}
-                  <a href="#" className="text-blue-500 hover:underline">Terms</a>
-                  {' • '}
-                  <a href="#" className="text-blue-500 hover:underline">Privacy Policy</a>
+                    By signing up, you agree to our{' '}
+                    <a href="#" className="text-blue-500 hover:underline">Terms</a>
+                    {' • '}
+                    <button 
+                      onClick={() => navigate('/privacy')}
+                      className="text-blue-500 hover:underline"
+                    >
+                      Privacy Policy
+                    </button>
                   </p>
 
                   <p className="text-center text-gray-600">

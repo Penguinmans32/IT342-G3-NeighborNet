@@ -3,11 +3,12 @@
 import { motion, AnimatePresence } from "framer-motion"
 import { useAuth } from "../backendApi/AuthContext"
 import { useNavigate, useLocation } from "react-router-dom"
-import { useEffect, useState, useRef } from "react"
+import { useEffect, useState, useRef, useCallback, useMemo } from "react"
 import { useNotification } from "../backendApi/NotificationContext"
 import Footer from "./SplashScreen/Footer"
 import "../styles/SignIn.css"
 import "../styles/Categories.css"
+import ClassCard from "./ClassCard"
 import {
   MdMenu,
   MdAccountCircle,
@@ -59,6 +60,7 @@ const Homepage = () => {
   const [availableCategories, setAvailableCategories] = useState([])
   const [categoryCounts, setCategoryCounts] = useState({})
   const [totalClassCount, setTotalClassCount] = useState(0)
+  const [savedClassesSet, setSavedClassesSet] = useState(new Set());
 
   const [searchQuery, setSearchQuery] = useState("")
   const [hasSearched, setHasSearched] = useState(false)
@@ -76,7 +78,6 @@ const Homepage = () => {
   const [isNotificationsOpen, setNotificationsOpen] = useState(false)
   const [isDarkMode, setIsDarkMode] = useState(false)
   const [savedClasses, setSavedClasses] = useState([])
-  const [hoveredClassId, setHoveredClassId] = useState(null)
 
   // Refs for click outside handling
   const profileMenuRef = useRef(null)
@@ -335,26 +336,6 @@ const Homepage = () => {
   }, [user])
 
   useEffect(() => {
-    const fetchUserClasses = async () => {
-      try {
-        const response = await axios.get("http://localhost:8080/api/classes/user", {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        })
-        console.log("User Classes Data:", response.data)
-        setUserClasses(response.data)
-      } catch (error) {
-        console.error("Error fetching user classes:", error)
-      }
-    }
-
-    if (user) {
-      fetchUserClasses()
-    }
-  }, [user])
-
-  useEffect(() => {
     if (!user) {
       navigate("/")
     }
@@ -384,9 +365,30 @@ const Homepage = () => {
     return fullUrl
   }
 
-  const toggleSaveClass = (classId) => {
-    setSavedClasses((prev) => (prev.includes(classId) ? prev.filter((id) => id !== classId) : [...prev, classId]))
-  }
+    const toggleSaveClass = useCallback((classId) => {
+      setSavedClassesSet(prev => {
+          const newSet = new Set(prev);
+          if (newSet.has(classId)) {
+              newSet.delete(classId);
+          } else {
+              newSet.add(classId);
+          }
+          return newSet;
+      });
+  }, []);
+
+  const filteredClasses = useMemo(() => {
+    return classes.filter((classItem) => {
+        const categoryMatch =
+            selectedCategory === "all" ? true : 
+            classItem.category?.toLowerCase() === selectedCategory;
+        const userClassMatch = showOnlyUserClasses
+            ? userClasses.some((userClass) => userClass.id === classItem.id)
+            : true;
+        return categoryMatch && userClassMatch;
+    });
+}, [classes, selectedCategory, showOnlyUserClasses, userClasses]);
+
 
   const toggleDarkMode = () => {
     setIsDarkMode(!isDarkMode)
@@ -782,244 +784,51 @@ const Homepage = () => {
               </div>
 
               {/* Classes Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {loading ? (
-                  [...Array(6)].map((_, i) => (
-                    <div key={i} className="animate-pulse">
-                      <div className={`aspect-video rounded-xl ${isDarkMode ? "bg-gray-800" : "bg-gray-200"} mb-4`} />
-                      <div className={`h-4 ${isDarkMode ? "bg-gray-800" : "bg-gray-200"} rounded w-3/4 mb-2`} />
-                      <div className={`h-4 ${isDarkMode ? "bg-gray-800" : "bg-gray-200"} rounded w-1/2`} />
-                    </div>
-                  ))
-                ) : hasSearched ? (
-                  displayedResults.length > 0 ? (
-                    displayedResults.map((classItem) => (
-                      <motion.div
-                        key={classItem.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        whileHover={{ y: -5 }}
-                        onHoverStart={() => setHoveredClassId(classItem.id)}
-                        onHoverEnd={() => setHoveredClassId(null)}
-                        className={`group relative ${isDarkMode ? "bg-gray-800" : "bg-white"} rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300`}
-                      >
-                        <div className="aspect-video relative overflow-hidden">
-                          <img
-                            src={getFullThumbnailUrl(classItem.thumbnailUrl) || "/placeholder.svg"}
-                            alt={classItem.title}
-                            className="object-cover w-full h-full group-hover:scale-110 transition-transform duration-300"
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-
-                          {/* Save button */}
-                          <motion.button
-                            initial={{ opacity: 0, scale: 0.8 }}
-                            animate={{
-                              opacity: hoveredClassId === classItem.id ? 1 : 0,
-                              scale: hoveredClassId === classItem.id ? 1 : 0.8,
-                            }}
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              toggleSaveClass(classItem.id)
-                            }}
-                            className="absolute top-3 right-3 w-9 h-9 rounded-full bg-white/80 flex items-center justify-center shadow-md z-10"
-                          >
-                            {savedClasses.includes(classItem.id) ? (
-                              <MdBookmark className="text-blue-600 text-xl" />
-                            ) : (
-                              <MdBookmarkBorder className="text-gray-700 text-xl" />
-                            )}
-                          </motion.button>
-                        </div>
-
-                        <div className="p-6">
-                          <div className="flex items-center gap-2 mb-3">
-                            <span
-                              className={`px-3 py-1 ${
-                                isDarkMode ? "bg-indigo-900/50 text-indigo-300" : "bg-blue-50 text-blue-600"
-                              } text-xs font-medium rounded-full`}
-                            >
-                              {classItem.category || "Uncategorized"}
-                            </span>
-                            <span className={`text-sm ${isDarkMode ? "text-gray-400" : "text-gray-400"}`}>
-                              {classItem.duration || "1h 30m"}
-                            </span>
-                          </div>
-                          <h3
-                            className={`text-lg font-semibold ${isDarkMode ? "text-white" : "text-gray-900"} mb-2 line-clamp-1`}
-                          >
-                            {classItem.title}
-                          </h3>
-                          <p className={`${isDarkMode ? "text-gray-300" : "text-gray-500"} text-sm mb-4 line-clamp-2`}>
-                            {classItem.description}
-                          </p>
-
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <img
-                                src={
-                                  classItem.creator?.imageUrl
-                                    ? getFullProfileImageUrl(classItem.creator.imageUrl)
-                                    : "/images/defaultProfile.png"
-                                }
-                                alt={classItem.creator?.username || "Creator"}
-                                className="w-8 h-8 rounded-full object-cover"
-                              />
-                              <div>
-                                <h4 className={`text-sm font-medium ${isDarkMode ? "text-white" : "text-gray-900"}`}>
-                                  {classItem.creatorName}
-                                </h4>
-                                <p className={`text-xs ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}>
-                                  {classItem.sections?.length || 0} sections
-                                </p>
-                              </div>
-                            </div>
-
-                            <div className="flex items-center gap-1">
-                              <MdStar className="text-yellow-400" />
-                              <span className={`text-sm font-medium ${isDarkMode ? "text-white" : "text-gray-900"}`}>
-                                {classItem.averageRating?.toFixed(1) || "N/A"}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                          <div className="space-x-4">
-                            <motion.button
-                              whileHover={{ scale: 1.1 }}
-                              className="px-6 py-2 bg-white text-blue-600 rounded-full font-medium"
-                              onClick={() => navigate(`/class/${classItem.id}`)}
-                            >
-                              View Class
-                            </motion.button>
-                          </div>
-                        </div>
-                      </motion.div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {loading ? (
+                    [...Array(6)].map((_, i) => (
+                      <div key={i} className="animate-pulse">
+                        <div className={`aspect-video rounded-xl ${isDarkMode ? "bg-gray-800" : "bg-gray-200"} mb-4`} />
+                        <div className={`h-4 ${isDarkMode ? "bg-gray-800" : "bg-gray-200"} rounded w-3/4 mb-2`} />
+                        <div className={`h-4 ${isDarkMode ? "bg-gray-800" : "bg-gray-200"} rounded w-1/2`} />
+                      </div>
                     ))
+                  ) : hasSearched ? (
+                    displayedResults.length > 0 ? (
+                      displayedResults.map((classItem) => (
+                        <ClassCard 
+                          key={classItem.id} 
+                          classItem={classItem} 
+                          isDarkMode={isDarkMode}
+                          savedClasses={Array.from(savedClassesSet)}
+                          toggleSaveClass={toggleSaveClass}
+                          navigate={navigate}
+                          getFullThumbnailUrl={getFullThumbnailUrl}
+                          getFullProfileImageUrl={getFullProfileImageUrl}
+                        />
+                      ))
+                    ) : (
+                      <div className={`col-span-3 py-12 text-center ${isDarkMode ? "text-gray-300" : "text-gray-500"}`}>
+                        <MdSearch className={`text-5xl mx-auto mb-4 ${isDarkMode ? "text-gray-600" : "text-gray-300"}`} />
+                        <h3 className="text-xl font-medium mb-2">No results found</h3>
+                        <p>We couldn't find any classes matching "{searchQuery}"</p>
+                      </div>
+                    )
                   ) : (
-                    <div className={`col-span-3 py-12 text-center ${isDarkMode ? "text-gray-300" : "text-gray-500"}`}>
-                      <MdSearch className={`text-5xl mx-auto mb-4 ${isDarkMode ? "text-gray-600" : "text-gray-300"}`} />
-                      <h3 className="text-xl font-medium mb-2">No results found</h3>
-                      <p>We couldn't find any classes matching "{searchQuery}"</p>
-                    </div>
-                  )
-                ) : (
-                  classes
-                    .filter((classItem) => {
-                      const categoryMatch =
-                        selectedCategory === "all" ? true : classItem.category?.toLowerCase() === selectedCategory
-                      const userClassMatch = showOnlyUserClasses
-                        ? userClasses.some((userClass) => userClass.id === classItem.id)
-                        : true
-                      return categoryMatch && userClassMatch
-                    })
-                    .map((classItem) => (
-                      <motion.div
-                        key={classItem.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        whileHover={{ y: -5 }}
-                        onHoverStart={() => setHoveredClassId(classItem.id)}
-                        onHoverEnd={() => setHoveredClassId(null)}
-                        className={`group relative ${isDarkMode ? "bg-gray-800" : "bg-white"} rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300`}
-                      >
-                        <div className="aspect-video relative overflow-hidden">
-                          <img
-                            src={getFullThumbnailUrl(classItem.thumbnailUrl) || "/placeholder.svg"}
-                            alt={classItem.title}
-                            className="object-cover w-full h-full group-hover:scale-110 transition-transform duration-300"
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-
-                          {/* Save button */}
-                          <motion.button
-                            initial={{ opacity: 0, scale: 0.8 }}
-                            animate={{
-                              opacity: hoveredClassId === classItem.id ? 1 : 0,
-                              scale: hoveredClassId === classItem.id ? 1 : 0.8,
-                            }}
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              toggleSaveClass(classItem.id)
-                            }}
-                            className="absolute top-3 right-3 w-9 h-9 rounded-full bg-white/80 flex items-center justify-center shadow-md z-10"
-                          >
-                            {savedClasses.includes(classItem.id) ? (
-                              <MdBookmark className="text-blue-600 text-xl" />
-                            ) : (
-                              <MdBookmarkBorder className="text-gray-700 text-xl" />
-                            )}
-                          </motion.button>
-                        </div>
-
-                        <div className="p-6">
-                          <div className="flex items-center gap-2 mb-3">
-                            <span
-                              className={`px-3 py-1 ${
-                                isDarkMode ? "bg-indigo-900/50 text-indigo-300" : "bg-blue-50 text-blue-600"
-                              } text-xs font-medium rounded-full`}
-                            >
-                              {classItem.category || "Uncategorized"}
-                            </span>
-                            <span className={`text-sm ${isDarkMode ? "text-gray-400" : "text-gray-400"}`}>
-                              {classItem.duration || "1h 30m"}
-                            </span>
-                          </div>
-                          <h3
-                            className={`text-lg font-semibold ${isDarkMode ? "text-white" : "text-gray-900"} mb-2 line-clamp-1`}
-                          >
-                            {classItem.title}
-                          </h3>
-                          <p className={`${isDarkMode ? "text-gray-300" : "text-gray-500"} text-sm mb-4 line-clamp-2`}>
-                            {classItem.description}
-                          </p>
-
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <img
-                                src={
-                                  classItem.creator?.imageUrl
-                                    ? getFullProfileImageUrl(classItem.creator.imageUrl)
-                                    : "/images/defaultProfile.png"
-                                }
-                                alt={classItem.creator?.username || "Creator"}
-                                className="w-8 h-8 rounded-full object-cover"
-                              />
-                              <div>
-                                <h4 className={`text-sm font-medium ${isDarkMode ? "text-white" : "text-gray-900"}`}>
-                                  {classItem.creatorName}
-                                </h4>
-                                <p className={`text-xs ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}>
-                                  {classItem.sections?.length || 0} sections
-                                </p>
-                              </div>
-                            </div>
-
-                            <div className="flex items-center gap-1">
-                              <MdStar className="text-yellow-400" />
-                              <span className={`text-sm font-medium ${isDarkMode ? "text-white" : "text-gray-900"}`}>
-                                {classItem.averageRating?.toFixed(1) || "N/A"}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                          <div className="space-x-4">
-                            <motion.button
-                              whileHover={{ scale: 1.1 }}
-                              className="px-6 py-2 bg-white text-blue-600 rounded-full font-medium"
-                              onClick={() => navigate(`/class/${classItem.id}`)}
-                            >
-                              View Class
-                            </motion.button>
-                          </div>
-                        </div>
-                      </motion.div>
+                    filteredClasses.map((classItem) => (
+                      <ClassCard 
+                          key={classItem.id} 
+                          classItem={classItem} 
+                          isDarkMode={isDarkMode}
+                          savedClasses={Array.from(savedClassesSet)}
+                          toggleSaveClass={toggleSaveClass}
+                          navigate={navigate}
+                          getFullThumbnailUrl={getFullThumbnailUrl}
+                          getFullProfileImageUrl={getFullProfileImageUrl}
+                      />
                     ))
-                )}
-              </div>
+                  )}
+                </div>
             </section>
 
             {/* Popular Categories Section */}

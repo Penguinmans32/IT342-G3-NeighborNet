@@ -32,6 +32,8 @@ import PrivacyPolicy from "./components/PrivacyPolicy";
 import Documentation from "./components/Documentation";
 import Blog from "./components/Blog";
 import SearchResults from "./components/SearchResults";
+import ForgotPassword from "./components/ForgotPassword";
+
 
 function App() {
   return (
@@ -60,6 +62,7 @@ function App() {
             <Route path="/docs" element={<Documentation />} />
             <Route path="/blog" element={<Blog />} />
             <Route path="/search" element={<SearchResults />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/oauth2/redirect" element={<OAuth2RedirectHandler />} />
             <Route 
               path="/homepage" 
