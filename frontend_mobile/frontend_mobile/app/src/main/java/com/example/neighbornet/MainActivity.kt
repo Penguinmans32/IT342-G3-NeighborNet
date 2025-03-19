@@ -130,7 +130,8 @@ class MainActivity : ComponentActivity() {
                                 onGoogleSignUp = { /* TODO */ },
                                 onGithubSignUp = { /* TODO */ },
                                 onMicrosoftSignUp = { /* TODO */ },
-                                onNavigateToLogin = { currentScreen = "login" }
+                                onNavigateToLogin = { currentScreen = "login" },
+                                onLoginSuccess = { currentScreen = "home" },
                             )
                             "verification" -> VerificationScreen(
                                 viewModel = authViewModel,

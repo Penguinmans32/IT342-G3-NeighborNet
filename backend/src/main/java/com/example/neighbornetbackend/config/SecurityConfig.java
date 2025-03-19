@@ -163,8 +163,8 @@ public class SecurityConfig {
                 "http://10.0.2.2",
                 "http://10.0.118.40:8080",
                 "http://10.0.118.40",
-                "http://10.0.6.216:8080",
-                "http://10.0.6.216"
+                "http://10.0.191.212:8080",
+                "http://10.0.191.212"
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList(
