@@ -44,7 +44,7 @@ public class FirebaseAuthenticationTokenFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         String token = getToken(request);
-        logger.debug("Processing token: {}", token != null ? "present" : "null");
+        //logger.debug("Processing token: {}", token != null ? "present" : "null");
 
         if (token != null && isFirebaseToken(token)) {
             logger.debug("Token identified as Firebase token");
@@ -92,7 +92,7 @@ public class FirebaseAuthenticationTokenFilter extends OncePerRequestFilter {
                 logger.error("Error processing Firebase authentication: {}", e.getMessage());
             }
         } else {
-            logger.debug("Token is not a Firebase token, passing to next filter");
+            //logger.debug("Token is not a Firebase token, passing to next filter");
         }
 
         filterChain.doFilter(request, response);
@@ -105,7 +105,7 @@ public class FirebaseAuthenticationTokenFilter extends OncePerRequestFilter {
             logger.debug("Found Bearer token in request");
             return token;
         }
-        logger.debug("No Bearer token found in request");
+        //logger.debug("No Bearer token found in request");
         return null;
     }
 
@@ -121,11 +121,11 @@ public class FirebaseAuthenticationTokenFilter extends OncePerRequestFilter {
             // Additional Firebase token validation
             // Firebase tokens are typically longer and have specific claims
             boolean isFirebaseToken = token.length() > 500;
-            logger.debug("Token length check for Firebase token: {}", isFirebaseToken);
+            //logger.debug("Token length check for Firebase token: {}", isFirebaseToken);
             return isFirebaseToken;
 
         } catch (Exception e) {
-            logger.error("Error checking Firebase token: {}", e.getMessage());
+            //logger.error("Error checking Firebase token: {}", e.getMessage());
             return false;
         }
     }
@@ -138,7 +138,7 @@ public class FirebaseAuthenticationTokenFilter extends OncePerRequestFilter {
                 path.startsWith("/api/auth/signup") ||
                 path.startsWith("/api/auth/refreshtoken");
 
-        logger.debug("Should not filter request to {}: {}", path, shouldNotFilter);
+        //logger.debug("Should not filter request to {}: {}", path, shouldNotFilter);
         return shouldNotFilter;
     }
 }
