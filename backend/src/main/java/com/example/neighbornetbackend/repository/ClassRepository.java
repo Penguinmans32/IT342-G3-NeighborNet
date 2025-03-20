@@ -38,6 +38,8 @@ public interface ClassRepository extends JpaRepository<CourseClass, Long> {
             @Param("category") String category,
             @Param("query") String query
     );
+
+    int countByCreatorId(Long creatorId);
 }
 
 

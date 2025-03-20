@@ -90,7 +90,7 @@ public class ForgotPasswordService {
 
 
     @Transactional
-    public void resetPassword(String email, String otp, String newPassword) {
+    public void resetPassword(String email, String otp, String currentPassword, String newPassword) {
         try {
             EmailVerificationToken token = tokenRepository.findByUserEmailAndOtp(email, otp)
                     .orElseThrow(() -> new RuntimeException("Invalid or expired reset token"));
@@ -100,6 +100,12 @@ public class ForgotPasswordService {
             }
 
             User user = token.getUser();
+
+            if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+                throw new RuntimeException("Current password is incorrect");
+            }
+
+
             user.setPassword(passwordEncoder.encode(newPassword));
             userRepository.save(user);
 

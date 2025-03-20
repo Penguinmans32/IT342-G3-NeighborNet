@@ -4,6 +4,7 @@ public class PasswordResetRequest {
 
     private String email;
     private String otp;
+    private String currentPassword;
     private String newPassword;
 
     public String getEmail() {
@@ -28,5 +29,13 @@ public class PasswordResetRequest {
 
     public void setOtp(String otp) {
         this.otp = otp;
+    }
+
+    public String getCurrentPassword() {
+        return currentPassword;
+    }
+
+    public void setCurrentPassword(String currentPassword) {
+        this.currentPassword = currentPassword;
     }
 }

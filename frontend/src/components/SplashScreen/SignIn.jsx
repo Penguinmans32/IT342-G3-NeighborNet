@@ -1,5 +1,3 @@
-"use client"
-
 import { FaSearch, FaChalkboardTeacher, FaHandshake, FaBookReader, FaUsers } from "react-icons/fa"
 import { motion } from "framer-motion"
 import AuthModals from "./AuthModal"

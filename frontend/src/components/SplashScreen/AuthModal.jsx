@@ -123,9 +123,9 @@
         }
     
         const messageHandler = async (event) => {
-          console.log('Message received:', event);
-          console.log('Origin:', event.origin);
-          console.log('Expected origin:', window.location.origin);
+          //console.log('Message received:', event);
+          //console.log('Origin:', event.origin);
+          //console.log('Expected origin:', window.location.origin);
           
           if (event.origin !== window.location.origin && 
               event.origin !== import.meta.env.VITE_APP_API_URL) {
@@ -135,7 +135,7 @@
     
           if (event.data?.type === 'oauth2_success') {
             const token = event.data.token;
-            console.log('Received token:', token);
+            //console.log('Received token:', token);
         
             if (token) {
               try {

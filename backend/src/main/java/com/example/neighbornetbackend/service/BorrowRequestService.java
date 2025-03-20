@@ -21,13 +21,15 @@ public class BorrowRequestService {
     private final BorrowRequestRepository borrowRequestRepository;
     private final ItemRepository itemRepository;
     private final UserRepository userRepository;
+    private final ActivityService activityService;
 
     public BorrowRequestService(BorrowRequestRepository borrowRequestRepository,
                                 ItemRepository itemRepository,
-                                UserRepository userRepository) {
+                                UserRepository userRepository, ActivityService activityService) {
         this.borrowRequestRepository = borrowRequestRepository;
         this.itemRepository = itemRepository;
         this.userRepository = userRepository;
+        this.activityService = activityService;
     }
 
     @Transactional
@@ -60,8 +62,18 @@ public class BorrowRequestService {
             request.setEndDate(endDate);
             request.setMessage(requestDTO.getMessage());
 
+
             BorrowRequest savedRequest = borrowRequestRepository.save(request);
             logger.info("Successfully created borrow request with ID: {}", savedRequest.getId());
+
+            activityService.trackActivity(
+                    borrowerId,
+                    "item_requested",
+                    "Requested to borrow an item",
+                    item.getName(),
+                    "HandShake",
+                    item.getId()
+            );
 
             return convertToDTO(savedRequest);
         } catch (Exception e) {
@@ -90,5 +102,78 @@ public class BorrowRequestService {
         dto.setMessage(request.getMessage());
         dto.setStatus(request.getStatus());
         return dto;
+    }
+
+    @Transactional
+    public BorrowRequestDTO approveBorrowRequest(Long requestId) {
+        BorrowRequest request = borrowRequestRepository.findById(requestId)
+                .orElseThrow(() -> new RuntimeException("Borrow request not found"));
+
+        request.setStatus("ACCEPTED");
+        BorrowRequest savedRequest = borrowRequestRepository.save(request);
+
+        // Track for the owner (lender)
+        activityService.trackActivity(
+                request.getItem().getOwner().getId(),
+                "item_lent",
+                "Approved lending request",
+                request.getItem().getName(),
+                "Check",
+                request.getItem().getId()
+        );
+
+        // Track for the borrower
+        activityService.trackActivity(
+                request.getBorrower().getId(),
+                "item_borrowed",
+                "Started borrowing an item",
+                request.getItem().getName(),
+                "HandShake",
+                request.getItem().getId()
+        );
+
+        return convertToDTO(savedRequest);
+    }
+
+    @Transactional
+    public BorrowRequestDTO completeReturn(Long requestId) {
+        BorrowRequest request = borrowRequestRepository.findById(requestId)
+                .orElseThrow(() -> new RuntimeException("Borrow request not found"));
+
+        request.setStatus("RETURNED");
+        BorrowRequest savedRequest = borrowRequestRepository.save(request);
+
+        // Track the item return
+        activityService.trackActivity(
+                request.getBorrower().getId(),
+                "item_returned",
+                "Returned a borrowed item",
+                request.getItem().getName(),
+                "RotateCcw",
+                request.getItem().getId()
+        );
+
+        return convertToDTO(savedRequest);
+    }
+
+    @Transactional
+    public BorrowRequestDTO rejectBorrowRequest(Long requestId) {
+        BorrowRequest request = borrowRequestRepository.findById(requestId)
+                .orElseThrow(() -> new RuntimeException("Borrow request not found"));
+
+        request.setStatus("REJECTED");
+        BorrowRequest savedRequest = borrowRequestRepository.save(request);
+
+        // Track the rejection
+        activityService.trackActivity(
+                request.getItem().getOwner().getId(),
+                "item_request_rejected",
+                "Rejected borrowing request",
+                request.getItem().getName(),
+                "X",
+                request.getItem().getId()
+        );
+
+        return convertToDTO(savedRequest);
     }
 }

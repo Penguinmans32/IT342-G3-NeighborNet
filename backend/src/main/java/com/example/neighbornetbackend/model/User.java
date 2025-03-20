@@ -47,6 +47,31 @@ public class User {
     @Column(name = "created_date")
     private LocalDateTime createdDate;
 
+    @Column(columnDefinition = "TEXT")
+    private String bio;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<UserSkill> skills = new ArrayList<>();
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<UserInterest> interests = new ArrayList<>();
+
+    @Column(name = "github_url")
+    private String githubUrl;
+
+    @Column(name = "twitter_url")
+    private String twitterUrl;
+
+    @Column(name = "linkedin_url")
+    private String linkedinUrl;
+
+    @Column(name = "facebook_url")
+    private String facebookUrl;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<UserAchievement> achievements = new ArrayList<>();
+
+
     @PrePersist
     protected void onCreate() {
         createdDate = LocalDateTime.now();
@@ -151,4 +176,72 @@ public class User {
         this.createdDate = createdDate;
     }
 
+    public String getBio() {
+        return bio;
+    }
+
+    public void setBio(String bio) {
+        this.bio = bio;
+    }
+
+    public List<UserSkill> getSkills() {
+        return skills;
+    }
+
+    public void setSkills(List<UserSkill> skills) {
+        this.skills = skills;
+    }
+
+    public List<UserInterest> getInterests() {
+        return interests;
+    }
+
+    public void setInterests(List<UserInterest> interests) {
+        this.interests = interests;
+    }
+
+    public String getGithubUrl() {
+        return githubUrl;
+    }
+
+    public void setGithubUrl(String githubUrl) {
+        this.githubUrl = githubUrl;
+    }
+
+    public String getTwitterUrl() {
+        return twitterUrl;
+    }
+
+    public void setTwitterUrl(String twitterUrl) {
+        this.twitterUrl = twitterUrl;
+    }
+
+    public String getLinkedinUrl() {
+        return linkedinUrl;
+    }
+
+    public void setLinkedinUrl(String linkedinUrl) {
+        this.linkedinUrl = linkedinUrl;
+    }
+
+    public String getFacebookUrl() {
+        return facebookUrl;
+    }
+
+    public void setFacebookUrl(String facebookUrl) {
+        this.facebookUrl = facebookUrl;
+    }
+
+    public List<UserAchievement> getAchievements() {
+        return achievements;
+    }
+
+    public void setAchievements(List<UserAchievement> achievements) {
+        this.achievements = achievements;
+    }
+
+    public void addAchievement(UserAchievement achievement) {
+        achievements.add(achievement);
+        achievement.setUser(this);
+    }
 }

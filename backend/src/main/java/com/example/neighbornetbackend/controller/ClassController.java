@@ -2,16 +2,14 @@ package com.example.neighbornetbackend.controller;
 
 import com.example.neighbornetbackend.dto.*;
 import com.example.neighbornetbackend.exception.ResourceNotFoundException;
+import com.example.neighbornetbackend.model.AchievementType;
 import com.example.neighbornetbackend.model.CourseClass;
 import com.example.neighbornetbackend.model.Feedback;
 import com.example.neighbornetbackend.repository.ClassRepository;
 import com.example.neighbornetbackend.repository.FeedbackRepository;
 import com.example.neighbornetbackend.security.CurrentUser;
 import com.example.neighbornetbackend.security.UserPrincipal;
-import com.example.neighbornetbackend.service.ClassService;
-import com.example.neighbornetbackend.service.FeedbackService;
-import com.example.neighbornetbackend.service.LessonProgressService;
-import com.example.neighbornetbackend.service.RatingService;
+import com.example.neighbornetbackend.service.*;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -24,7 +22,9 @@ import org.springframework.core.io.UrlResource;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
@@ -37,14 +37,16 @@ public class ClassController {
     private final FeedbackService feedbackService;
     private final LessonProgressService progressService;
     private final FeedbackRepository feedbackRepository;
+    private final AchievementService achievementService;
 
-    public ClassController(ClassService classService, ClassRepository classRepository, RatingService ratingService, FeedbackService feedbackService, LessonProgressService progressService, FeedbackRepository feedbackRepository) {
+    public ClassController(ClassService classService, ClassRepository classRepository, RatingService ratingService, FeedbackService feedbackService, LessonProgressService progressService, FeedbackRepository feedbackRepository, AchievementService achievementService) {
         this.classService = classService;
         this.classRepository = classRepository;
         this.ratingService = ratingService;
         this.feedbackService = feedbackService;
         this.progressService = progressService;
         this.feedbackRepository = feedbackRepository;
+        this.achievementService = achievementService;
     }
 
     @Operation(summary = "Create a new class")
@@ -60,6 +62,7 @@ public class ClassController {
             System.out.println("Current user: " + currentUser.getId());
 
             ClassResponse newClass = classService.createClass(request, thumbnail, currentUser.getId());
+            achievementService.checkClassCreationAchievements(currentUser.getId());
             return ResponseEntity.ok(newClass);
         } catch (Exception e) {
             e.printStackTrace();
@@ -192,6 +195,19 @@ public class ClassController {
             @CurrentUser UserPrincipal currentUser) {
         try {
             RatingResponse rating = ratingService.rateClass(classId, currentUser.getId(), ratingRequest.getRating());
+
+            CourseClass courseClass = classRepository.findById(classId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Class not found"));
+            Long creatorId = courseClass.getCreator().getId();
+
+            int totalRatings = ratingService.getCreatorTotalRatings(creatorId);
+
+            achievementService.checkAndAwardAchievement(
+                    creatorId,
+                    AchievementType.TOP_RATED,
+                    totalRatings
+            );
+
             return ResponseEntity.ok(rating);
         } catch (ResourceNotFoundException e) {
             return ResponseEntity.notFound().build();
@@ -235,6 +251,12 @@ public class ClassController {
             @CurrentUser UserPrincipal currentUser) {
         try {
             ClassResponse response = classService.startLearning(classId, currentUser.getId());
+            int enrolledCount = classService.getEnrolledClassesByUser(currentUser.getId()).size();
+            achievementService.checkAndAwardAchievement(
+                    currentUser.getId(),
+                    AchievementType.POPULAR_TEACHER,
+                    enrolledCount
+            );
             return ResponseEntity.ok(response);
         } catch (ResourceNotFoundException e) {
             return ResponseEntity.notFound().build();
@@ -267,6 +289,11 @@ public class ClassController {
                     classId,
                     currentUser.getId(),
                     feedbackRequest
+            );
+            achievementService.checkAndAwardAchievement(
+                    currentUser.getId(),
+                    AchievementType.FEEDBACK_GIVER,
+                    1
             );
             return ResponseEntity.ok(feedback);
         } catch (ResourceNotFoundException e) {
@@ -434,4 +461,77 @@ public class ClassController {
             return ResponseEntity.badRequest().build();
         }
     }
+
+    @PostMapping("/{classId}/save")
+    public ResponseEntity<?> saveClass(
+            @PathVariable Long classId,
+            @CurrentUser UserPrincipal currentUser) {
+        try {
+            boolean isSaved = classService.saveClass(classId, currentUser.getId());
+            return ResponseEntity.ok(Map.of("saved", isSaved));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Failed to save class: " + e.getMessage());
+        }
+    }
+
+    @DeleteMapping("/{classId}/unsave")
+    public ResponseEntity<?> unsaveClass(
+            @PathVariable Long classId,
+            @CurrentUser UserPrincipal currentUser) {
+        try {
+            classService.unsaveClass(classId, currentUser.getId());
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Failed to unsave class: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/saved")
+    public ResponseEntity<List<ClassResponse>> getSavedClasses(
+            @CurrentUser UserPrincipal currentUser) {
+        try {
+            List<ClassResponse> savedClasses = classService.getSavedClasses(currentUser.getId());
+            return ResponseEntity.ok(savedClasses);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @GetMapping("/{classId}/is-saved")
+    public ResponseEntity<Boolean> isClassSaved(
+            @PathVariable Long classId,
+            @CurrentUser UserPrincipal currentUser) {
+        try {
+            boolean isSaved = classService.isClassSaved(classId, currentUser.getId());
+            return ResponseEntity.ok(isSaved);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @GetMapping("/user-stats/{userId}")
+    public ResponseEntity<Map<String, Object>> getUserStats(@PathVariable Long userId) {
+        try {
+            Map<String, Object> stats = new HashMap<>();
+
+            // Get number of classes created by user
+            int classesCreated = classRepository.countByCreatorId(userId);
+            stats.put("classesCreated", classesCreated);
+
+            // Get number of enrolled classes
+            int enrolledClasses = classService.getEnrolledClassesByUser(userId).size();
+            stats.put("enrolledClasses", enrolledClasses);
+
+            // Get saved classes count
+            int savedClassesCount = classService.getSavedClasses(userId).size();
+            stats.put("savedClassesCount", savedClassesCount);
+
+            return ResponseEntity.ok(stats);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+
 }

@@ -1,5 +1,3 @@
-"use client"
-
 import { motion, AnimatePresence } from "framer-motion"
 import { useAuth } from "../backendApi/AuthContext"
 import { useNavigate, useLocation } from "react-router-dom"
@@ -140,7 +138,21 @@ const Homepage = () => {
     hover: { x: 8 },
   }
 
-  // Click outside handlers
+  const fetchSavedClasses = async () => {
+    try {
+      const response = await axios.get("http://localhost:8080/api/classes/saved", {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+      const savedClassIds = response.data.map(classItem => classItem.id);
+      setSavedClassesSet(new Set(savedClassIds));
+    } catch (error) {
+      console.error("Error fetching saved classes:", error);
+    }
+  };
+
+
   useEffect(() => {
     function handleClickOutside(event) {
       if (profileMenuRef.current && !profileMenuRef.current.contains(event.target)) {
@@ -252,59 +264,50 @@ const Homepage = () => {
   useEffect(() => {
     const fetchClasses = async () => {
       try {
-        // Change the endpoint to fetch all classes
         const response = await axios.get("http://localhost:8080/api/classes/all", {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
-        })
-
-        let classesData = []
+        });
+  
+        let classesData = [];
         if (Array.isArray(response.data)) {
-          classesData = response.data
+          classesData = response.data;
         } else if (response.data && typeof response.data === "object") {
-          classesData = Object.values(response.data)
+          classesData = Object.values(response.data);
         }
-
-        setClasses(classesData)
-
+  
+        setClasses(classesData);
+  
         // Separately fetch user's own classes if needed
         const myClassesResponse = await axios.get("http://localhost:8080/api/classes/my-classes", {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
-        })
-
-        let myClassesData = []
+        });
+  
+        let myClassesData = [];
         if (Array.isArray(myClassesResponse.data)) {
-          myClassesData = myClassesResponse.data
+          myClassesData = myClassesResponse.data;
         } else if (myClassesResponse.data && typeof myClassesResponse.data === "object") {
-          myClassesData = Object.values(myClassesResponse.data)
+          myClassesData = Object.values(myClassesResponse.data);
         }
-
-        setUserClasses(myClassesData)
-
-        // Simulate saved classes for demo purposes
-        const randomSavedClasses = classesData
-          .sort(() => 0.5 - Math.random())
-          .slice(0, Math.floor(Math.random() * 5) + 2)
-          .map((c) => c.id)
-
-        setSavedClasses(randomSavedClasses)
+  
+        setUserClasses(myClassesData);
       } catch (error) {
-        console.error("Error fetching classes:", error)
-        setClasses([])
-        setUserClasses([])
+        console.error("Error fetching classes:", error);
+        setClasses([]);
+        setUserClasses([]);
       } finally {
-        setLoading(false)
-        setIsLoading(false)
+        setLoading(false);
+        setIsLoading(false);
       }
-    }
-
+    };
+  
     if (user) {
-      fetchClasses()
+      fetchClasses();
     }
-  }, [user])
+  }, [user]);
 
   const handleNotificationClick = (notification) => {
     if (notification.unread) {
@@ -357,7 +360,7 @@ const Homepage = () => {
   }
 
   const getFullProfileImageUrl = (imageUrl) => {
-    console.log("Raw imageUrl:", imageUrl)
+    //console.log("Raw imageUrl:", imageUrl)
     if (!imageUrl) {
       return "/images/defaultProfile.png"
     }
@@ -365,17 +368,42 @@ const Homepage = () => {
     return fullUrl
   }
 
-    const toggleSaveClass = useCallback((classId) => {
-      setSavedClassesSet(prev => {
-          const newSet = new Set(prev);
-          if (newSet.has(classId)) {
-              newSet.delete(classId);
-          } else {
-              newSet.add(classId);
-          }
-          return newSet;
+  const toggleSaveClass = useCallback(async (classId) => {
+    try {
+      const isSaved = savedClassesSet.has(classId);
+      const endpoint = isSaved ? 
+        `http://localhost:8080/api/classes/${classId}/unsave` : 
+        `http://localhost:8080/api/classes/${classId}/save`;
+      const method = isSaved ? 'DELETE' : 'POST';
+  
+      await axios({
+        method,
+        url: endpoint,
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
       });
-  }, []);
+  
+      setSavedClassesSet(prev => {
+        const newSet = new Set(prev);
+        if (isSaved) {
+          newSet.delete(classId);
+        } else {
+          newSet.add(classId);
+        }
+        return newSet;
+      });
+  
+    } catch (error) {
+      console.error("Error toggling class save:", error);
+    }
+  }, [savedClassesSet]);
+
+  useEffect(() => {
+    if (user) {
+      fetchSavedClasses();
+    }
+  }, [user]);
 
   const filteredClasses = useMemo(() => {
     return classes.filter((classItem) => {

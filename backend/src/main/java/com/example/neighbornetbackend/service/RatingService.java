@@ -123,4 +123,8 @@ public class RatingService {
                 rating.getUpdatedAt()
         );
     }
+
+    public int getCreatorTotalRatings(Long creatorId) {
+        return ratingRepository.countByClassCreatorId(creatorId);
+    }
 }

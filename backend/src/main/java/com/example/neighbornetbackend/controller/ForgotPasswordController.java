@@ -36,7 +36,12 @@ public class ForgotPasswordController {
     @PostMapping("/reset")
     public ResponseEntity<?> resetPassword(@RequestBody PasswordResetRequest request) {
         try {
-            forgotPasswordService.resetPassword(request.getEmail(), request.getOtp(), request.getNewPassword());
+            forgotPasswordService.resetPassword(
+                    request.getEmail(),
+                    request.getOtp(),
+                    request.getCurrentPassword(),
+                    request.getNewPassword()
+            );
             Map<String, String> response = new HashMap<>();
             response.put("message", "Password reset successfully");
             return ResponseEntity.ok(response);
