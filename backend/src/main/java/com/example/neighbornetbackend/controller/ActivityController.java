@@ -9,13 +9,12 @@ import com.example.neighbornetbackend.model.Item;
 import com.example.neighbornetbackend.model.User;
 import com.example.neighbornetbackend.repository.ItemRepository;
 import com.example.neighbornetbackend.repository.UserRepository;
+import com.example.neighbornetbackend.security.CurrentUser;
+import com.example.neighbornetbackend.security.UserPrincipal;
 import com.example.neighbornetbackend.service.BorrowingAgreementService;
 import com.example.neighbornetbackend.service.ClassService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
 import java.util.List;

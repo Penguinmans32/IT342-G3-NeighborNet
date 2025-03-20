@@ -18,4 +18,6 @@ public interface ClassEnrollmentRepository extends JpaRepository<ClassEnrollment
     List<ClassEnrollment> findTop10ByOrderByEnrolledAtDesc();
 
     List<ClassEnrollment> findByUserId(Long userId);
+
+    List<ClassEnrollment> findByUserIdOrderByEnrolledAtDesc(Long userId);
 }
