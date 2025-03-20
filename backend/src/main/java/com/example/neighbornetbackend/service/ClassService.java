@@ -3,11 +3,10 @@ package com.example.neighbornetbackend.service;
 import com.example.neighbornetbackend.dto.CreateClassRequest;
 import com.example.neighbornetbackend.dto.ClassResponse;
 import com.example.neighbornetbackend.exception.ResourceNotFoundException;
-import com.example.neighbornetbackend.model.ClassEnrollment;
-import com.example.neighbornetbackend.model.CourseClass;
-import com.example.neighbornetbackend.model.User;
+import com.example.neighbornetbackend.model.*;
 import com.example.neighbornetbackend.repository.*;
 import jakarta.annotation.PostConstruct;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -32,8 +31,12 @@ public class ClassService {
     private final LessonProgressRepository lessonProgressRepository;
     private final ClassEnrollmentRepository enrollmentRepository;
     private final NotificationService notificationService;
+    private final ActivityService activityService;
 
     private final String THUMBNAIL_DIRECTORY = "thumbnails";
+
+    @Autowired
+    private SavedClassRepository savedClassRepository;
 
     @PostConstruct
     public void init() {
@@ -46,7 +49,7 @@ public class ClassService {
 
     public ClassService(ClassRepository classRepository,
                         UserRepository userRepository,
-                        FileStorageService fileStorageService, LessonRepository lessonRepository, LessonProgressRepository lessonProgressRepository, ClassEnrollmentRepository enrollmentRepository, NotificationService notificationService) {
+                        FileStorageService fileStorageService, LessonRepository lessonRepository, LessonProgressRepository lessonProgressRepository, ClassEnrollmentRepository enrollmentRepository, NotificationService notificationService, ActivityService activityService) {
         this.classRepository = classRepository;
         this.userRepository = userRepository;
         this.fileStorageService = fileStorageService;
@@ -54,6 +57,7 @@ public class ClassService {
         this.lessonProgressRepository = lessonProgressRepository;
         this.enrollmentRepository = enrollmentRepository;
         this.notificationService = notificationService;
+        this.activityService = activityService;
     }
 
     private void notifyClassCreator(CourseClass courseClass, String title, String message, String type) {
@@ -137,6 +141,16 @@ public class ClassService {
 
         newClass.setCreator(creator);
         CourseClass savedClass = classRepository.save(newClass);
+
+        activityService.trackActivity(
+                userId,
+                "class_created",
+                "Created a new class",
+                savedClass.getTitle(),
+                "BookOpen",
+                savedClass.getId()
+        );
+
         return ClassResponse.fromEntity(savedClass);
     }
 
@@ -173,6 +187,15 @@ public class ClassService {
         CourseClass classToDelete = classRepository.findById(classId)
                 .orElseThrow(() -> new ResourceNotFoundException("Class not found"));
 
+        activityService.trackActivity(
+                classToDelete.getCreator().getId(),
+                "class_deleted",
+                "Deleted a class",
+                classToDelete.getTitle(),
+                "Trash",
+                classId
+        );
+
         try {
             // First delete all lesson progress records
             lessonProgressRepository.deleteByLessonClassId(classId);
@@ -192,7 +215,7 @@ public class ClassService {
                 }
             }
 
-            // Finally delete the class
+
             classRepository.delete(classToDelete);
         } catch (Exception e) {
             throw new RuntimeException("Error deleting class and related data", e);
@@ -242,6 +265,16 @@ public class ClassService {
         }
 
         CourseClass updatedClass = classRepository.save(existingClass);
+
+        activityService.trackActivity(
+                userId,
+                "class_updated",
+                "Updated a class",
+                updatedClass.getTitle(),
+                "Edit",
+                updatedClass.getId()
+        );
+
         return ClassResponse.fromEntity(updatedClass);
     }
 
@@ -268,6 +301,16 @@ public class ClassService {
             // Update enrolled count
             long enrolledCount = enrollmentRepository.countByCourseClassId(classId);
             courseClass.setEnrolledCount((int) enrolledCount);
+
+            activityService.trackActivity(
+                    userId,
+                    "class_enrolled",
+                    "Enrolled in a class",
+                    courseClass.getTitle(),
+                    "GraduationCap",
+                    courseClass.getId()
+            );
+
             courseClass = classRepository.save(courseClass);
         }
 
@@ -301,5 +344,52 @@ public class ClassService {
         return results.stream()
                 .map(ClassResponse::fromEntity)
                 .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public boolean saveClass(Long classId, Long userId) {
+        if (savedClassRepository.existsByUserIdAndCourseClassId(userId, classId)) {
+            return false;
+        }
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        CourseClass courseClass = classRepository.findById(classId)
+                .orElseThrow(() -> new ResourceNotFoundException("Class not found"));
+
+        SavedClass savedClass = new SavedClass();
+        savedClass.setUser(user);
+        savedClass.setCourseClass(courseClass);
+
+        savedClassRepository.save(savedClass);
+        activityService.trackActivity(
+                userId,
+                "class_saved",
+                "Saved a class",
+                courseClass.getTitle(),
+                "Bookmark",
+                courseClass.getId()
+        );
+
+        savedClassRepository.save(savedClass);
+
+        return true;
+    }
+
+    @Transactional
+    public void unsaveClass(Long classId, Long userId) {
+        savedClassRepository.deleteByUserIdAndCourseClassId(userId, classId);
+    }
+
+    public List<ClassResponse> getSavedClasses(Long userId) {
+        return savedClassRepository.findByUserId(userId)
+                .stream()
+                .map(savedClass -> ClassResponse.fromEntity(savedClass.getCourseClass()))
+                .collect(Collectors.toList());
+    }
+
+    public boolean isClassSaved(Long classId, Long userId) {
+        return savedClassRepository.existsByUserIdAndCourseClassId(userId, classId);
     }
 }

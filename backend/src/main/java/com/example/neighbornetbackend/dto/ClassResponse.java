@@ -34,6 +34,7 @@ public class ClassResponse {
     private String linkedinUrl;
     private String portfolioUrl;
     private String phone_number;
+    private boolean isSaved;
 
 
     public static ClassResponse fromEntity(CourseClass classEntity) {
@@ -77,6 +78,20 @@ public class ClassResponse {
         }
         return response;
 
+    }
+
+    public static ClassResponse fromEntity(CourseClass courseClass, boolean isSaved) {
+        ClassResponse response = fromEntity(courseClass);
+        response.setSaved(isSaved);
+        return response;
+    }
+
+    public boolean isSaved() {
+        return isSaved;
+    }
+
+    public void setSaved(boolean saved) {
+        isSaved = saved;
     }
 
     public Long getCreatorId() {

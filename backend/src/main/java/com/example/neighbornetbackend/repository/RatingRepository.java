@@ -23,4 +23,7 @@ public interface RatingRepository extends JpaRepository<ClassRating, Long> {
 
     @Query("SELECT COUNT(r) FROM ClassRating r WHERE r.courseClass.id = :classId")
     Long countByClassId(@Param("classId") Long classId);
+
+    @Query("SELECT COUNT(r) FROM ClassRating r WHERE r.courseClass.creator.id = :creatorId")
+    int countByClassCreatorId(@Param("creatorId") Long creatorId);
 }

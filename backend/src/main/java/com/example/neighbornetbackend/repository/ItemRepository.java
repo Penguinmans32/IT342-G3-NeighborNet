@@ -38,4 +38,6 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
             @Param("minLng") double minLng,
             @Param("maxLng") double maxLng
     );
+
+    int countByOwnerId(Long userId);
 }

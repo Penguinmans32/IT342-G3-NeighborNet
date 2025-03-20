@@ -1,8 +1,11 @@
 package com.example.neighbornetbackend.controller;
 
+import com.example.neighbornetbackend.dto.UpdateProfileRequest;
+import com.example.neighbornetbackend.dto.UserDTO;
 import com.example.neighbornetbackend.model.User;
 import com.example.neighbornetbackend.repository.UserRepository;
 import com.example.neighbornetbackend.service.UserProfileStorageService;
+import com.example.neighbornetbackend.service.UserService;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpHeaders;
@@ -26,10 +29,12 @@ public class UserProfileController {
 
     private final UserRepository userRepository;
     private final UserProfileStorageService userProfileStorageService;
+    private final UserService userService;
 
-    public UserProfileController(UserRepository userRepository, UserProfileStorageService userProfileStorageService) {
+    public UserProfileController(UserRepository userRepository, UserProfileStorageService userProfileStorageService, UserService userService) {
         this.userRepository = userRepository;
         this.userProfileStorageService = userProfileStorageService;
+        this.userService = userService;
     }
 
     @GetMapping("/profile-pictures/{filename:.+}")
@@ -61,28 +66,13 @@ public class UserProfileController {
 
     @GetMapping("/profile")
     public ResponseEntity<?> getUserProfile(Authentication authentication) {
-        System.out.println("Profile endpoint hit");
         if (authentication == null) {
-            System.out.println("Authentication is null");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not authenticated");
         }
 
         String userIdentifier = authentication.getName();
-        System.out.println("User identifier: " + userIdentifier);
-
-        // Try to find user by both username and email
         return userRepository.findByUsernameOrEmail(userIdentifier, userIdentifier)
-                .map(user -> {
-                    System.out.println("User found: " + user.getUsername());
-                    Map<String, Object> profile = new HashMap<>();
-                    profile.put("id", user.getId());
-                    profile.put("username", user.getUsername());
-                    profile.put("email", user.getEmail());
-                    profile.put("imageUrl", user.getImageUrl());
-                    profile.put("provider", user.getProvider());
-                    profile.put("emailVerified", user.isEmailVerified());
-                    return ResponseEntity.ok(profile);
-                })
+                .map(user -> ResponseEntity.ok(UserDTO.fromEntity(user)))
                 .orElse(ResponseEntity.notFound().build());
     }
 
@@ -107,6 +97,23 @@ public class UserProfileController {
             return ResponseEntity.ok(response);
         } catch (IOException e) {
             return ResponseEntity.badRequest().body("Failed to upload profile picture");
+        }
+    }
+
+    @PatchMapping("/profile")
+    public ResponseEntity<?> updateProfile(
+            @RequestBody UpdateProfileRequest request,
+            Authentication authentication) {
+        if (authentication == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not authenticated");
+        }
+
+        try {
+            String userIdentifier = authentication.getName();
+            User updatedUser = userService.updateUserProfile(userIdentifier, request);
+            return ResponseEntity.ok(UserDTO.fromEntity(updatedUser));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Failed to update profile: " + e.getMessage());
         }
     }
 }

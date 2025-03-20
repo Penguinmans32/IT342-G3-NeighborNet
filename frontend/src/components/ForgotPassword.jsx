@@ -14,6 +14,9 @@ import {
     MdVerified,
     MdVpnKey
   } from 'react-icons/md';
+  import { HiExternalLink } from 'react-icons/hi';
+  import { FcGoogle } from 'react-icons/fc';
+  import { FaGithub, FaMicrosoft } from 'react-icons/fa';
 
 const ForgotPassword = () => {
   const [stage, setStage] = useState(1); 
@@ -28,6 +31,14 @@ const ForgotPassword = () => {
   const [resendTimer, setResendTimer] = useState(30);
   const [passwordError, setPasswordError] = useState('');
   const navigate = useNavigate();
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [isOAuthUser, setIsOAuthUser] = useState(false);
+
+  const handleDismissOAuth = () => {
+    setIsOAuthUser(false);
+    setEmailError('');
+    setEmail('');
+  };
 
   const handleResendOtp = async () => {
     if (!canResend) return;
@@ -82,24 +93,96 @@ const ForgotPassword = () => {
     setEmailError('');
     
     if (!validateEmail(email)) {
-      setEmailError('Please enter a valid email address');
-      return;
+        setEmailError('Please enter a valid email address');
+        return;
     }
   
     setIsLoading(true);
     try {
-      const response = await fetch('http://localhost:8080/api/auth/password/forgot?email=' + encodeURIComponent(email), {
-        method: 'POST',
-      });
-      if (!response.ok) throw new Error('Failed to send reset email');
-      setStage(2);
+        const response = await fetch(`http://localhost:8080/api/auth/check-provider?email=${encodeURIComponent(email)}`, {
+            method: 'GET',
+        });
+        const data = await response.json();
+        
+        if (data.provider === 'google' || data.provider === 'github' || data.provider === 'microsoft') {
+            setEmailError(
+                `This account uses ${data.provider} login. Please reset your password through ${data.provider}.`
+            );
+            // Show alternative instructions
+            setIsOAuthUser(true);
+            return;
+        }
+
+        // Continue with normal password reset flow for non-OAuth users
+        const resetResponse = await fetch('http://localhost:8080/api/auth/password/forgot?email=' + encodeURIComponent(email), {
+            method: 'POST',
+        });
+        if (!resetResponse.ok) throw new Error('Failed to send reset email');
+        setStage(2);
     } catch (error) {
-      setEmailError('Failed to send OTP. Please try again.');
+        setEmailError('Failed to send OTP. Please try again.');
     } finally {
-      setIsLoading(false);
+        setIsLoading(false);
     }
   };
   
+
+  const OAuthUserMessage = ({ provider, onDismiss }) => (
+    <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-blue-50 p-6 rounded-lg"
+    >
+        <div className="flex items-center space-x-3 mb-4">
+            {provider === 'google' && <FcGoogle className="w-8 h-8" />}
+            {provider === 'github' && <FaGithub className="w-8 h-8" />}
+            {provider === 'microsoft' && <FaMicrosoft className="w-8 h-8" />}
+            <h3 className="text-xl font-semibold">Social Login Account</h3>
+        </div>
+        
+        <p className="text-gray-600 mb-4">
+            This account uses {provider} for authentication. To change your password:
+        </p>
+        
+        <ol className="list-decimal list-inside space-y-2 text-gray-700">
+            <li>Visit {provider}'s account settings</li>
+            <li>Look for security or password settings</li>
+            <li>Follow {provider}'s password reset process</li>
+        </ol>
+
+        <div className="mt-6 flex justify-between items-center">
+            <a
+                href={getProviderPasswordResetLink(provider)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center space-x-2 text-blue-600 hover:text-blue-700"
+            >
+                <span>Go to {provider} Account Settings</span>
+                <HiExternalLink className="w-5 h-5" />
+            </a>
+            
+            <button
+                onClick={onDismiss}
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg transition-colors duration-200"
+            >
+                Try Different Email
+            </button>
+        </div>
+    </motion.div>
+);
+
+  const getProviderPasswordResetLink = (provider) => {
+    switch (provider) {
+        case 'google':
+            return 'https://myaccount.google.com/security';
+        case 'github':
+            return 'https://github.com/settings/security';
+        case 'microsoft':
+            return 'https://account.live.com/password/reset';
+        default:
+            return '#';
+    }
+  };
 
   const handleOtpSubmit = async (e) => {
     e.preventDefault();
@@ -134,7 +217,6 @@ const ForgotPassword = () => {
       return;
     }
 
-    // Add password strength validation if needed
     if (newPassword.length < 8) {
       setPasswordError('Password must be at least 8 characters long');
       return;
@@ -150,6 +232,7 @@ const ForgotPassword = () => {
         body: JSON.stringify({
           email,
           otp: otp.join(''),
+          currentPassword,
           newPassword
         }),
       });
@@ -218,32 +301,39 @@ const ForgotPassword = () => {
                     />
                   </div>
                   
-                  <button
-                    type="submit"
-                    disabled={isLoading}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg transition-colors duration-200 disabled:bg-blue-400"
+                  {isOAuthUser ? (
+                    <OAuthUserMessage 
+                    provider={emailError.split(' ')[2]} 
+                    onDismiss={handleDismissOAuth}
+                  />
+                  ) : (
+                    <button
+                      type="submit"
+                      disabled={isLoading}
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg transition-colors duration-200 disabled:bg-blue-400"
                     >
-                    {isLoading ? (
+                      {isLoading ? (
                         <div className="flex items-center justify-center space-x-2">
-                        <motion.div
+                          <motion.div
                             animate={{ rotate: 360 }}
                             transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                        >
+                          >
                             <MdEmail className="w-5 h-5" />
-                        </motion.div>
-                        <span>Sending OTP...</span>
+                          </motion.div>
+                          <span>Sending OTP...</span>
                         </div>
-                    ) : (
+                      ) : (
                         "Send Reset Link"
-                    )}
+                      )}
                     </button>
+                  )}
 
-                    {emailError && (
-                        <p className="text-red-500 text-sm mt-2 flex items-center">
-                            <MdWarning className="w-4 h-4 mr-1" />
-                            {emailError}
-                        </p>
-                        )}
+                  {emailError && !isOAuthUser && (
+                    <p className="text-red-500 text-sm mt-2 flex items-center">
+                      <MdWarning className="w-4 h-4 mr-1" />
+                      {emailError}
+                    </p>
+                  )}
                 </div>
               </motion.form>
             )}
@@ -348,6 +438,18 @@ const ForgotPassword = () => {
               >
                 <h2 className="text-3xl font-bold text-gray-900">Set New Password</h2>
                 <p className="text-gray-600">Create a strong password for your account</p>
+
+                <div className="relative">
+                  <FiLock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    placeholder="Current password"
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  />
+                </div>
                 
                 <div className="space-y-4">
                   <div className="relative">

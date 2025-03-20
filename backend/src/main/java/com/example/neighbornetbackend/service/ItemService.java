@@ -27,14 +27,16 @@ public class ItemService {
     private final UserRepository userRepository;
     private final ItemImageStorageService itemImageStorageService;
     private final BorrowingAgreementRepository borrowingAgreementRepository;
+    private final ActivityService activityService;
 
     private static final Logger logger = LoggerFactory.getLogger(ItemService.class);
 
-    public ItemService(ItemRepository itemRepository, UserRepository userRepository, ItemImageStorageService itemImageStorageService, BorrowingAgreementRepository borrowingAgreementRepository) {
+    public ItemService(ItemRepository itemRepository, UserRepository userRepository, ItemImageStorageService itemImageStorageService, BorrowingAgreementRepository borrowingAgreementRepository, ActivityService activityService) {
         this.itemRepository = itemRepository;
         this.userRepository = userRepository;
         this.itemImageStorageService = itemImageStorageService;
         this.borrowingAgreementRepository = borrowingAgreementRepository;
+        this.activityService = activityService;
     }
 
     public ItemDTO createItem(Item item, List<MultipartFile> images, Long userId) throws IOException {
@@ -46,6 +48,15 @@ public class ItemService {
         item.setOwner(user);
 
         Item savedItem = itemRepository.save(item);
+
+        activityService.trackActivity(
+                userId,
+                "item_shared",
+                "Shared a new item",
+                savedItem.getName(),
+                "Package",
+                savedItem.getId()
+        );
 
         return convertToDTO(savedItem);
     }
@@ -119,6 +130,15 @@ public class ItemService {
         Item item = itemRepository.findById(itemId)
                 .orElseThrow(() -> new RuntimeException("Item not found"));
 
+        activityService.trackActivity(
+                userId,
+                "item_deleted",
+                "Deleted an item",
+                item.getName(),
+                "Trash",
+                itemId
+        );
+
         // Check if the user is the owner
         if (!item.getOwner().getId().equals(userId)) {
             throw new RuntimeException("You don't have permission to delete this item");
@@ -161,6 +181,17 @@ public class ItemService {
         existingItem.setPhone(updatedItem.getPhone());
 
         Item savedItem = itemRepository.save(existingItem);
+
+        activityService.trackActivity(
+                userId,
+                "item_updated",
+                "Updated an item",
+                savedItem.getName(),
+                "Edit",
+                savedItem.getId()
+        );
+
+
         return convertToDTO(savedItem);
     }
 

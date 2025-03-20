@@ -1,16 +1,187 @@
-import { useState, useEffect } from "react";
-import { useAuth } from "../backendApi/AuthContext";
-import { useNavigate} from "react-router-dom";
-import { motion,} from "framer-motion";
-import Footer from './SplashScreen/Footer';
-import axios from "axios";
+import { useState, useEffect, useRef } from "react"
+import { useNavigate } from "react-router-dom"
+import { motion, AnimatePresence } from "framer-motion"
+import { useAchievements } from "../backendApi/useAchievements"
+import { useActivities } from "../backendApi/useActivities"
+import { AchievementIcon } from "./AchievementIcon"
+import {
+  User,
+  Edit,
+  Home,
+  Camera,
+  Github,
+  Twitter,
+  Linkedin,
+  Mail,
+  Star,
+  BookOpen,
+  Package,
+  Award,
+  Activity,
+  ChevronRight,
+  Heart,
+  Calendar,
+  Clock,
+} from "lucide-react"
+import axios from "axios"
+import Footer from "./SplashScreen/Footer"
+import { useAuth } from "../backendApi/AuthContext"
 
-const Profile = () => {
-  const { user} = useAuth();
-  const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState("profile");
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [profileData, setProfileData] = useState(null);
+export default function Profile() {
+  const { user } = useAuth()
+  const router = useNavigate()
+  const [activeTab, setActiveTab] = useState("profile")
+  const [isUpdating, setIsUpdating] = useState(false)
+  const [savedClasses, setSavedClasses] = useState([])
+  const { achievements, loading: achievementsLoading } = useAchievements(user?.id);
+  const { activities, loading: activitiesLoading } = useActivities(user?.id);
+  const [userStats, setUserStats] = useState({
+    classesCreated: 0,
+    itemsPosted: 0,
+    communityScore: 0,
+  })
+  const [isSavedClassesLoading, setIsSavedClassesLoading] = useState(true)
+  const [profileData, setProfileData] = useState({
+    username: "",
+    email: "",
+    imageUrl: "",
+    bio: "",
+    skills: [],
+    interests: [],
+    socialLinks: {
+      github: "",
+      twitter: "",
+      linkedin: "",
+      facebook: "",
+    },
+  })
+  const [showTooltip, setShowTooltip] = useState(false)
+  const [scrollY, setScrollY] = useState(0)
+  const profileRef = useRef(null)
+
+  const formatMessageTime = (timestamp) => {
+    try {
+      // First check if we have a valid timestamp
+      if (!timestamp) {
+        console.error('No timestamp provided');
+        return 'Invalid Time';
+      }
+  
+      // If timestamp is already a Date object
+      if (timestamp instanceof Date) {
+        return new Intl.DateTimeFormat('en-US', {
+          hour: 'numeric',
+          minute: 'numeric',
+          hour12: true,
+          timeZone: 'Asia/Singapore'
+        }).format(timestamp);
+      }
+  
+      // If timestamp is a string, try to parse it
+      let date;
+      if (typeof timestamp === 'string') {
+        // Check if the timestamp contains microseconds
+        if (timestamp.includes('.')) {
+          // Remove anything after milliseconds (more than 3 digits after dot)
+          const cleanTimestamp = timestamp.replace(/(\.\d{3})\d+/, '$1');
+          // Make sure it's in ISO format
+          if (!timestamp.includes('T')) {
+            timestamp = cleanTimestamp.replace(' ', 'T');
+          }
+          if (!timestamp.endsWith('Z')) {
+            timestamp = timestamp + 'Z';
+          }
+        }
+        date = new Date(timestamp);
+      }
+  
+      if (!date || isNaN(date.getTime())) {
+        console.error('Invalid timestamp format:', timestamp);
+        return 'Invalid Time';
+      }
+  
+      return new Intl.DateTimeFormat('en-US', {
+        hour: 'numeric',
+        minute: 'numeric',
+        hour12: true,
+        timeZone: 'Asia/Singapore'
+      }).format(date);
+    } catch (error) {
+      console.error('Error formatting time:', error, timestamp);
+      return 'Invalid Time';
+    }
+  };
+
+  // Handle scroll effects
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrollY(window.scrollY)
+    }
+
+    window.addEventListener("scroll", handleScroll)
+    return () => window.removeEventListener("scroll", handleScroll)
+  }, [])
+
+  const fetchUserStats = async () => {
+    try {
+      const [classStats, itemStats] = await Promise.all([
+        axios.get(`http://localhost:8080/api/classes/user-stats/${user.id}`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }),
+        axios.get(`http://localhost:8080/api/borrowing/items/user-stats/${user.id}`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }),
+      ])
+
+      // Calculate community score based on various metrics
+      const communityScore = Math.min(
+        100,
+        classStats.data.classesCreated * 10 +
+          classStats.data.enrolledClasses * 5 +
+          itemStats.data.itemsPosted * 8 +
+          itemStats.data.currentlyLent * 15,
+      )
+
+      setUserStats({
+        classesCreated: classStats.data.classesCreated,
+        itemsPosted: itemStats.data.itemsPosted,
+        communityScore,
+      })
+    } catch (error) {
+      console.error("Error fetching user stats:", error)
+    }
+  }
+
+  useEffect(() => {
+    if (user) {
+      fetchUserStats()
+    }
+  }, [user])
+
+  const fetchSavedClasses = async () => {
+    try {
+      const response = await axios.get("http://localhost:8080/api/classes/saved", {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      })
+      setSavedClasses(response.data)
+    } catch (error) {
+      console.error("Error fetching saved classes:", error)
+    } finally {
+      setIsSavedClassesLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (user) {
+      fetchSavedClasses()
+    }
+  }, [user])
 
   useEffect(() => {
     const fetchProfileData = async () => {
@@ -19,423 +190,729 @@ const Profile = () => {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
-        });
-        setProfileData(response.data);
+        })
+
+        setProfileData({
+          ...response.data,
+          skills: response.data.skills || [],
+          interests: response.data.interests || [],
+          socialLinks: response.data.socialLinks || {
+            github: "",
+            twitter: "",
+            linkedin: "",
+            facebook: "",
+          },
+        })
       } catch (error) {
-        console.error("Error fetching profile data:", error);
+        console.error("Error fetching profile data:", error)
       }
-    };
+    }
 
     if (user) {
-      fetchProfileData();
+      fetchProfileData()
     }
-  }, [user]);
+  }, [user])
 
   const handleProfilePictureUpdate = async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
+    const file = event.target.files[0]
+    if (!file) return
 
-    const formData = new FormData();
-    formData.append("file", file);
+    const formData = new FormData()
+    formData.append("file", file)
 
-    setIsUpdating(true);
+    setIsUpdating(true)
     try {
-      const response = await axios.put(
-        "http://localhost:8080/api/users/profile/picture",
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
-      
-      setProfileData(prev => ({
+      const response = await axios.put("http://localhost:8080/api/users/profile/picture", formData, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          "Content-Type": "multipart/form-data",
+        },
+      })
+
+      setProfileData((prev) => ({
         ...prev,
-        imageUrl: response.data.imageUrl
-      }));
+        imageUrl: response.data.imageUrl,
+      }))
+
+      // Show tooltip feedback
+      setShowTooltip(true)
+      setTimeout(() => setShowTooltip(false), 3000)
     } catch (error) {
-      console.error("Error updating profile picture:", error);
+      console.error("Error updating profile picture:", error)
     } finally {
-      setIsUpdating(false);
+      setIsUpdating(false)
     }
   };
 
-  const styles = {
-    container: {
-      minHeight: "100vh",
-      backgroundColor: "rgba(255, 255, 255, 0.9)",
-      position: "relative",
-      zIndex: "1",
-      paddingTop: "50px",
-    },
-    homeButton: {
-      position: "absolute",
-      top: "20px",
-      left: "20px",  // Changed from right to left
-      background: "linear-gradient(to right, #3b82f6, #8b5cf6)",
-      color: "#fff",
-      border: "none",
-      padding: "10px 20px",
-      borderRadius: "8px",
-      cursor: "pointer",
-      fontSize: "0.9rem",
-      fontWeight: "500",
-      boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-      transition: "transform 0.2s ease, box-shadow 0.2s ease",
-      zIndex: "10",
-      "&:hover": {
-        transform: "translateY(-2px)",
-        boxShadow: "0 4px 6px rgba(0, 0, 0, 0.15)",
-      },
-    },
-    content: {
-      backgroundColor: "rgba(255, 255, 255, 0.95)",
-      margin: "20px",
-      borderRadius: "16px",
-      padding: "20px",
-      display: "flex",
-      boxShadow: "0 8px 32px rgba(0, 0, 0, 0.1)",
-      backdropFilter: "blur(8px)",
-      border: "1px solid rgba(255, 255, 255, 0.2)",
-      paddingTop: "20px",
-    },
-    profileContainer: {
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      padding: '20px',
-      backgroundColor: '#f9f9f9',
-      borderRadius: '8px',
-      boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
-    },
-    profileSection: {
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "flex-start",
-      marginTop: "20px",
-      marginLeft: "20px",
-    },
-    avatar: {
-      width: "100px",
-      height: "100px",
-      borderRadius: "50%",
-      backgroundColor: "#ddd",
-      marginBottom: "15px",
-    },
-    name: {
-      fontSize: "1.5rem",
-      fontWeight: "bold",
-      marginBottom: "5px",
-      color: "#333",
-    },
-    bio: {
-      color: "#666",
-      marginBottom: "10px",
-      fontSize: "0.9rem",
-    },
-    editButton: {
-      background: "linear-gradient(to right, #3b82f6, #8b5cf6)",
-      color: "#fff",
-      border: "none",
-      padding: "8px 20px",
-      borderRadius: "4px",
-      cursor: "pointer",
-      marginBottom: "20px",
-    },
-    tabs: {
-      display: "flex",
-      borderBottom: "1px solid #eee",
-      marginBottom: "20px",
-      width: "100%",
-      position: "relative",
-      background: "linear-gradient(to right, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1))",
-      padding: "10px 0",
-      borderRadius: "8px",
-    },
-    tabsWrapper: {
-      display: "flex",
-      gap: "100px",
-      position: "relative",
-      zIndex: "1",
-    },
-    tab: {
-      padding: "10px 30px",
-      cursor: "pointer",
-      color: "#666",
-      borderBottom: "2px solid transparent",
-      position: "relative",
-      transition: "all 0.3s ease",
-      "&:hover": {
-        color: "#8b5cf6",
-        transform: "translateY(-2px)",
-      },
-    },
-    profileTab: {
-      marginLeft: "20px", 
-    },
-    achievementsTab: {
-      position: "absolute",
-      left: "50%",
-      transform: "translateX(-50%)",
-    },
-    tabHighlight: {
-      position: "absolute",
-      bottom: "-1px",
-      height: "2px",
-      transition: "all 0.3s ease",
-      background: "linear-gradient(to right, #3b82f6, #8b5cf6)",
-    },
-    animatedBackground: {
-      position: "fixed",
-      top: "0",
-      left: "0",
-      right: "0",
-      bottom: "0",
-      background: "linear-gradient(45deg, rgba(59, 130, 246, 0.05), rgba(139, 92, 246, 0.05))",
-      zIndex: "-1",
-      overflow: "hidden",
-    },
-    activeTab: {
-      borderBottom: "2px solid #8b5cf6",
-      color: "#8b5cf6",
-      fontWeight: "bold",
-    },
-    section: {
-      marginBottom: "20px",
-      textAlign: "center",
-    },
-    sectionTitle: {
-      fontSize: "1.1rem",
-      fontWeight: "bold",
-      marginBottom: "10px",
-      color: "#333",
-    },
-    statsContainer: {
-      display: "flex",
-      gap: "20px",
-      marginBottom: "20px",
-    },
-    stat: {
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "flex-start",
-    },
-    statLabel: {
-      color: "#333",
-      fontWeight: "bold",
-    },
-    statValue: {
-      color: "#666",
-    },
-    linkButton: {
-      display: "flex",
-      alignItems: "center",
-      gap: "8px",
-      width: "100%",
-      padding: "10px",
-      border: "1px solid #ddd",
-      borderRadius: "4px",
-      backgroundColor: "transparent",
-      cursor: "pointer",
-      color: "#333",
-      marginBottom: "20px",
-    },
-    progressNote: {
-      fontSize: "0.8rem",
-      color: "#666",
-      fontStyle: "italic",
-    },
+  const getIconColor = (iconName) => {
+    const colors = {
+      'BookOpen': 'text-blue-500',
+      'Package': 'text-indigo-500',
+      'Star': 'text-amber-500',
+      'Award': 'text-emerald-500',
+      'Heart': 'text-rose-500',
+      'Crown': 'text-purple-500',
+      'HandShake': 'text-green-500',
+      'Gift': 'text-pink-500',
+      'MessageCircle': 'text-cyan-500',
+      'Target': 'text-orange-500',
+      'Share2': 'text-violet-500',
+      'Users': 'text-teal-500',
+      'ThumbsUp': 'text-yellow-500'
+    };
+    return colors[iconName] || 'text-gray-500';
   };
 
-  const FloatingElement = ({ style }) => (
-    <div
-      style={{
-        position: "absolute",
-        width: "100px",
-        height: "100px",
-        borderRadius: "50%",
-        background: "linear-gradient(45deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1))",
-        animation: `float ${Math.random() * 10 + 5}s ease-in-out infinite`,
-        ...style,
-      }}
-    />
-  );
+  const getActivityIcon = (iconName) => {
+    return <AchievementIcon 
+      iconName={iconName} 
+      className={`h-4 w-4 ${getIconColor(iconName)}`}
+    />;
+  };
 
   return (
-    <>
-     <div style={styles.animatedBackground}>
-        <FloatingElement style={{ top: "10%", left: "10%" }} />
-        <FloatingElement style={{ top: "50%", right: "15%" }} />
-        <FloatingElement style={{ bottom: "20%", left: "30%" }} />
+    <div className="min-h-screen bg-white relative overflow-hidden">
+      {/* Subtle background pattern */}
+      <div className="absolute inset-0 -z-10 opacity-5">
+        <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+              <path d="M 40 0 L 0 0 0 40" fill="none" stroke="currentColor" strokeWidth="1" />
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#grid)" />
+        </svg>
       </div>
 
-      <button 
-      style={styles.homeButton} 
-      onClick={() => navigate("/homepage")}
-    >
-      Homepage
-    </button>
-    <div style={styles.container}>
-              <div style={styles.content}>
-                <div style={styles.profileSection}>
-                  <div style={styles.profileContainer}>
-                    <div style={styles.avatar} className="relative group">
-                      <img
-                        src={
-                          profileData?.imageUrl
-                            ? profileData.imageUrl.startsWith('http')
-                              ? profileData.imageUrl
-                              : `http://localhost:8080${profileData.imageUrl}`
-                            : "/images/defaultProfile.png"
-                        }
-                        alt="Profile"
-                        className="w-full h-full rounded-full object-cover"
-                        onError={(e) => {
-                          console.error("Error loading image:", e);
-                          e.target.onerror = null;
-                          e.target.src = "/images/defaultProfile.png";
-                        }}
-                      />
-                      <div className="absolute inset-0 bg-black/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <label className="cursor-pointer">
-                          <span className="text-white text-sm">Change Photo</span>
-                          <input
-                            type="file"
-                            className="hidden"
-                            accept="image/*"
-                            onChange={handleProfilePictureUpdate}
-                            disabled={isUpdating}
-                          />
-                        </label>
-                      </div>
-                      {/* Loading overlay */}
-                      {isUpdating && (
-                        <div className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center">
-                          <span className="text-white">Updating...</span>
-                        </div>
-                      )}
+      {/* Accent color blobs */}
+      <div className="absolute top-40 -right-40 w-96 h-96 rounded-full bg-blue-50 blur-3xl opacity-50"></div>
+      <div className="absolute -bottom-20 -left-20 w-80 h-80 rounded-full bg-indigo-50 blur-3xl opacity-40"></div>
+
+      {/* Navigation header */}
+      <div
+        className={`sticky top-0 z-50 backdrop-blur-md bg-white/95 border-b border-slate-100 shadow-sm transition-all duration-300 ${
+          scrollY > 50 ? "py-2" : "py-3"
+        }`}
+      >
+        <div className="container mx-auto px-4 flex items-center justify-between">
+          <button
+            onClick={() => router("/homepage")}
+            className="group flex items-center gap-2 text-slate-700 hover:text-blue-600 px-3 py-2 rounded-md hover:bg-blue-50 transition-colors"
+          >
+            <Home className="h-4 w-4 group-hover:scale-110 transition-transform" />
+            <span className="font-medium">Home</span>
+          </button>
+
+          <div className="relative">
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-medium text-slate-700">{profileData?.username || user?.username}</span>
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                className="h-9 w-9 rounded-full border-2 border-white shadow-sm overflow-hidden relative"
+              >
+                <img
+                  src={
+                    profileData?.imageUrl
+                      ? profileData.imageUrl.startsWith("http")
+                        ? profileData.imageUrl
+                        : `http://localhost:8080${profileData.imageUrl}`
+                      : "/placeholder.svg?height=36&width=36"
+                  }
+                  alt="Profile"
+                  className="h-full w-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.src = "/placeholder.svg?height=36&width=36"
+                  }}
+                />
+                {!profileData?.imageUrl && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-blue-100 text-blue-500">
+                    <User className="h-4 w-4" />
+                  </div>
+                )}
+              </motion.div>
+            </div>
+
+            {/* Success tooltip */}
+            <AnimatePresence>
+              {showTooltip && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="absolute top-full right-0 mt-2 bg-green-50 border border-green-100 text-green-700 px-3 py-2 rounded-md shadow-md z-50"
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="h-2 w-2 rounded-full bg-green-500"></div>
+                    <span>Profile picture updated!</span>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+      </div>
+
+      <div className="container mx-auto py-8 px-4" ref={profileRef}>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          {/* Profile sidebar */}
+          <div className="lg:col-span-4">
+            <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6 sticky top-24">
+              <div className="flex flex-col items-center">
+                {/* Profile picture with upload overlay */}
+                <div className="relative group mb-6 mt-4">
+                  <motion.div
+                    whileHover={{ scale: 1.02 }}
+                    className="relative h-32 w-32 rounded-full overflow-hidden border-4 border-white shadow-md"
+                  >
+                    <img
+                      src={
+                        profileData?.imageUrl
+                          ? profileData.imageUrl.startsWith("http")
+                            ? profileData.imageUrl
+                            : `http://localhost:8080${profileData.imageUrl}`
+                          : "/placeholder.svg?height=128&width=128"
+                      }
+                      alt="Profile picture"
+                      className="h-full w-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.src = "/placeholder.svg?height=128&width=128"
+                      }}
+                    />
+
+                    {/* Upload overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <label className="cursor-pointer flex flex-col items-center">
+                        <Camera className="h-6 w-6 text-white mb-1" />
+                        <span className="text-white text-xs font-medium">Change Photo</span>
+                        <input
+                          type="file"
+                          className="hidden"
+                          accept="image/*"
+                          onChange={handleProfilePictureUpdate}
+                          disabled={isUpdating}
+                        />
+                      </label>
                     </div>
+                  </motion.div>
 
-                    {/* Profile Info */}
-                    <h1 style={styles.name}>{profileData?.username || user?.username}</h1>
-                    <p style={styles.bio}>
-                      {profileData?.email}
-                    </p>
-                    <button style={styles.editButton} onClick={() => navigate("/edit-profile")}>
-                      Edit Profile
-                    </button>
-
-                    {/* Stats */}
-                    <div style={styles.statsContainer}>
-                      <div style={styles.stat}>
-                        <span style={styles.statLabel}>Followers</span>
-                        <span style={styles.statValue}>0</span>
-                      </div>
-                      <div style={styles.stat}>
-                        <span style={styles.statLabel}>Following</span>
-                        <span style={styles.statValue}>0</span>
-                      </div>
+                  {/* Loading overlay */}
+                  {isUpdating && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="absolute inset-0 bg-black/40 rounded-full"></div>
+                      <div className="z-10 h-10 w-10 rounded-full border-2 border-white border-t-transparent animate-spin"></div>
                     </div>
+                  )}
 
-                    {/* Social Links */}
-                    <button style={styles.linkButton} onClick={() => navigate("/edit-profile")}>
-                      <span>🔗</span>
-                      Link social accounts
-                    </button>
+                  {/* Status indicator */}
+                  <div className="absolute bottom-1 right-1 h-5 w-5 rounded-full bg-green-500 border-2 border-white"></div>
+                </div>
 
-                    {/* Progress Section */}
-                    <div style={styles.section}>
-                      <h3 style={styles.sectionTitle}>Progress*</h3>
-                      <p style={styles.progressNote}>*These stats are only visible to you</p>
-                    </div>
+                {/* Profile info */}
+                <h1 className="text-2xl font-bold text-slate-800 mb-1">{profileData?.username || user?.username}</h1>
+                <p className="text-slate-500 mb-2">{profileData?.email || user?.email}</p>
+                <div className="flex items-center gap-1 text-xs text-slate-500 mb-6">
+                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-500"></span>
+                  <span>Online</span>
+                </div>
+
+                <motion.button
+                  onClick={() => router("/edit-profile")}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="mb-8 bg-blue-500 hover:bg-blue-600 text-white w-full py-2.5 px-4 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 flex items-center justify-center"
+                >
+                  <Edit className="mr-2 h-4 w-4" />
+                  Edit Profile
+                </motion.button>
+
+                {/* Stats */}
+                <div className="grid grid-cols-2 w-full gap-4 mb-8">
+                  <motion.div
+                    whileHover={{ y: -3 }}
+                    className="flex flex-col items-center p-4 bg-slate-50 rounded-xl border border-slate-100"
+                  >
+                    <span className="text-slate-500 text-sm mb-1">Followers</span>
+                    <span className="text-slate-800 font-bold text-xl">128</span>
+                  </motion.div>
+                  <motion.div
+                    whileHover={{ y: -3 }}
+                    className="flex flex-col items-center p-4 bg-slate-50 rounded-xl border border-slate-100"
+                  >
+                    <span className="text-slate-500 text-sm mb-1">Following</span>
+                    <span className="text-slate-800 font-bold text-xl">86</span>
+                  </motion.div>
+                </div>
+
+                {/* Social links */}
+                <div className="w-full mb-8">
+                  <h3 className="text-sm font-medium text-slate-700 mb-3">Social Profiles</h3>
+                  <div className="flex flex-wrap gap-2 justify-center">
+                    {profileData?.socialLinks?.twitter && (
+                      <motion.a
+                        href={profileData.socialLinks.twitter}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        whileHover={{ y: -3, scale: 1.05 }}
+                        className="rounded-full h-10 w-10 bg-white border border-slate-100 flex items-center justify-center hover:bg-blue-50 hover:border-blue-100 transition-colors"
+                      >
+                        <Twitter className="h-4 w-4 text-blue-500" />
+                      </motion.a>
+                    )}
+                    {profileData?.socialLinks?.github && (
+                      <motion.a
+                        href={profileData.socialLinks.github}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        whileHover={{ y: -3, scale: 1.05 }}
+                        className="rounded-full h-10 w-10 bg-white border border-slate-100 flex items-center justify-center hover:bg-slate-50 hover:border-slate-200 transition-colors"
+                      >
+                        <Github className="h-4 w-4 text-slate-800" />
+                      </motion.a>
+                    )}
+                    {profileData?.socialLinks?.linkedin && (
+                      <motion.a
+                        href={profileData.socialLinks.linkedin}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        whileHover={{ y: -3, scale: 1.05 }}
+                        className="rounded-full h-10 w-10 bg-white border border-slate-100 flex items-center justify-center hover:bg-blue-50 hover:border-blue-100 transition-colors"
+                      >
+                        <Linkedin className="h-4 w-4 text-blue-700" />
+                      </motion.a>
+                    )}
+                    {profileData?.socialLinks?.facebook && (
+                      <motion.a
+                        href={profileData.socialLinks.facebook}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        whileHover={{ y: -3, scale: 1.05 }}
+                        className="rounded-full h-10 w-10 bg-white border border-slate-100 flex items-center justify-center hover:bg-red-50 hover:border-red-100 transition-colors"
+                      >
+                        <Mail className="h-4 w-4 text-red-500" />
+                      </motion.a>
+                    )}
                   </div>
                 </div>
 
+                {/* Skills section */}
+                <div className="w-full">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-medium text-slate-800">Skills</h3>
+                    <span className="text-xs font-normal px-2 py-1 rounded-full border border-slate-100 text-slate-600">
+                      {profileData?.skills?.length || 0} Skills
+                    </span>
+                  </div>
 
-                    {/* Right side - Tabs and Content */}
-                    <div className="flex-1 ml-8">
-                      {/* Tabs */}
-                      <div style={styles.tabs}>
-                        <div
-                          style={{
-                            ...styles.tab,
-                            ...styles.profileTab,
-                            ...(activeTab === "profile" ? styles.activeTab : {}),
-                          }}
-                          onClick={() => setActiveTab("profile")}
-                        >
-                          Profile
+                  <div className="space-y-4">
+                    {profileData?.skills?.map((skill, index) => (
+                      <div key={index}>
+                        <div className="flex justify-between text-sm mb-1">
+                          <span className="text-slate-700 font-medium">{skill.name}</span>
+                          <span className="text-slate-500">{skill.level}%</span>
                         </div>
-                        <div
-                          style={{
-                            ...styles.tab,
-                            ...styles.achievementsTab,
-                            ...(activeTab === "achievements" ? styles.activeTab : {}),
-                          }}
-                          onClick={() => setActiveTab("achievements")}
-                        >
-                          Achievements
+                        <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${skill.level}%` }}
+                            transition={{ duration: 1, delay: index * 0.2 }}
+                            className="h-full bg-blue-500 rounded-full"
+                          ></motion.div>
+                        </div>
+                      </div>
+                    ))}
+
+                    {(!profileData?.skills || profileData.skills.length === 0) && (
+                      <div className="text-center py-4 text-slate-400 text-sm">No skills added yet</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Main content area */}
+          <div className="lg:col-span-8 space-y-8">
+            <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+              {/* Custom tabs */}
+              <div className="w-full border-b border-slate-100 flex">
+                {[
+                  { id: "profile", label: "Profile", icon: <User className="h-4 w-4" /> },
+                  { id: "achievements", label: "Achievements", icon: <Award className="h-4 w-4" /> },
+                  { id: "activity", label: "Activity", icon: <Activity className="h-4 w-4" /> },
+                ].map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex-1 py-4 text-center transition-colors flex items-center justify-center gap-2 ${
+                      activeTab === tab.id
+                        ? "border-b-2 border-blue-500 text-blue-600 font-medium"
+                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                    }`}
+                  >
+                    <span className={activeTab === tab.id ? "text-blue-500" : "text-slate-400"}>{tab.icon}</span>
+                    <span>{tab.label}</span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="p-6">
+                <AnimatePresence mode="wait">
+                  {activeTab === "profile" && (
+                    <motion.div
+                      key="profile"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.3 }}
+                      className="space-y-8"
+                    >
+                      <div>
+                        <h2 className="text-xl font-semibold text-slate-800 mb-4 flex items-center">
+                          <User className="mr-2 h-5 w-5 text-blue-500" />
+                          About Me
+                        </h2>
+                        <div className="bg-slate-50 rounded-xl p-6 border border-slate-100">
+                          <p className="text-slate-600 leading-relaxed">
+                            {profileData?.bio ||
+                              "Hi there! I'm a passionate developer who loves creating beautiful and functional web applications. I specialize in front-end development with React and have experience with various back-end technologies."}
+                          </p>
                         </div>
                       </div>
 
-                      {/* Tab Content */}
-                      <div className="mt-6">
-                        {activeTab === "profile" && (
-                          <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ duration: 0.3 }}
-                          >
-                            <div style={styles.section}>
-                              <h2 style={styles.sectionTitle}>About Me</h2>
-                              <p>{profileData?.bio || "No bio yet"}</p>
+                      <div>
+                        <h2 className="text-xl font-semibold text-slate-800 mb-4 flex items-center">
+                          <Heart className="mr-2 h-5 w-5 text-blue-500" />
+                          Interests
+                        </h2>
+                        <div className="flex flex-wrap gap-2">
+                          {profileData?.interests?.length > 0 ? (
+                            profileData.interests.map((interest, index) => (
+                              <motion.span
+                                key={index}
+                                initial={{ opacity: 0, scale: 0.8 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ duration: 0.3, delay: index * 0.1 }}
+                                whileHover={{ scale: 1.05, y: -2 }}
+                                className="bg-blue-50 hover:bg-blue-100 text-blue-600 px-3 py-1.5 rounded-full text-sm border border-blue-100"
+                              >
+                                {interest}
+                              </motion.span>
+                            ))
+                          ) : (
+                            <div className="text-slate-400 text-sm py-2">No interests added yet</div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="flex items-center justify-between mb-4">
+                          <h2 className="text-xl font-semibold text-slate-800 flex items-center">
+                            <BookOpen className="mr-2 h-5 w-5 text-blue-500" />
+                            Favorite Classes
+                          </h2>
+                          {savedClasses.length > 0 && (
+                            <motion.button
+                              whileHover={{ scale: 1.05, x: 3 }}
+                              className="text-sm text-blue-500 hover:text-blue-600 flex items-center gap-1"
+                              onClick={() => router("/saved-classes")}
+                            >
+                              <span>View all</span>
+                              <ChevronRight className="h-4 w-4" />
+                            </motion.button>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {isSavedClassesLoading ? (
+                            // Loading skeleton
+                            [...Array(2)].map((_, index) => (
+                              <div key={index} className="animate-pulse bg-slate-50 rounded-lg overflow-hidden">
+                                <div className="h-32 bg-slate-100"></div>
+                                <div className="p-4 space-y-2">
+                                  <div className="h-4 w-3/4 bg-slate-100 rounded"></div>
+                                  <div className="h-3 w-1/2 bg-slate-100 rounded"></div>
+                                </div>
+                              </div>
+                            ))
+                          ) : savedClasses.length > 0 ? (
+                            savedClasses.slice(0, 4).map((classItem, index) => (
+                              <motion.div
+                                key={classItem.id}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.4, delay: index * 0.1 }}
+                                whileHover={{ y: -5, scale: 1.02 }}
+                                onClick={() => router(`/class/${classItem.id}`)}
+                                className="group cursor-pointer overflow-hidden bg-white rounded-lg border border-slate-100 hover:shadow-md transition-all duration-300"
+                              >
+                                <div className="h-32 relative overflow-hidden">
+                                  <img
+                                    src={
+                                      classItem.thumbnailUrl
+                                        ? classItem.thumbnailUrl.startsWith("http")
+                                          ? classItem.thumbnailUrl
+                                          : `http://localhost:8080${classItem.thumbnailUrl}`
+                                        : "/default-class-image.jpg"
+                                    }
+                                    alt={classItem.title}
+                                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                  />
+                                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                                </div>
+                                <div className="p-4">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <span className="px-2 py-1 text-xs font-medium bg-blue-50 text-blue-600 rounded-full">
+                                      {classItem.category || "Uncategorized"}
+                                    </span>
+                                    {classItem.averageRating && (
+                                      <div className="flex items-center gap-1">
+                                        <Star className="h-3 w-3 text-amber-400" />
+                                        <span className="text-sm text-slate-600">
+                                          {classItem.averageRating.toFixed(1)}
+                                        </span>
+                                      </div>
+                                    )}
+                                  </div>
+                                  <h3 className="font-medium text-slate-800 mb-1 line-clamp-1">{classItem.title}</h3>
+                                  <p className="text-sm text-slate-500 line-clamp-2">{classItem.description}</p>
+                                  <div className="mt-3 flex items-center gap-2">
+                                    <img
+                                      src={classItem.creator?.imageUrl || "/images/defaultProfile.png"}
+                                      alt={classItem.creatorName}
+                                      className="w-6 h-6 rounded-full object-cover"
+                                    />
+                                    <span className="text-xs text-slate-600">{classItem.creatorName}</span>
+                                  </div>
+                                </div>
+                              </motion.div>
+                            ))
+                          ) : (
+                            <div className="col-span-2 text-center py-8 bg-slate-50 rounded-lg border border-dashed border-slate-200">
+                              <div className="text-slate-400 mb-2">No favorite classes yet</div>
+                              <motion.button
+                                whileHover={{ scale: 1.05 }}
+                                onClick={() => router("/homepage")}
+                                className="text-blue-500 hover:text-blue-600 text-sm font-medium"
+                              >
+                                Browse classes
+                              </motion.button>
                             </div>
-                            {/* Additional profile sections can go here */}
-                          </motion.div>
-                        )}
-
-                        {activeTab === "achievements" && (
-                          <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ duration: 0.3 }}
-                            style={{ textAlign: "center", color: "#666", padding: "20px" }}
-                          >
-                            No achievements yet
-                          </motion.div>
-                        )}
+                          )}
+                        </div>
                       </div>
+                    </motion.div>
+                  )}
+
+                    {activeTab === "achievements" && (
+                        <motion.div
+                          key="achievements"
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          transition={{ duration: 0.3 }}
+                        >
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            {achievementsLoading ? (
+                              // Loading skeleton
+                              [...Array(6)].map((_, index) => (
+                                <div key={index} className="animate-pulse bg-slate-50 rounded-lg p-6">
+                                  <div className="w-16 h-16 bg-slate-200 rounded-full mx-auto mb-4"></div>
+                                  <div className="h-4 bg-slate-200 rounded w-3/4 mx-auto mb-2"></div>
+                                  <div className="h-3 bg-slate-200 rounded w-1/2 mx-auto"></div>
+                                </div>
+                              ))
+                            ) : achievements.length > 0 ? (
+                              achievements.map((achievement, index) => (
+                                <motion.div
+                                  key={achievement.id}
+                                  initial={{ opacity: 0, y: 20 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  transition={{ duration: 0.4, delay: index * 0.1 }}
+                                  whileHover={{ y: -5 }}
+                                  className={`overflow-hidden border rounded-lg ${
+                                    achievement.unlocked ? "bg-white border-blue-100" : "bg-slate-50 border-slate-100"
+                                  }`}
+                                >
+                                  <div className="p-6 flex flex-col items-center text-center">
+                                  <div className={`mb-4 ${achievement.unlocked ? "" : "opacity-30"}`}>
+                                      <AchievementIcon 
+                                        iconName={achievement.iconName} 
+                                        className={`h-8 w-8 ${
+                                          achievement.unlocked 
+                                            ? getIconColor(achievement.iconName) 
+                                            : "text-gray-400"
+                                        }`}
+                                      />
+                                    </div>
+                                    <h3
+                                      className={`font-medium mb-2 ${
+                                        achievement.unlocked ? "text-slate-800" : "text-slate-400"
+                                      }`}
+                                    >
+                                      {achievement.name}
+                                    </h3>
+                                    <p className="text-sm text-slate-500 mb-4">{achievement.description}</p>
+
+                                    <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                                      <motion.div
+                                        initial={{ width: 0 }}
+                                        animate={{ width: `${achievement.progress}%` }}
+                                        transition={{ duration: 1, delay: index * 0.2 }}
+                                        className={`h-full rounded-full ${
+                                          achievement.unlocked ? "bg-blue-500" : "bg-slate-300"
+                                        }`}
+                                      ></motion.div>
+                                    </div>
+
+                                    <div className="mt-3 text-xs text-slate-500">
+                                      {achievement.unlocked ? (
+                                        <span className="text-blue-500">
+                                          Unlocked {new Date(achievement.unlockedAt).toLocaleDateString()}
+                                        </span>
+                                      ) : (
+                                        <span>{Math.round(achievement.progress)}% progress</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </motion.div>
+                              ))
+                            ) : (
+                              <div className="col-span-3 text-center py-8">
+                                <div className="text-slate-400">No achievements yet</div>
+                              </div>
+                            )}
+                          </div>
+                        </motion.div>
+                      )}
+
+                      {activeTab === "activity" && (
+                          <motion.div
+                            key="activity"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            transition={{ duration: 0.3 }}
+                          >
+                            <div className="relative pl-6 border-l-2 border-slate-100 space-y-8">
+                              {activitiesLoading ? (
+                                // Loading skeleton
+                                [...Array(3)].map((_, index) => (
+                                  <div key={index} className="animate-pulse">
+                                    <div className="absolute -left-[25px] h-4 w-4 rounded-full bg-slate-200"></div>
+                                    <div className="mb-1 flex items-center gap-2">
+                                      <div className="h-3.5 w-24 bg-slate-200 rounded"></div>
+                                      <div className="h-3.5 w-16 bg-slate-200 rounded ml-2"></div>
+                                    </div>
+                                    <div className="bg-white rounded-lg p-4 border border-slate-100">
+                                      <div className="flex items-start gap-3">
+                                        <div className="h-8 w-8 bg-slate-200 rounded"></div>
+                                        <div className="flex-1">
+                                          <div className="h-4 w-3/4 bg-slate-200 rounded mb-2"></div>
+                                          <div className="h-3 w-1/2 bg-slate-200 rounded"></div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))
+                              ) : activities.length > 0 ? (
+                                activities.map((activity, index) => (
+                                  <motion.div
+                                    key={activity.id}
+                                    className="relative"
+                                    initial={{ opacity: 0, x: -20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ duration: 0.4, delay: index * 0.15 }}
+                                  >
+                                    <div className="absolute -left-[25px] h-4 w-4 rounded-full bg-blue-500 border-2 border-white"></div>
+                                    <div className="mb-1 text-sm text-slate-500 flex items-center gap-2">
+                                      <Calendar className="h-3.5 w-3.5 text-slate-400" />
+                                      <span>{activity.date.toLocaleDateString()}</span>
+                                      <Clock className="h-3.5 w-3.5 text-slate-400 ml-2" />
+                                      <span>
+                                        {activity.date.toLocaleTimeString([], { 
+                                          hour: "2-digit", 
+                                          minute: "2-digit" 
+                                        })}
+                                      </span>
+                                    </div>
+                                    <motion.div
+                                      whileHover={{ x: 3 }}
+                                      className="bg-white rounded-lg p-4 border border-slate-100 shadow-sm hover:shadow-md transition-all"
+                                    >
+                                      <div className="flex items-start gap-3">
+                                        <div className="p-2 bg-blue-50 rounded-lg">
+                                          {getActivityIcon(activity.iconName)}
+                                        </div>
+                                        <div>
+                                          <h4 className="font-medium text-slate-800 mb-1">
+                                            {activity.title}
+                                          </h4>
+                                          <p className="text-sm text-slate-600">
+                                            {activity.description}
+                                          </p>
+                                        </div>
+                                      </div>
+                                    </motion.div>
+                                  </motion.div>
+                                ))
+                              ) : (
+                                <div className="text-center py-8">
+                                  <div className="text-slate-400">No activities yet</div>
+                                </div>
+                              )}
+                            </div>
+                          </motion.div>
+                        )}
+                </AnimatePresence>
+              </div>
+            </div>
+
+            {/* Quick stats */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {[
+                {
+                  label: "Classes Created",
+                  value: userStats.classesCreated,
+                  icon: <BookOpen className="h-5 w-5 text-blue-500" />,
+                  color: "from-blue-500 to-blue-600",
+                },
+                {
+                  label: "Items Posted",
+                  value: userStats.itemsPosted,
+                  icon: <Package className="h-5 w-5 text-indigo-500" />,
+                  color: "from-indigo-500 to-indigo-600",
+                },
+                {
+                  label: "Community Score",
+                  value: `${userStats.communityScore}%`,
+                  icon: <Star className="h-5 w-5 text-amber-500" />,
+                  color: "from-amber-500 to-amber-600",
+                },
+              ].map((stat, index) => (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: 0.2 + index * 0.1 }}
+                  whileHover={{ y: -5 }}
+                  className="overflow-hidden rounded-lg border border-slate-100 bg-white shadow-sm hover:shadow-md transition-all"
+                >
+                  <div className={`h-1 bg-gradient-to-r ${stat.color}`}></div>
+                  <div className="p-4 flex items-center">
+                    <div className="mr-4 p-2 bg-slate-50 rounded-lg">{stat.icon}</div>
+                    <div>
+                      <p className="text-sm text-slate-500">{stat.label}</p>
+                      <p className="text-xl font-bold text-slate-800">{stat.value}</p>
                     </div>
                   </div>
-                  <Footer />
-                </div>
-                <style>
-        {`
-          @keyframes float {
-            0% {
-              transform: translateY(0) rotate(0);
-            }
-            50% {
-              transform: translateY(-20px) rotate(180deg);
-            }
-            100% {
-              transform: translateY(0) rotate(360deg);
-            }
-          }
-          
-          .tab-transition {
-            transition: all 0.3s ease;
-          }
-          
-          .tab-hover:hover {
-            transform: translateY(-2px);
-          }
-        `}
-      </style>
-      </>
-  );
-};
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
 
-export default Profile;
+      <Footer />
+    </div>
+  )
+}
+

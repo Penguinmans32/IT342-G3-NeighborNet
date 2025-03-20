@@ -416,4 +416,20 @@ public class AuthController {
                     .body(com.example.neighbornetbackend.dto.ApiResponse.error("Authentication Failed: " + e.getMessage()));
         }
     }
+
+    @GetMapping("/check-provider")
+    public ResponseEntity<?> checkAuthProvider(@RequestParam String email) {
+        try {
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            Map<String, String> response = new HashMap<>();
+            response.put("provider", user.getProvider() != null ? user.getProvider().toLowerCase() : "local");
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", "User not found"));
+        }
+    }
 }

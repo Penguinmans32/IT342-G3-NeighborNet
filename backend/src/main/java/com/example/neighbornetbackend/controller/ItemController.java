@@ -7,10 +7,7 @@ import com.example.neighbornetbackend.dto.RatingRequest;
 import com.example.neighbornetbackend.model.BorrowingAgreement;
 import com.example.neighbornetbackend.model.Item;
 import com.example.neighbornetbackend.model.ItemRating;
-import com.example.neighbornetbackend.service.BorrowingAgreementService;
-import com.example.neighbornetbackend.service.ItemImageStorageService;
-import com.example.neighbornetbackend.service.ItemRatingService;
-import com.example.neighbornetbackend.service.ItemService;
+import com.example.neighbornetbackend.service.*;
 import com.example.neighbornetbackend.security.CurrentUser;
 import com.example.neighbornetbackend.security.UserPrincipal;
 import org.slf4j.Logger;
@@ -25,7 +22,9 @@ import org.springframework.core.io.Resource;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/borrowing/items")
@@ -36,12 +35,14 @@ public class ItemController {
     private final ItemImageStorageService itemImageStorageService;
     private final ItemRatingService itemRatingService;
     private final BorrowingAgreementService borrowingAgreementService;
+    private final AchievementService achievementService;
 
-    public ItemController(ItemService itemService, ItemImageStorageService itemImageStorageService, ItemRatingService itemRatingService, BorrowingAgreementService borrowingAgreementService) {
+    public ItemController(ItemService itemService, ItemImageStorageService itemImageStorageService, ItemRatingService itemRatingService, BorrowingAgreementService borrowingAgreementService, AchievementService achievementService) {
         this.itemService = itemService;
         this.itemImageStorageService = itemImageStorageService;
         this.itemRatingService = itemRatingService;
         this.borrowingAgreementService = borrowingAgreementService;
+        this.achievementService = achievementService;
     }
 
     @PostMapping
@@ -51,6 +52,7 @@ public class ItemController {
             @CurrentUser UserPrincipal currentUser) {
         try {
             ItemDTO createdItem = itemService.createItem(item, images, currentUser.getId());
+            achievementService.checkItemPostingAchievements(currentUser.getId());
             return ResponseEntity.ok(createdItem);
         } catch (IOException e) {
             return ResponseEntity.badRequest().build();
@@ -238,5 +240,26 @@ public class ItemController {
             @RequestParam Double maxLng) {
         List<ItemDTO> items = itemService.findItemsWithinBounds(minLat, maxLat, minLng, maxLng);
         return ResponseEntity.ok(items);
+    }
+
+    @GetMapping("/user-stats/{userId}")
+    public ResponseEntity<Map<String, Object>> getUserItemStats(@PathVariable Long userId) {
+        try {
+            Map<String, Object> stats = new HashMap<>();
+
+            int itemsPosted = itemService.getItemsByUser(userId).size();
+            stats.put("itemsPosted", itemsPosted);
+
+            int borrowedItems = borrowingAgreementService.getBorrowedItems(userId).size();
+            stats.put("currentlyBorrowed", borrowedItems);
+
+            int lentItems = borrowingAgreementService.getLentItems(userId).size();
+            stats.put("currentlyLent", lentItems);
+
+            return ResponseEntity.ok(stats);
+        } catch (Exception e) {
+            logger.error("Error getting user item stats", e);
+            return ResponseEntity.internalServerError().build();
+        }
     }
 }

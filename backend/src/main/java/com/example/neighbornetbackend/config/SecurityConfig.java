@@ -67,7 +67,7 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(request -> {
                     CorsConfiguration config = new CorsConfiguration();
                     config.setAllowedOrigins(Arrays.asList("http://localhost:5173"));
-                    config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+                    config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
                     config.setAllowCredentials(true);
                     config.setAllowedHeaders(Arrays.asList("*"));
                     config.setExposedHeaders(Arrays.asList(
@@ -107,6 +107,7 @@ public class SecurityConfig {
                         .requestMatchers("/topic/**").permitAll()
                         .requestMatchers("/queue/**").permitAll()
                         .requestMatchers("/messages/**").permitAll()
+                        .requestMatchers("/api/users/profile/**").permitAll()
                         .requestMatchers("/conversations/**").permitAll()
                         .requestMatchers("/api/dashboard/stats").permitAll()
                         .requestMatchers("/api/auth/password/**").permitAll()
