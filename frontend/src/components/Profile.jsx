@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { useAchievements } from "../backendApi/useAchievements"
 import { useActivities } from "../backendApi/useActivities"
 import { AchievementIcon } from "./AchievementIcon"
+import { useParams } from "react-router-dom"
 import {
   User,
   Edit,
@@ -31,10 +32,11 @@ export default function Profile() {
   const { user } = useAuth()
   const router = useNavigate()
   const [activeTab, setActiveTab] = useState("profile")
+  const { userId } = useParams(); 
   const [isUpdating, setIsUpdating] = useState(false)
   const [savedClasses, setSavedClasses] = useState([])
-  const { achievements, loading: achievementsLoading } = useAchievements(user?.id);
-  const { activities, loading: activitiesLoading } = useActivities(user?.id);
+  const { achievements, loading: achievementsLoading } = useAchievements(userId || user?.id);
+  const { activities, loading: activitiesLoading } = useActivities(userId || user?.id);
   const [userStats, setUserStats] = useState({
     classesCreated: 0,
     itemsPosted: 0,
@@ -67,7 +69,6 @@ export default function Profile() {
         return 'Invalid Time';
       }
   
-      // If timestamp is already a Date object
       if (timestamp instanceof Date) {
         return new Intl.DateTimeFormat('en-US', {
           hour: 'numeric',
@@ -77,14 +78,10 @@ export default function Profile() {
         }).format(timestamp);
       }
   
-      // If timestamp is a string, try to parse it
       let date;
       if (typeof timestamp === 'string') {
-        // Check if the timestamp contains microseconds
         if (timestamp.includes('.')) {
-          // Remove anything after milliseconds (more than 3 digits after dot)
           const cleanTimestamp = timestamp.replace(/(\.\d{3})\d+/, '$1');
-          // Make sure it's in ISO format
           if (!timestamp.includes('T')) {
             timestamp = cleanTimestamp.replace(' ', 'T');
           }
@@ -124,13 +121,14 @@ export default function Profile() {
 
   const fetchUserStats = async () => {
     try {
+      const targetId = userId || user?.id;
       const [classStats, itemStats] = await Promise.all([
-        axios.get(`http://localhost:8080/api/classes/user-stats/${user.id}`, {
+        axios.get(`http://localhost:8080/api/classes/user-stats/${targetId}`, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
         }),
-        axios.get(`http://localhost:8080/api/borrowing/items/user-stats/${user.id}`, {
+        axios.get(`http://localhost:8080/api/borrowing/items/user-stats/${targetId}`, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
@@ -178,20 +176,24 @@ export default function Profile() {
   }
 
   useEffect(() => {
-    if (user) {
-      fetchSavedClasses()
+    if (user && (!userId || userId === user.id.toString())) {
+      fetchSavedClasses();
     }
-  }, [user])
+  }, [user, userId]);
 
   useEffect(() => {
-    const fetchProfileData = async () => {
+    const fetchProfileData = async (targetUserId) => {
       try {
-        const response = await axios.get("http://localhost:8080/api/users/profile", {
+        const endpoint = targetUserId 
+          ? `http://localhost:8080/api/users/${targetUserId}/profile` 
+          : "http://localhost:8080/api/users/profile";
+  
+        const response = await axios.get(endpoint, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
-        })
-
+        });
+  
         setProfileData({
           ...response.data,
           skills: response.data.skills || [],
@@ -202,16 +204,21 @@ export default function Profile() {
             linkedin: "",
             facebook: "",
           },
-        })
+        });
       } catch (error) {
-        console.error("Error fetching profile data:", error)
+        console.error("Error fetching profile data:", error);
+      }
+    };
+  
+    if (user) {
+      if (userId && userId !== user.id.toString()) {
+        fetchProfileData(userId);
+      } else {
+        fetchProfileData();
       }
     }
+  }, [user, userId]);
 
-    if (user) {
-      fetchProfileData()
-    }
-  }, [user])
 
   const handleProfilePictureUpdate = async (event) => {
     const file = event.target.files[0]
@@ -408,22 +415,36 @@ export default function Profile() {
                 </div>
 
                 {/* Profile info */}
-                <h1 className="text-2xl font-bold text-slate-800 mb-1">{profileData?.username || user?.username}</h1>
-                <p className="text-slate-500 mb-2">{profileData?.email || user?.email}</p>
+                <h1 className="text-2xl font-bold text-slate-800 mb-1">
+                  {profileData?.username || user?.username}
+                </h1>
+                {(!userId || userId === user?.id?.toString()) ? (
+                  <p className="text-slate-500 mb-2">
+                    {profileData?.email || user?.email}
+                  </p>
+                ) : (
+                  <p className="text-slate-500 mb-2">
+                    Community Member
+                  </p>
+                )}
                 <div className="flex items-center gap-1 text-xs text-slate-500 mb-6">
                   <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-500"></span>
                   <span>Online</span>
                 </div>
 
-                <motion.button
-                  onClick={() => router("/edit-profile")}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="mb-8 bg-blue-500 hover:bg-blue-600 text-white w-full py-2.5 px-4 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 flex items-center justify-center"
-                >
-                  <Edit className="mr-2 h-4 w-4" />
-                  Edit Profile
-                </motion.button>
+                {(!userId || userId === user?.id?.toString()) && (
+                  <motion.button
+                    onClick={() => router("/edit-profile")}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="mb-8 bg-blue-500 hover:bg-blue-600 text-white w-full py-2.5 px-4 
+                              rounded-lg shadow-sm hover:shadow-md transition-all duration-200 
+                              flex items-center justify-center"
+                  >
+                    <Edit className="mr-2 h-4 w-4" />
+                    Edit Profile
+                  </motion.button>
+                )}
 
                 {/* Stats */}
                 <div className="grid grid-cols-2 w-full gap-4 mb-8">

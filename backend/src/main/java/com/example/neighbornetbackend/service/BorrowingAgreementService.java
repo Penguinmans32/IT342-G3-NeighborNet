@@ -15,4 +15,5 @@ public interface BorrowingAgreementService {
     List<ItemDTO> getBorrowedItems(Long userId);
     List<ItemDTO> getLentItems(Long userId);
     List<BorrowingAgreement> getRecentBorrows();
+    List<BorrowingAgreement> getUserBorrows(Long userId);
 }

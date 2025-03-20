@@ -64,6 +64,7 @@ function App() {
             <Route path="/search" element={<SearchResults />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/oauth2/redirect" element={<OAuth2RedirectHandler />} />
+            <Route path="/profile/:userId" element={<Profile />} />
             <Route 
               path="/homepage" 
               element={

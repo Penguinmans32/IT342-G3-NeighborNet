@@ -130,6 +130,14 @@ const Dashboard = () => {
     return thumbnailUrl.startsWith("http") ? thumbnailUrl : `http://localhost:8080${thumbnailUrl}`
   }
 
+  const navigateToProfile = (userId) => {
+    if (userId === user?.id) {
+      navigate('/profile');
+    } else {
+      navigate(`/profile/${userId}`);
+    }
+  };
+
   useEffect(() => {
     const fetchRecentActivities = async () => {
       try {
@@ -835,17 +843,29 @@ const Dashboard = () => {
                     className="border-b border-indigo-100 last:border-0 pb-6 mb-6 last:pb-0 last:mb-0"
                   >
                     <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-400 to-blue-500 flex items-center justify-center overflow-hidden flex-shrink-0 border-2 border-white shadow-sm">
-                        <img
-                          src={post.author.imageUrl || "/images/defaultProfile.png"}
-                          alt={post.author.username}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
+                    <div 
+                      onClick={() => navigateToProfile(post.author.id)}
+                      className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-400 to-blue-500 
+                                flex items-center justify-center overflow-hidden flex-shrink-0 
+                                border-2 border-white shadow-sm cursor-pointer
+                                hover:border-blue-300 transition-all"
+                    >
+                      <img
+                        src={post.author.imageUrl || "/images/defaultProfile.png"}
+                        alt={post.author.username}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
                       <div className="flex-1">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center">
-                            <h3 className="font-semibold text-indigo-900">{post.author.username}</h3>
+                          <h3 
+                              onClick={() => navigateToProfile(post.author.id)}
+                              className="font-semibold text-indigo-900 cursor-pointer
+                                        hover:text-blue-600 transition-colors"
+                            >
+                              {post.author.username}
+                            </h3>
                             {user?.id === post.author.id && (
                               <div className="ml-4 flex items-center gap-2">
                                 <button
@@ -879,7 +899,13 @@ const Dashboard = () => {
                           <div className="border-l-4 border-indigo-200 pl-4 mt-3 bg-indigo-50/50 rounded-r-xl p-3">
                             <div className="text-sm text-indigo-600 mb-2 font-medium flex items-center gap-1">
                               <Share2 className="w-4 h-4" />
-                              {post.sharedBy.username} shared this post
+                              <span 
+                                onClick={() => navigateToProfile(post.sharedBy.id)}
+                                className="cursor-pointer hover:text-blue-600 transition-colors"
+                              >
+                                {post.sharedBy.username}
+                              </span>
+                              {" shared this post"}
                             </div>
                             {post.content && (
                               <p className="text-indigo-800 mb-4 bg-white p-3 rounded-xl border border-indigo-100">
@@ -888,16 +914,20 @@ const Dashboard = () => {
                             )}
                             <div className="bg-white rounded-xl p-4 border border-indigo-100 shadow-sm">
                               <div className="flex items-center gap-2 mb-2">
-                                <img
+                              <img
+                                  onClick={() => navigateToProfile(post.originalPost.author.id)}
                                   src={post.originalPost.author.imageUrl || "/images/defaultProfile.png"}
                                   alt={post.originalPost.author.username}
-                                  className="w-8 h-8 rounded-full border border-indigo-200"
+                                  className="w-8 h-8 rounded-full border border-indigo-200 cursor-pointer
+                                            hover:border-blue-300 transition-all"
                                 />
                                 <div>
-                                  <div className="font-medium">{post.originalPost.author.username}</div>
-                                  <div className="text-xs text-indigo-400">
-                                    {formatDate(post.originalPost.createdAt)}
-                                  </div>
+                                <div 
+                                  onClick={() => navigateToProfile(post.originalPost.author.id)}
+                                  className="font-medium cursor-pointer hover:text-blue-600 transition-colors"
+                                >
+                                  {post.originalPost.author.username}
+                                </div>
                                 </div>
                               </div>
                               <p className="text-indigo-800">{post.originalPost.content}</p>
@@ -1054,15 +1084,23 @@ const Dashboard = () => {
                                   animate={{ opacity: 1, y: 0 }}
                                   className="flex gap-3"
                                 >
-                                  <img
-                                    src={comment.author.imageUrl || "/images/defaultProfile.png"}
-                                    alt={comment.author.username}
-                                    className="w-8 h-8 rounded-full object-cover border-2 border-indigo-100"
-                                  />
+                                   <img
+                                      onClick={() => navigateToProfile(comment.author.id)}
+                                      src={comment.author.imageUrl || "/images/defaultProfile.png"}
+                                      alt={comment.author.username}
+                                      className="w-8 h-8 rounded-full object-cover border-2 border-indigo-100
+                                                cursor-pointer hover:border-blue-300 transition-all"
+                                    />
                                   <div className="flex-1">
                                     <div className="bg-indigo-50 rounded-xl px-4 py-3">
                                       <div className="flex justify-between items-start">
-                                        <span className="font-medium text-indigo-900">{comment.author.username}</span>
+                                      <span 
+                                          onClick={() => navigateToProfile(comment.author.id)}
+                                          className="font-medium text-indigo-900 cursor-pointer
+                                                  hover:text-blue-600 transition-colors"
+                                        >
+                                          {comment.author.username}
+                                        </span>
                                         <span
                                           className="text-xs text-indigo-400 bg-white px-2 py-0.5 rounded-full"
                                           title={new Date(comment.createdAt).toLocaleString()}

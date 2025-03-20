@@ -2,6 +2,7 @@ package com.example.neighbornetbackend.controller;
 
 import com.example.neighbornetbackend.dto.UpdateProfileRequest;
 import com.example.neighbornetbackend.dto.UserDTO;
+import com.example.neighbornetbackend.dto.UserSkillDTO;
 import com.example.neighbornetbackend.model.User;
 import com.example.neighbornetbackend.repository.UserRepository;
 import com.example.neighbornetbackend.service.UserProfileStorageService;
@@ -21,6 +22,7 @@ import java.net.MalformedURLException;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/users")
@@ -114,6 +116,46 @@ public class UserProfileController {
             return ResponseEntity.ok(UserDTO.fromEntity(updatedUser));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Failed to update profile: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/{userId}/profile")
+    public ResponseEntity<?> getUserProfile(@PathVariable Long userId, Authentication authentication) {
+        try {
+            User targetUser = userRepository.findById(userId)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            if (authentication != null &&
+                    targetUser.getUsername().equals(authentication.getName())) {
+                return getUserProfile(authentication);
+            }
+
+            UserDTO publicProfile = new UserDTO(
+                    targetUser.getId(),
+                    targetUser.getUsername(),
+                    targetUser.getImageUrl(),
+                    null,
+                    targetUser.getBio()
+            );
+
+            publicProfile.setSkills(targetUser.getSkills().stream()
+                    .map(skill -> new UserSkillDTO(skill.getName(), skill.getProficiencyLevel()))
+                    .collect(Collectors.toList()));
+
+            publicProfile.setInterests(targetUser.getInterests().stream()
+                    .map(interest -> interest.getName())
+                    .collect(Collectors.toList()));
+
+            Map<String, String> socialLinks = new HashMap<>();
+            socialLinks.put("github", targetUser.getGithubUrl());
+            socialLinks.put("twitter", targetUser.getTwitterUrl());
+            socialLinks.put("linkedin", targetUser.getLinkedinUrl());
+            socialLinks.put("facebook", targetUser.getFacebookUrl());
+            publicProfile.setSocialLinks(socialLinks);
+
+            return ResponseEntity.ok(publicProfile);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 }

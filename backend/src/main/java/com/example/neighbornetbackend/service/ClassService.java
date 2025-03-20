@@ -17,6 +17,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -221,6 +222,15 @@ public class ClassService {
             throw new RuntimeException("Error deleting class and related data", e);
         }
     }
+
+    public List<ClassEnrollment> getUserEnrollments(Long userId) {
+        try {
+            return enrollmentRepository.findByUserIdOrderByEnrolledAtDesc(userId);
+        } catch (Exception e) {
+            return new ArrayList<>();
+        }
+    }
+
 
     @Transactional
     public ClassResponse updateClass(Long classId, CreateClassRequest request,

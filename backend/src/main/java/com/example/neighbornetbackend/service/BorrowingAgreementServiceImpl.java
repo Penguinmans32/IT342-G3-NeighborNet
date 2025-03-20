@@ -59,6 +59,11 @@ public class BorrowingAgreementServiceImpl implements BorrowingAgreementService 
     }
 
     @Override
+    public List<BorrowingAgreement> getUserBorrows(Long userId) {
+        return borrowingAgreementRepository.findByBorrowerIdOrderByCreatedAtDesc(userId);
+    }
+
+    @Override
     public BorrowingAgreement getById(Long id) {
         return borrowingAgreementRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Agreement not found"));

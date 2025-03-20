@@ -9,7 +9,8 @@ export const useAchievements = (userId) => {
   useEffect(() => {
     const fetchAchievements = async () => {
       try {
-        const response = await axios.get(`http://localhost:8080/api/achievements/user`, {
+        // Change the endpoint to include userId
+        const response = await axios.get(`http://localhost:8080/api/achievements/user/${userId}`, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
@@ -20,7 +21,7 @@ export const useAchievements = (userId) => {
           id: achievement.id,
           name: achievement.name,
           description: achievement.description,
-          iconName: achievement.icon, // Just pass the icon name
+          iconName: achievement.icon,
           unlocked: achievement.unlocked,
           progress: (achievement.currentProgress / achievement.requiredProgress) * 100,
           unlockedAt: achievement.unlockedAt

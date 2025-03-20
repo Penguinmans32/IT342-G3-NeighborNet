@@ -30,4 +30,6 @@ public interface BorrowingAgreementRepository extends JpaRepository<BorrowingAgr
     long countByCreatedAtBefore(LocalDateTime date);
 
     List<BorrowingAgreement> findTop10ByStatusOrderByCreatedAtDesc(String status);
+
+    List<BorrowingAgreement> findByBorrowerIdOrderByCreatedAtDesc(Long userId);
 }
