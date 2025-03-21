@@ -6,6 +6,8 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 
 @Entity
 public class ChatMessage {
@@ -22,7 +24,7 @@ public class ChatMessage {
     @Column(nullable = false)
     private String content;
 
-    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", timezone = "UTC")
     @Column(nullable = false)
     private LocalDateTime timestamp;
 
@@ -39,7 +41,7 @@ public class ChatMessage {
     private String formData;
 
     public ChatMessage() {
-        this.timestamp = LocalDateTime.now();
+        this.timestamp = LocalDateTime.now(ZoneOffset.UTC);
         this.is_read = false;
     }
 
@@ -85,7 +87,11 @@ public class ChatMessage {
     }
 
     public void setTimestamp(LocalDateTime timestamp) {
-        this.timestamp = timestamp;
+        if (timestamp != null) {
+            this.timestamp = timestamp.atZone(ZoneId.systemDefault())
+                    .withZoneSameInstant(ZoneOffset.UTC)
+                    .toLocalDateTime();
+        }
     }
 
     public boolean isIs_read() {

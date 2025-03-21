@@ -162,24 +162,29 @@ export default function Profile() {
 
   const fetchSavedClasses = async () => {
     try {
-      const response = await axios.get("http://localhost:8080/api/classes/saved", {
+      const targetId = userId || user?.id;
+      const endpoint = userId 
+        ? `http://localhost:8080/api/classes/saved/${targetId}` // For viewing other profiles
+        : "http://localhost:8080/api/classes/saved"; // For current user
+  
+      const response = await axios.get(endpoint, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
-      })
-      setSavedClasses(response.data)
+      });
+      setSavedClasses(response.data);
     } catch (error) {
-      console.error("Error fetching saved classes:", error)
+      console.error("Error fetching saved classes:", error);
     } finally {
-      setIsSavedClassesLoading(false)
+      setIsSavedClassesLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
-    if (user && (!userId || userId === user.id.toString())) {
+    if (user) { 
       fetchSavedClasses();
     }
-  }, [user, userId]);
+  }, [user, userId]); 
 
   useEffect(() => {
     const fetchProfileData = async (targetUserId) => {
@@ -386,20 +391,22 @@ export default function Profile() {
                       }}
                     />
 
-                    {/* Upload overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <label className="cursor-pointer flex flex-col items-center">
-                        <Camera className="h-6 w-6 text-white mb-1" />
-                        <span className="text-white text-xs font-medium">Change Photo</span>
-                        <input
-                          type="file"
-                          className="hidden"
-                          accept="image/*"
-                          onChange={handleProfilePictureUpdate}
-                          disabled={isUpdating}
-                        />
-                      </label>
-                    </div>
+                    {/* Upload overlay - Only show on own profile */}
+                    {(!userId || userId === user?.id?.toString()) && (
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <label className="cursor-pointer flex flex-col items-center">
+                          <Camera className="h-6 w-6 text-white mb-1" />
+                          <span className="text-white text-xs font-medium">Change Photo</span>
+                          <input
+                            type="file"
+                            className="hidden"
+                            accept="image/*"
+                            onChange={handleProfilePictureUpdate}
+                            disabled={isUpdating}
+                          />
+                        </label>
+                      </div>
+                    )}
                   </motion.div>
 
                   {/* Loading overlay */}
@@ -419,14 +426,62 @@ export default function Profile() {
                   {profileData?.username || user?.username}
                 </h1>
                 {(!userId || userId === user?.id?.toString()) ? (
-                  <p className="text-slate-500 mb-2">
-                    {profileData?.email || user?.email}
-                  </p>
-                ) : (
-                  <p className="text-slate-500 mb-2">
-                    Community Member
-                  </p>
-                )}
+                    <p className="text-slate-500 mb-2">
+                      {profileData?.email || user?.email}
+                    </p>
+                  ) : (
+                    <>
+                      <p className="text-slate-500 mb-2">
+                        Community Member
+                      </p>
+                      {/* Message Button - Only show on other profiles */}
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={async () => {
+                          try {
+                            // First, ensure a conversation exists or create one
+                            const response = await axios.post(
+                              'http://localhost:8080/conversations/create',
+                              {
+                                userId1: user.id,
+                                userId2: userId
+                              },
+                              {
+                                headers: {
+                                  Authorization: `Bearer ${localStorage.getItem("token")}`
+                                }
+                              }
+                            );
+
+                            // Navigate to messages page
+                            router(`/messages`);
+
+                            // You can also add a small delay to ensure the messages page is loaded
+                            // before trying to open the specific chat
+                            setTimeout(() => {
+                              // Emit an event to open this specific chat
+                              const event = new CustomEvent('openChat', {
+                                detail: {
+                                  contactId: userId,
+                                  contactName: profileData?.username
+                                }
+                              });
+                              window.dispatchEvent(event);
+                            }, 100);
+                          } catch (error) {
+                            console.error('Error creating conversation:', error);
+                          }
+                        }}
+                        className="mb-4 bg-blue-500 hover:bg-blue-600 text-white w-full py-2.5 px-4 
+                                  rounded-lg shadow-sm hover:shadow-md transition-all duration-200 
+                                  flex items-center justify-center"
+                      >
+                        <Mail className="mr-2 h-4 w-4" />
+                        Send Message
+                      </motion.button>
+                    </>
+                  )}
                 <div className="flex items-center gap-1 text-xs text-slate-500 mb-6">
                   <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-500"></span>
                   <span>Online</span>
@@ -631,7 +686,7 @@ export default function Profile() {
                             <BookOpen className="mr-2 h-5 w-5 text-blue-500" />
                             Favorite Classes
                           </h2>
-                          {savedClasses.length > 0 && (
+                          {(!userId || userId === user?.id?.toString()) && savedClasses.length > 0 && (
                             <motion.button
                               whileHover={{ scale: 1.05, x: 3 }}
                               className="text-sm text-blue-500 hover:text-blue-600 flex items-center gap-1"

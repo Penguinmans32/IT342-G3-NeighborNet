@@ -10,6 +10,8 @@ import com.example.neighbornetbackend.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -18,6 +20,8 @@ public class ConversationService {
 
     @Autowired
     private ChatMessageRepository chatMessageRepository;
+
+
 
     @Autowired
     private UserRepository userRepository;
@@ -81,5 +85,34 @@ public class ConversationService {
                 })
                 .sorted((c1, c2) -> c2.getLastMessageTimestamp().compareTo(c1.getLastMessageTimestamp()))
                 .collect(Collectors.toList());
+    }
+
+    public ConversationDTO createOrGetConversation(Long userId1, Long userId2) {
+        List<ConversationDTO> existingConversations = findConversationsForUser(userId1);
+
+        Optional<ConversationDTO> existingConversation = existingConversations.stream()
+                .filter(conv -> conv.getParticipant().getId().equals(userId2))
+                .findFirst();
+
+        if (existingConversation.isPresent()) {
+            return existingConversation.get();
+        }
+
+        // If no existing conversation, create a new one
+        // You might need to adjust this based on your database schema
+        ChatMessage initialMessage = new ChatMessage();
+        initialMessage.setSenderId(userId1);
+        initialMessage.setReceiverId(userId2);
+        initialMessage.setContent("Hi!");
+        initialMessage.setMessageType("TEXT");
+        initialMessage.setTimestamp(LocalDateTime.now(ZoneOffset.UTC));
+
+        chatMessageRepository.save(initialMessage);
+
+        // Return the new conversation
+        return findConversationsForUser(userId1).stream()
+                .filter(conv -> conv.getParticipant().getId().equals(userId2))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Failed to create conversation"));
     }
 }

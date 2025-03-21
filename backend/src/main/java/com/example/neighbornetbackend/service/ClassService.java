@@ -402,4 +402,15 @@ public class ClassService {
     public boolean isClassSaved(Long classId, Long userId) {
         return savedClassRepository.existsByUserIdAndCourseClassId(userId, classId);
     }
+
+    public List<ClassResponse> getSavedClassesForUser(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        List<SavedClass> savedClasses = savedClassRepository.findByUserId(userId);
+
+        return savedClasses.stream()
+                .map(savedClass -> ClassResponse.fromEntity(savedClass.getCourseClass(), true))
+                .collect(Collectors.toList());
+    }
 }

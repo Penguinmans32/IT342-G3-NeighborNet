@@ -41,6 +41,22 @@ const MessagesPage = () => {
   };
 
   useEffect(() => {
+    const handleOpenChat = (event) => {
+      const { contactId, contactName } = event.detail;
+      const conversation = conversations.find(
+        conv => conv.participant.id.toString() === contactId.toString()
+      );
+      
+      if (conversation) {
+        handleContactSelect(conversation.participant);
+      }
+    };
+  
+    window.addEventListener('openChat', handleOpenChat);
+    return () => window.removeEventListener('openChat', handleOpenChat);
+  }, [conversations]); 
+
+  useEffect(() => {
     if (user?.id) {
       const socket = new SockJS('http://localhost:8080/ws');
       const stomp = new Client({
@@ -91,11 +107,13 @@ const MessagesPage = () => {
           ? '📋 Agreement' 
           : message.content;
   
+      const newTimestamp = new Date(message.timestamp).toISOString();
+  
       if (conversationIndex !== -1) {
         const updatedConversation = {
           ...updatedConversations[conversationIndex],
           lastMessage: displayContent,
-          lastMessageTimestamp: message.timestamp,
+          lastMessageTimestamp: newTimestamp,
           unreadCount: message.senderId !== user.id ? 
             (updatedConversations[conversationIndex].unreadCount + 1) : 
             updatedConversations[conversationIndex].unreadCount
@@ -110,7 +128,7 @@ const MessagesPage = () => {
             username: message.senderName 
           },
           lastMessage: displayContent,
-          lastMessageTimestamp: message.timestamp,
+          lastMessageTimestamp: newTimestamp,
           unreadCount: message.senderId !== user.id ? 1 : 0
         };
         updatedConversations.unshift(newConversation);

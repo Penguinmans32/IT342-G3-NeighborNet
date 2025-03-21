@@ -27,6 +27,7 @@ import org.springframework.core.io.UrlResource;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 
@@ -79,7 +80,7 @@ public class ChatController {
     public ResponseEntity<ChatMessage> createMessage(@RequestBody ChatMessage message) {
         try {
             if (message.getTimestamp() == null) {
-                message.setTimestamp(LocalDateTime.now());
+                message.setTimestamp(LocalDateTime.now(ZoneOffset.UTC));
             }
 
             ChatMessage savedMessage = chatService.save(message);
@@ -243,6 +244,24 @@ public class ChatController {
             return ResponseEntity.ok(updatedAgreement);
         } catch (Exception e) {
             return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @PostMapping("/conversations/create")
+    @ResponseBody
+    public ResponseEntity<?> createConversation(@RequestBody Map<String, Long> request) {
+        try {
+            Long userId1 = request.get("userId1");
+            Long userId2 = request.get("userId2");
+
+            if (userId1 == null || userId2 == null) {
+                return ResponseEntity.badRequest().body("Both user IDs are required");
+            }
+
+            ConversationDTO conversation = conversationService.createOrGetConversation(userId1, userId2);
+            return ResponseEntity.ok(conversation);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error creating conversation: " + e.getMessage());
         }
     }
 }

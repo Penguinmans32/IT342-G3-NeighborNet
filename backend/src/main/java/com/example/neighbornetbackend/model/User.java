@@ -29,6 +29,11 @@ public class User {
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Notification> notifications = new ArrayList<>();
 
+    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
+    private List<SavedClass> savedClasses = new ArrayList<>();
+
+
+
     @Column(name = "email_verified")
     private boolean emailVerified = false;
 
@@ -166,6 +171,14 @@ public class User {
     public void removeNotification(Notification notification) {
         notifications.remove(notification);
         notification.setUser(null);
+    }
+
+    public List<SavedClass> getSavedClasses() {
+        return savedClasses;
+    }
+
+    public void setSavedClasses(List<SavedClass> savedClasses) {
+        this.savedClasses = savedClasses;
     }
 
     public LocalDateTime getCreatedDate() {

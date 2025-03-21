@@ -188,6 +188,16 @@ public class ClassController {
         }
     }
 
+    @GetMapping("/saved/{userId}")
+    public ResponseEntity<List<ClassResponse>> getSavedClassesForUser(@PathVariable Long userId) {
+        try {
+            List<ClassResponse> savedClasses = classService.getSavedClassesForUser(userId);
+            return ResponseEntity.ok(savedClasses);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
     @PostMapping("/{classId}/rate")
     public ResponseEntity<RatingResponse> rateClass(
             @PathVariable Long classId,
