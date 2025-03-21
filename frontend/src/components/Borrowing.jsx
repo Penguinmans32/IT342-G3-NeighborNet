@@ -491,22 +491,25 @@ const Borrowing = () => {
       }
   
       if (stompClient?.connected) {
+        const now = new Date();
+        const timestamp = now.toISOString().substring(0, 23);
+
         const chatMessage = {
-          senderId: user.id,
-          receiverId: messageModal.ownerId,
-          content: message,
-          messageType: 'TEXT',  
-          timestamp: new Date().toISOString(),
-          item: {  
-            id: item.id,
-            name: item.name,
-            imageUrls: item.imageUrls || [],
-            category: item.category,
-            description: item.description,
-            location: item.location,
-            availableFrom: item.availableFrom,
-            availableUntil: item.availableUntil
-          }
+            senderId: user.id,
+            receiverId: messageModal.ownerId,
+            content: message,
+            messageType: 'TEXT',
+            timestamp: timestamp,
+            item: {
+                id: item.id,
+                name: item.name,
+                imageUrls: item.imageUrls || [],
+                category: item.category,
+                description: item.description,
+                location: item.location,
+                availableFrom: item.availableFrom,
+                availableUntil: item.availableUntil
+            }
         };
 
         console.log("Message being sent:", chatMessage);

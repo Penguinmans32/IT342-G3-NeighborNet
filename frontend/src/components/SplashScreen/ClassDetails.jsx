@@ -670,7 +670,7 @@ const handleSubmitFeedback = async (e) => {
       if (editingFeedback) {
           // Update existing feedback
           await axios.put(
-              `http://localhost:8080/api/classes/${classId}/feedback/${editingFeedback.id}`,  // Updated path
+              `http://localhost:8080/api/classes/${classId}/feedback/${editingFeedback.id}`,
               {
                   content: feedbackText,
                   rating: userRating
