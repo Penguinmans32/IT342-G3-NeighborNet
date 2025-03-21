@@ -7,38 +7,24 @@ import ImageGalleryModal from './ImageGalleryModal';
 
 const formatMessageTime = (timestamp) => {
   try {
-    // First check if we have a valid timestamp
     if (!timestamp) {
       console.error('No timestamp provided');
       return 'Invalid Time';
     }
 
-    // If timestamp is already a Date object
-    if (timestamp instanceof Date) {
-      return new Intl.DateTimeFormat('en-US', {
-        hour: 'numeric',
-        minute: 'numeric',
-        hour12: true,
-        timeZone: 'Asia/Singapore'
-      }).format(timestamp);
-    }
-
-    // If timestamp is a string, try to parse it
+    // Convert timestamp to Date object
     let date;
     if (typeof timestamp === 'string') {
-      // Check if the timestamp contains microseconds
-      if (timestamp.includes('.')) {
-        // Remove anything after milliseconds (more than 3 digits after dot)
-        const cleanTimestamp = timestamp.replace(/(\.\d{3})\d+/, '$1');
-        // Make sure it's in ISO format
-        if (!timestamp.includes('T')) {
-          timestamp = cleanTimestamp.replace(' ', 'T');
-        }
-        if (!timestamp.endsWith('Z')) {
-          timestamp = timestamp + 'Z';
-        }
+      // If timestamp contains timezone info
+      if (timestamp.endsWith('Z') || timestamp.includes('+')) {
+        date = new Date(timestamp);
+      } else {
+        // If timestamp is in database format without timezone (assuming UTC)
+        // Add 'Z' to make it explicit UTC
+        date = new Date(timestamp + 'Z');
       }
-      date = new Date(timestamp);
+    } else if (timestamp instanceof Date) {
+      date = timestamp;
     }
 
     if (!date || isNaN(date.getTime())) {
@@ -46,12 +32,14 @@ const formatMessageTime = (timestamp) => {
       return 'Invalid Time';
     }
 
+    // Convert UTC time to Singapore time
+    const singaporeTime = new Date(date.getTime());
     return new Intl.DateTimeFormat('en-US', {
       hour: 'numeric',
       minute: 'numeric',
       hour12: true,
       timeZone: 'Asia/Singapore'
-    }).format(date);
+    }).format(singaporeTime);
   } catch (error) {
     console.error('Error formatting time:', error, timestamp);
     return 'Invalid Time';
@@ -350,18 +338,22 @@ const Chat = ({ senderId, receiverId, receiverName, onMessageSent, stompClient }
 
   const sendMessage = () => {
     if (messageInput.trim() && stompClient && stompClient.connected) {
+      // Create timestamp in UTC
+      const now = new Date();
+      const utcTimestamp = now.toISOString().replace('Z', ''); // Remove Z to match DB format
+  
       const chatMessage = {
         senderId: senderId,
         receiverId: receiverId,
         content: messageInput.trim(),
         messageType: 'TEXT',
-        timestamp: new Date().toISOString()
+        timestamp: utcTimestamp
       };
   
       const tempMessage = { ...chatMessage, id: `temp-${Date.now()}` };
       setMessages(prev => {
         const newMessages = [...prev, tempMessage].sort((a, b) => 
-          new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+          new Date(a.timestamp + 'Z').getTime() - new Date(b.timestamp + 'Z').getTime()
         );
         return newMessages;
       });
@@ -407,14 +399,14 @@ const Chat = ({ senderId, receiverId, receiverName, onMessageSent, stompClient }
               Online
             </span>
             <span className="text-xs text-gray-500">•</span>
-            <span className="text-xs text-gray-500">Local Time: {
-              new Date().toLocaleTimeString('en-US', {
+            <span className="text-xs text-gray-500">
+              Local Time: {new Intl.DateTimeFormat('en-US', {
                 hour: 'numeric',
                 minute: 'numeric',
                 hour12: true,
                 timeZone: 'Asia/Singapore'
-              })
-            }</span>
+              }).format(new Date())}
+            </span>
           </div>
         </div>
       </div>
