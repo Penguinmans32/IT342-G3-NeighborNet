@@ -24,7 +24,7 @@ public class ChatMessage {
     @Column(nullable = false)
     private String content;
 
-    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", timezone = "UTC")
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS", timezone = "UTC")
     @Column(nullable = false)
     private LocalDateTime timestamp;
 
@@ -88,9 +88,7 @@ public class ChatMessage {
 
     public void setTimestamp(LocalDateTime timestamp) {
         if (timestamp != null) {
-            this.timestamp = timestamp.atZone(ZoneId.systemDefault())
-                    .withZoneSameInstant(ZoneOffset.UTC)
-                    .toLocalDateTime();
+            this.timestamp = timestamp;
         }
     }
 

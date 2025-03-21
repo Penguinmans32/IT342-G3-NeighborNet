@@ -1,5 +1,7 @@
 package com.example.neighbornetbackend.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+
 import java.time.LocalDateTime;
 
 public class ConversationDTO {
@@ -7,6 +9,8 @@ public class ConversationDTO {
     private Long id;
     private ParticipantDTO participant;
     private String lastMessage;
+
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS", timezone = "UTC")
     private LocalDateTime lastMessageTimestamp;
     private int unreadCount;
 
