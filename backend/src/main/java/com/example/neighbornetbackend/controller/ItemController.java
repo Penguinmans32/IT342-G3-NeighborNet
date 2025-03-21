@@ -196,6 +196,18 @@ public class ItemController {
         }
     }
 
+    @GetMapping("/all-borrowed")
+    public ResponseEntity<List<ItemDTO>> getAllBorrowedItems() {
+        try {
+            logger.debug("Getting all borrowed items");
+            List<ItemDTO> borrowedItems = itemService.getAllCurrentlyBorrowedItems();
+            return ResponseEntity.ok(borrowedItems);
+        } catch (Exception e) {
+            logger.error("Error getting all borrowed items", e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
     @GetMapping("/lent")
     public ResponseEntity<List<ItemDTO>> getLentItems(@CurrentUser UserPrincipal currentUser) {
         try {

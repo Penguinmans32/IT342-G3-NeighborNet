@@ -19,9 +19,13 @@ public interface BorrowingAgreementRepository extends JpaRepository<BorrowingAgr
     @Query("SELECT ba FROM BorrowingAgreement ba " +
             "WHERE ba.itemId = :itemId " +
             "AND ba.status = 'PENDING' " +
-            "AND ((ba.borrowingStart BETWEEN :start AND :end) " +
-            "OR (ba.borrowingEnd BETWEEN :start AND :end) " +
-            "OR (:start BETWEEN ba.borrowingStart AND ba.borrowingEnd))")
+            "AND (" +
+            "   (ba.borrowingStart BETWEEN :start AND :end) " +
+            "   OR (ba.borrowingEnd BETWEEN :start AND :end) " +
+            "   OR (:start BETWEEN ba.borrowingStart AND ba.borrowingEnd) " +
+            "   OR (:end BETWEEN ba.borrowingStart AND ba.borrowingEnd) " +
+            "   OR (ba.borrowingStart <= :start AND ba.borrowingEnd >= :end)" +
+            ")")
     List<BorrowingAgreement> findOverlappingAgreements(
             @Param("itemId") Long itemId,
             @Param("start") LocalDateTime start,
@@ -32,4 +36,14 @@ public interface BorrowingAgreementRepository extends JpaRepository<BorrowingAgr
     List<BorrowingAgreement> findTop10ByStatusOrderByCreatedAtDesc(String status);
 
     List<BorrowingAgreement> findByBorrowerIdOrderByCreatedAtDesc(Long userId);
+
+    List<BorrowingAgreement> findByItemIdAndBorrowerIdAndLenderIdAndStatusAndBorrowingEndGreaterThan(
+            Long itemId,
+            Long borrowerId,
+            Long lenderId,
+            String status,
+            LocalDateTime date
+    );
+
+    List<BorrowingAgreement> findByStatusAndBorrowingEndGreaterThan(String status, LocalDateTime date);
 }
