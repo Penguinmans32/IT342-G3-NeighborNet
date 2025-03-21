@@ -18,6 +18,7 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -206,5 +207,27 @@ public class ItemService {
     public List<BorrowingAgreement> getItemBorrowers(Long itemId) {
         return borrowingAgreementRepository.findByItemIdAndStatusAndBorrowingEndGreaterThan(
                 itemId, "ACCEPTED", LocalDateTime.now());
+    }
+
+    public List<ItemDTO> getAllCurrentlyBorrowedItems() {
+        List<BorrowingAgreement> activeAgreements = borrowingAgreementRepository
+                .findByStatusAndBorrowingEndGreaterThan("ACCEPTED", LocalDateTime.now());
+
+        return activeAgreements.stream()
+                .map(agreement -> {
+                    Item item = itemRepository.findById(agreement.getItemId()).orElse(null);
+                    if (item != null) {
+                        ItemDTO itemDTO = ItemDTO.fromItem(item);
+                        User borrower = userRepository.findById(agreement.getBorrowerId()).orElse(null);
+                        if (borrower != null) {
+                            CreatorDTO borrowerDTO = CreatorDTO.fromUser(borrower);
+                            itemDTO.setBorrower(borrowerDTO);
+                        }
+                        return itemDTO;
+                    }
+                    return null;
+                })
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
     }
 }

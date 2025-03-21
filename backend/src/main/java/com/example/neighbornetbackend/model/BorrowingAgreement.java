@@ -19,10 +19,10 @@ public class BorrowingAgreement {
     @Column(nullable = false)
     private Long borrowerId;
 
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", timezone = "UTC")
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS", timezone = "UTC")
     private LocalDateTime borrowingStart;
 
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'" , timezone = "UTC")
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS", timezone = "UTC")
     private LocalDateTime borrowingEnd;
 
     @Column
@@ -31,7 +31,7 @@ public class BorrowingAgreement {
     @Column
     private String status;
 
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", timezone = "UTC")
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS", timezone = "UTC")
     private LocalDateTime createdAt;
 
     public Long getId() {

@@ -41,18 +41,6 @@ public class BorrowingAgreementServiceImpl implements BorrowingAgreementService 
 
     @Override
     public BorrowingAgreement create(BorrowingAgreement agreement) {
-        // Check for overlapping agreements
-        List<BorrowingAgreement> overlappingAgreements = borrowingAgreementRepository
-                .findOverlappingAgreements(
-                        agreement.getItemId(),
-                        agreement.getBorrowingStart(),
-                        agreement.getBorrowingEnd()
-                );
-
-        if (!overlappingAgreements.isEmpty()) {
-            throw new RuntimeException("Item is not available during the requested period");
-        }
-
         agreement.setCreatedAt(LocalDateTime.now());
         agreement.setStatus("PENDING");
         return borrowingAgreementRepository.save(agreement);
@@ -83,7 +71,33 @@ public class BorrowingAgreementServiceImpl implements BorrowingAgreementService 
         agreement.setStatus(status);
         BorrowingAgreement updatedAgreement = borrowingAgreementRepository.save(agreement);
 
-        // Send notification based on status
+        // If the status is ACCEPTED, reject all other pending requests for the same dates
+        if ("ACCEPTED".equals(status.toUpperCase())) {
+            List<BorrowingAgreement> overlappingAgreements = borrowingAgreementRepository
+                    .findOverlappingAgreements(
+                            agreement.getItemId(),
+                            agreement.getBorrowingStart(),
+                            agreement.getBorrowingEnd()
+                    );
+
+            // Reject all other pending agreements that overlap
+            for (BorrowingAgreement overlapping : overlappingAgreements) {
+                if (!overlapping.getId().equals(agreementId)) {
+                    overlapping.setStatus("REJECTED");
+                    borrowingAgreementRepository.save(overlapping);
+
+                    // Send notification to rejected borrowers
+                    notificationService.createAndSendNotification(
+                            overlapping.getBorrowerId(),
+                            "Borrowing Request Automatically Rejected",
+                            "Your request to borrow '" + item.getName() + "' has been automatically rejected as another request has been accepted for these dates.",
+                            "BORROW_REJECTED"
+                    );
+                }
+            }
+        }
+
+        // Original notification logic
         String title;
         String message;
         String type;
@@ -134,9 +148,10 @@ public class BorrowingAgreementServiceImpl implements BorrowingAgreementService 
 
     public List<BorrowingAgreement> findByItemIdAndUsersAndStatus(
             Long itemId, Long borrowerId, Long lenderId, String status) {
-        // Only check for PENDING agreements with the same itemId
-        return borrowingAgreementRepository.findByItemIdAndStatusAndBorrowingEndGreaterThan(
+        return borrowingAgreementRepository.findByItemIdAndBorrowerIdAndLenderIdAndStatusAndBorrowingEndGreaterThan(
                 itemId,
+                borrowerId,
+                lenderId,
                 "PENDING",
                 LocalDateTime.now()
         );

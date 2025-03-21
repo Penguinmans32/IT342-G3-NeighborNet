@@ -359,10 +359,11 @@ const Borrowing = () => {
 
   const fetchBorrowedItemsStatus = async () => {
     try {
-      const response = await axios.get('http://localhost:8080/api/borrowing/items/borrowed', {
+      const response = await axios.get('http://localhost:8080/api/borrowing/items/all-borrowed', {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       console.log("Full borrowed items response:", response.data);
+      
       const borrowedItemsMap = new Map(
         response.data.map(item => [item.id, {
           borrowed: true,
@@ -373,7 +374,7 @@ const Borrowing = () => {
         }])
       );
       setBorrowedItems(borrowedItemsMap);
-      console.log("Borrowed items:", borrowedItemsMap);
+      console.log("All borrowed items:", borrowedItemsMap);
     } catch (error) {
       console.error('Error fetching borrowed items status:', error);
     }
@@ -778,9 +779,9 @@ const Borrowing = () => {
                           <div className="bg-red-500 text-white px-6 py-2 rounded-full font-bold mb-2">
                             Currently Borrowed
                           </div>
-                          {item.borrower && (
+                          {borrowedItems.get(item.id)?.borrowerInfo?.username && (
                             <div className="text-white text-sm bg-black/40 px-4 py-1 rounded-full">
-                              by {item.borrower.username}
+                              by {borrowedItems.get(item.id).borrowerInfo.username}
                             </div>
                           )}
                         </div>

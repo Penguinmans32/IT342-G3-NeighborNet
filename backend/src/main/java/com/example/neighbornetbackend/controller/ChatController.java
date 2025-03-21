@@ -241,6 +241,23 @@ public class ChatController {
         try {
             String status = request.get("status");
             BorrowingAgreement updatedAgreement = borrowingAgreementService.updateStatus(id, status);
+
+            ChatMessage updateMessage = new ChatMessage();
+            updateMessage.setMessageType("AGREEMENT_UPDATE");
+            updateMessage.setContent("Agreement Updated");
+            updateMessage.setFormData(toJson(updatedAgreement));
+
+            messagingTemplate.convertAndSendToUser(
+                    String.valueOf(updatedAgreement.getBorrowerId()),
+                    "/queue/messages",
+                    updateMessage
+            );
+            messagingTemplate.convertAndSendToUser(
+                    String.valueOf(updatedAgreement.getLenderId()),
+                    "/queue/messages",
+                    updateMessage
+            );
+
             return ResponseEntity.ok(updatedAgreement);
         } catch (Exception e) {
             return ResponseEntity.badRequest().build();

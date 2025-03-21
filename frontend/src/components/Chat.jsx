@@ -63,52 +63,46 @@ const Chat = ({ senderId, receiverId, receiverName, onMessageSent, stompClient }
 
   const handleAgreementResponse = async (agreementId, status) => {
     try {
-      const response = await fetch(`http://localhost:8080/chat/agreement/${agreementId}/respond`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ status }),
-      })
+        const response = await fetch(`http://localhost:8080/chat/agreement/${agreementId}/respond`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ status }),
+        });
 
-      if (!response.ok) {
-        throw new Error("Failed to update agreement status")
-      }
+        if (!response.ok) {
+            throw new Error("Failed to update agreement status");
+        }
 
-      const updatedAgreement = await response.json()
+        const updatedAgreement = await response.json();
+        setMessages((prevMessages) =>
+            prevMessages.map((msg) => {
+                if (msg.messageType === "FORM") {
+                    try {
+                        const formData = JSON.parse(msg.formData);
+                        if (formData.id === agreementId) {
+                            return {
+                                ...msg,
+                                formData: JSON.stringify({
+                                    ...formData,
+                                    status: status
+                                })
+                            };
+                        }
+                    } catch (error) {
+                        console.error("Error parsing form data:", error);
+                    }
+                }
+                return msg;
+            })
+        );
 
-      if (stompClient && stompClient.connected) {
-        stompClient.publish({
-          destination: "/app/chat",
-          body: JSON.stringify({
-            senderId,
-            receiverId,
-            messageType: "FORM",
-            content: `Agreement ${status.toLowerCase()}`,
-            formData: JSON.stringify(updatedAgreement),
-          }),
-        })
-      }
-
-      setMessages((prevMessages) =>
-        prevMessages.map((msg) => {
-          if (msg.messageType === "FORM") {
-            const formData = JSON.parse(msg.formData)
-            if (formData.id === agreementId) {
-              return {
-                ...msg,
-                formData: JSON.stringify({ ...formData, status }),
-              }
-            }
-          }
-          return msg
-        }),
-      )
     } catch (error) {
-      console.error("Error updating agreement status:", error)
-      alert("Failed to update agreement status. Please try again.")
+        console.error("Error updating agreement status:", error);
+        alert("Failed to update agreement status. Please try again.");
     }
-  }
+};
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -175,77 +169,107 @@ const Chat = ({ senderId, receiverId, receiverName, onMessageSent, stompClient }
 
   const handleSendAgreement = async (formData) => {
     try {
-      const formatDate = (dateString) => {
-        const date = new Date(dateString)
-        date.setUTCHours(12, 0, 0, 0)
-        return date.toISOString()
-      }
-
-      const requestData = {
-        ...formData,
-        lenderId: receiverId,
-        borrowerId: senderId,
-        borrowingStart: formatDate(formData.borrowingStart),
-        borrowingEnd: formatDate(formData.borrowingEnd),
-      }
-
-      console.log("Sending agreement data:", requestData)
-
-      const response = await fetch("http://localhost:8080/chat/send-agreement", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-        body: JSON.stringify(requestData),
-      })
-
-      const responseText = await response.text()
-      let responseData
-
-      try {
-        responseData = JSON.parse(responseText)
-      } catch (e) {
-        responseData = responseText
-      }
-
-      if (!response.ok) {
-        if (responseData === "A pending agreement already exists for this item") {
-          alert(
-            "You already have a pending agreement for this item. Please wait for the lender's response or check your existing agreements.",
-          )
-        } else {
-          alert(`Failed to send agreement: ${responseData}`)
+        const formatDate = (dateString) => {
+            const date = new Date(dateString);
+            date.setUTCHours(12, 0, 0, 0);
+            return `${date.toISOString().slice(0, 19)}.000`;
         }
-        return
-      }
 
-      const agreementMessage = {
-        id: `temp-agreement-${Date.now()}`,
-        senderId,
-        receiverId,
-        messageType: "FORM",
-        content: "Sent a borrowing agreement",
-        formData: JSON.stringify({
-          ...responseData,
-          itemName: formData.itemName,
-        }),
-        timestamp: new Date().toISOString(),
-      }
+        const now = new Date();
+        const currentTimestamp = `${now.toISOString().slice(0, 19)}.000`;
 
-      setMessages((prev) => [...prev, agreementMessage])
-      setShowAgreementForm(false)
-      scrollToBottom()
+        const requestData = {
+            ...formData,
+            lenderId: receiverId,
+            borrowerId: senderId,
+            borrowingStart: formatDate(formData.borrowingStart),
+            borrowingEnd: formatDate(formData.borrowingEnd),
+            createdAt: currentTimestamp,
+        };
+
+        console.log("Sending agreement data:", requestData);
+
+        const response = await fetch("http://localhost:8080/chat/send-agreement", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+            body: JSON.stringify(requestData),
+        });
+
+        const responseText = await response.text();
+        let responseData;
+
+        try {
+            responseData = JSON.parse(responseText);
+        } catch (e) {
+            responseData = responseText;
+        }
+
+        if (!response.ok) {
+            if (responseData === "A pending agreement already exists for this item") {
+                alert(
+                    "You already have a pending agreement for this item. Please wait for the lender's response or check your existing agreements."
+                );
+            } else {
+                alert(`Failed to send agreement: ${responseData}`);
+            }
+            return;
+        }
+
+        const agreementMessage = {
+            id: `temp-agreement-${Date.now()}`,
+            senderId,
+            receiverId,
+            messageType: "FORM",
+            content: "Sent a borrowing agreement",
+            formData: JSON.stringify({
+                ...responseData,
+                itemName: formData.itemName,
+            }),
+            timestamp: currentTimestamp 
+        };
+
+        setMessages((prev) => [...prev, agreementMessage]);
+        setShowAgreementForm(false);
+        scrollToBottom();
     } catch (error) {
-      console.error("Error sending agreement:", error)
-      alert("An unexpected error occurred. Please try again.")
+        console.error("Error sending agreement:", error);
+        alert("An unexpected error occurred. Please try again.");
     }
-  }
+};
 
   useEffect(() => {
     if (stompClient) {
       const subscription = stompClient.subscribe(`/user/${senderId}/queue/messages`, (message) => {
         const newMessage = JSON.parse(message.body)
+
+        if (newMessage.messageType === "AGREEMENT_UPDATE") {
+          const updatedAgreement = JSON.parse(newMessage.formData);
+          
+          setMessages((prevMessages) =>
+              prevMessages.map((msg) => {
+                  if (msg.messageType === "FORM") {
+                      try {
+                          const formData = JSON.parse(msg.formData);
+                          if (formData.id === updatedAgreement.id) {
+                              return {
+                                  ...msg,
+                                  formData: JSON.stringify(updatedAgreement)
+                              };
+                          }
+                      } catch (error) {
+                          console.error("Error parsing form data:", error);
+                      }
+                  }
+                  return msg;
+              })
+          );
+          return;
+      }
+
+
         if (newMessage.senderId === receiverId || newMessage.receiverId === receiverId) {
           const processedMessage = {
             ...newMessage,
