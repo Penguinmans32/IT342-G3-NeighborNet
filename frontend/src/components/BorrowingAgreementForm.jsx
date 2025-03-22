@@ -18,6 +18,7 @@ const BorrowingAgreementForm = ({ onSubmit, onClose, senderId, receiverId, stomp
 
   console.log('Form data:', formData); // Debug log
 
+
   useEffect(() => {
     const fetchItems = async () => {
       try {
@@ -61,6 +62,29 @@ const BorrowingAgreementForm = ({ onSubmit, onClose, senderId, receiverId, stomp
     }
   }, [receiverId]);
 
+
+  const validateDates = (startDate, endDate, itemAvailableFrom, itemAvailableUntil) => {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const availableFrom = new Date(itemAvailableFrom);
+    const availableUntil = new Date(itemAvailableUntil);
+  
+    [start, end, availableFrom, availableUntil].forEach(date => {
+      date.setHours(0, 0, 0, 0);
+    });
+  
+    if (start < availableFrom || start > availableUntil) {
+      return "Start date must be within the item's available period";
+    }
+    if (end < availableFrom || end > availableUntil) {
+      return "End date must be within the item's available period";
+    }
+    if (end < start) {
+      return "End date cannot be before start date";
+    }
+    return null;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null); // Clear any previous errors
@@ -74,6 +98,20 @@ const BorrowingAgreementForm = ({ onSubmit, onClose, senderId, receiverId, stomp
       const selectedItem = items.find(item => item.id.toString() === formData.itemId.toString());
       if (!selectedItem) {
         setError('Selected item not found');
+        return;
+      }
+
+      const dateError = validateDates(
+        formData.borrowingStart,
+        formData.borrowingEnd,
+        selectedItem.availableFrom,
+        selectedItem.availableUntil
+      );
+
+      
+      
+      if (dateError) {
+        setError(dateError);
         return;
       }
   
@@ -104,14 +142,38 @@ const BorrowingAgreementForm = ({ onSubmit, onClose, senderId, receiverId, stomp
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    
     if (name === 'itemId') {
       const selected = items.find(item => item.id.toString() === value);
-      setSelectedItem(selected); // Update selected item
+      setSelectedItem(selected);
       setFormData(prev => ({
         ...prev,
         itemId: value,
-        itemName: selected?.name || ''
+        itemName: selected?.name || '',
+        borrowingStart: '',
+        borrowingEnd: ''
       }));
+    } else if (name === 'borrowingStart' || name === 'borrowingEnd') {
+      const newFormData = {
+        ...formData,
+        [name]: value
+      };
+  
+      if (selectedItem && newFormData.borrowingStart && newFormData.borrowingEnd) {
+        const error = validateDates(
+          newFormData.borrowingStart,
+          newFormData.borrowingEnd,
+          selectedItem.availableFrom,
+          selectedItem.availableUntil
+        );
+  
+        if (error) {
+          alert(error);
+          return;
+        }
+      }
+  
+      setFormData(newFormData);
     } else {
       setFormData(prev => ({
         ...prev,
@@ -119,6 +181,7 @@ const BorrowingAgreementForm = ({ onSubmit, onClose, senderId, receiverId, stomp
       }));
     }
   };
+  
 
   return (
     <motion.div
@@ -258,37 +321,49 @@ const BorrowingAgreementForm = ({ onSubmit, onClose, senderId, receiverId, stomp
 
           {/* Agreement Form Fields */}
           <div className="p-4">
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Start Date*
-                </label>
-                <input
-                  type="date"
-                  name="borrowingStart"
-                  value={formData.borrowingStart}
-                  onChange={handleChange}
-                  min={new Date().toISOString().split('T')[0]}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  End Date*
-                </label>
-                <input
-                  type="date"
-                  name="borrowingEnd"
-                  value={formData.borrowingEnd}
-                  onChange={handleChange}
-                  min={formData.borrowingStart || new Date().toISOString().split('T')[0]}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-              </div>
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Start Date*
+              </label>
+              <input
+                type="date"
+                name="borrowingStart"
+                value={formData.borrowingStart}
+                onChange={handleChange}
+                min={selectedItem ? new Date(selectedItem.availableFrom).toISOString().split('T')[0] : ''}
+                max={selectedItem ? new Date(selectedItem.availableUntil).toISOString().split('T')[0] : ''}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                required
+              />
+              {selectedItem && (
+                <p className="text-xs text-gray-500 mt-1">
+                  Available from: {new Date(selectedItem.availableFrom).toLocaleDateString()}
+                </p>
+              )}
             </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                End Date*
+              </label>
+              <input
+                type="date"
+                name="borrowingEnd"
+                value={formData.borrowingEnd}
+                onChange={handleChange}
+                min={formData.borrowingStart || (selectedItem ? new Date(selectedItem.availableFrom).toISOString().split('T')[0] : '')}
+                max={selectedItem ? new Date(selectedItem.availableUntil).toISOString().split('T')[0] : ''}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                required
+              />
+              {selectedItem && (
+                <p className="text-xs text-gray-500 mt-1">
+                  Available until: {new Date(selectedItem.availableUntil).toLocaleDateString()}
+                </p>
+              )}
+            </div>
+          </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
