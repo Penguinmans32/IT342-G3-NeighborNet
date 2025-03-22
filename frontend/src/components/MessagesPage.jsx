@@ -70,6 +70,7 @@ const MessagesPage = () => {
         console.log("Connected to WebSocket")
         stomp.subscribe(`/user/${user.id}/queue/messages`, (message) => {
           const newMessage = JSON.parse(message.body)
+          console.log("Received new message:", newMessage)
           handleNewMessage(newMessage)
         })
       }

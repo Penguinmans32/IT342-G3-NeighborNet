@@ -32,9 +32,11 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Controller
 public class ChatController {
@@ -279,134 +281,125 @@ public class ChatController {
             @RequestBody Map<String, String> request) {
         try {
             String status = request.get("status");
+
+            // Get the agreement we're responding to
+            BorrowingAgreement currentAgreement = borrowingAgreementRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Agreement not found"));
+
+            // Update the current agreement first
             BorrowingAgreement updatedAgreement = borrowingAgreementService.updateStatus(id, status);
 
             if ("ACCEPTED".equals(status)) {
                 Long itemId = updatedAgreement.getItemId();
+                Item item = itemRepository.findById(itemId)
+                        .orElseThrow(() -> new RuntimeException("Item not found"));
 
-                List<BorrowingAgreement> pendingAgreements = borrowingAgreementRepository
-                        .findByItemIdAndStatus(itemId, "PENDING");
+                // Find ALL agreements for this item
+                List<BorrowingAgreement> allItemAgreements = borrowingAgreementRepository
+                        .findByItemId(itemId);
 
-                for (BorrowingAgreement agreement : pendingAgreements) {
+                // Process each agreement
+                for (BorrowingAgreement agreement : allItemAgreements) {
+                    // Skip the agreement we just accepted
                     if (agreement.getId().equals(id)) {
                         continue;
                     }
 
+                    // Update all other agreements to rejected
                     agreement.setStatus("REJECTED");
-                    agreement.setRejectionReason("Another request has been accepted for this item");
+                    agreement.setRejectionReason("This item has been lent to another user");
                     borrowingAgreementRepository.save(agreement);
 
+                    // Create rejection update message
                     ObjectNode rejectedFormDataObj = objectMapper.createObjectNode();
                     rejectedFormDataObj.put("id", agreement.getId());
                     rejectedFormDataObj.put("status", "REJECTED");
-                    rejectedFormDataObj.put("itemId", agreement.getItemId());
-
-                    Item rejectedItem = itemRepository.findById(agreement.getItemId())
-                            .orElseThrow(() -> new RuntimeException("Item not found"));
-                    rejectedFormDataObj.put("itemName", rejectedItem.getName());
-
+                    rejectedFormDataObj.put("itemId", itemId);
+                    rejectedFormDataObj.put("itemName", item.getName());
                     rejectedFormDataObj.put("borrowerId", agreement.getBorrowerId());
                     rejectedFormDataObj.put("lenderId", agreement.getLenderId());
                     rejectedFormDataObj.put("borrowingStart", agreement.getBorrowingStart().toString());
                     rejectedFormDataObj.put("borrowingEnd", agreement.getBorrowingEnd().toString());
                     rejectedFormDataObj.put("terms", agreement.getTerms());
-                    rejectedFormDataObj.put("rejectionReason", "Another request has been accepted for this item");
+                    rejectedFormDataObj.put("rejectionReason", "This item has been lent to another user");
 
                     String rejectedFormData = objectMapper.writeValueAsString(rejectedFormDataObj);
 
-                    ChatMessage rejectedUpdateMessage = new ChatMessage();
-                    rejectedUpdateMessage.setMessageType("AGREEMENT_UPDATE");
-                    rejectedUpdateMessage.setContent("Agreement Updated");
-                    rejectedUpdateMessage.setFormData(rejectedFormData);
+                    // Update all chat messages containing this agreement
+                    updateChatMessagesForAgreement(agreement.getId(), rejectedFormData);
 
+                    // Send websocket updates only
                     messagingTemplate.convertAndSendToUser(
                             String.valueOf(agreement.getBorrowerId()),
                             "/queue/messages",
-                            rejectedUpdateMessage
+                            new ChatMessage() {{
+                                setMessageType("AGREEMENT_UPDATE");
+                                setFormData(rejectedFormData);
+                            }}
                     );
                     messagingTemplate.convertAndSendToUser(
                             String.valueOf(agreement.getLenderId()),
                             "/queue/messages",
-                            rejectedUpdateMessage
+                            new ChatMessage() {{
+                                setMessageType("AGREEMENT_UPDATE");
+                                setFormData(rejectedFormData);
+                            }}
                     );
-
-                    List<ChatMessage> messages = chatService.findChatMessages(
-                            agreement.getBorrowerId(),
-                            agreement.getLenderId()
-                    );
-
-                    for (ChatMessage message : messages) {
-                        if ("FORM".equals(message.getMessageType())) {
-                            try {
-                                JsonNode formData = objectMapper.readTree(message.getFormData());
-                                if (formData.has("id") && formData.get("id").asLong() == agreement.getId()) {
-                                    message.setFormData(rejectedFormData);
-                                    chatService.save(message);
-                                    break;
-                                }
-                            } catch (Exception e) {
-                                e.printStackTrace();
-                            }
-                        }
-                    }
                 }
             }
 
-            Item item = itemRepository.findById(updatedAgreement.getItemId())
-                    .orElseThrow(() -> new RuntimeException("Item not found"));
+            // Create update for the accepted/rejected agreement
+            ObjectNode acceptedFormDataObj = objectMapper.createObjectNode();
+            acceptedFormDataObj.put("id", updatedAgreement.getId());
+            acceptedFormDataObj.put("status", updatedAgreement.getStatus());
+            acceptedFormDataObj.put("itemId", updatedAgreement.getItemId());
+            acceptedFormDataObj.put("itemName", itemRepository.findById(updatedAgreement.getItemId())
+                    .orElseThrow(() -> new RuntimeException("Item not found")).getName());
+            acceptedFormDataObj.put("borrowerId", updatedAgreement.getBorrowerId());
+            acceptedFormDataObj.put("lenderId", updatedAgreement.getLenderId());
+            acceptedFormDataObj.put("borrowingStart", updatedAgreement.getBorrowingStart().toString());
+            acceptedFormDataObj.put("borrowingEnd", updatedAgreement.getBorrowingEnd().toString());
+            acceptedFormDataObj.put("terms", updatedAgreement.getTerms());
+            acceptedFormDataObj.putNull("rejectionReason");
 
-            ObjectNode formDataObj = objectMapper.createObjectNode();
-            formDataObj.put("id", updatedAgreement.getId());
-            formDataObj.put("status", updatedAgreement.getStatus());
-            formDataObj.put("itemId", updatedAgreement.getItemId());
-            formDataObj.put("itemName", item.getName());
-            formDataObj.put("borrowerId", updatedAgreement.getBorrowerId());
-            formDataObj.put("lenderId", updatedAgreement.getLenderId());
-            formDataObj.put("borrowingStart", updatedAgreement.getBorrowingStart().toString());
-            formDataObj.put("borrowingEnd", updatedAgreement.getBorrowingEnd().toString());
-            formDataObj.put("terms", updatedAgreement.getTerms());
-            formDataObj.put("rejectionReason",
-                    updatedAgreement.getRejectionReason() != null ?
-                            updatedAgreement.getRejectionReason() : null);
+            String acceptedFormData = objectMapper.writeValueAsString(acceptedFormDataObj);
 
-            String updatedFormData = objectMapper.writeValueAsString(formDataObj);
+            // Update the chat messages for the accepted agreement
+            updateChatMessagesForAgreement(id, acceptedFormData);
 
-            List<ChatMessage> allMessagesWithThisAgreement = chatService.findAllMessagesWithAgreement(id);
-
-            for (ChatMessage message : allMessagesWithThisAgreement) {
-                if ("FORM".equals(message.getMessageType())) {
-                    try {
-                        JsonNode formData = objectMapper.readTree(message.getFormData());
-                        if (formData.has("id") && formData.get("id").asLong() == id) {
-                            message.setFormData(updatedFormData);
-                            chatService.save(message);
-                        }
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-
-            ChatMessage updateMessage = new ChatMessage();
-            updateMessage.setMessageType("AGREEMENT_UPDATE");
-            updateMessage.setContent("Agreement Updated");
-            updateMessage.setFormData(updatedFormData);
-
+            // Send websocket updates only
             messagingTemplate.convertAndSendToUser(
                     String.valueOf(updatedAgreement.getBorrowerId()),
                     "/queue/messages",
-                    updateMessage
+                    new ChatMessage() {{
+                        setMessageType("AGREEMENT_UPDATE");
+                        setFormData(acceptedFormData);
+                    }}
             );
             messagingTemplate.convertAndSendToUser(
                     String.valueOf(updatedAgreement.getLenderId()),
                     "/queue/messages",
-                    updateMessage
+                    new ChatMessage() {{
+                        setMessageType("AGREEMENT_UPDATE");
+                        setFormData(acceptedFormData);
+                    }}
             );
 
             return ResponseEntity.ok(updatedAgreement);
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.badRequest().build();
+        }
+    }
+
+    // Helper method to update chat messages
+    private void updateChatMessagesForAgreement(Long agreementId, String newFormData) {
+        List<ChatMessage> messages = chatService.findAllMessagesWithAgreement(agreementId);
+        for (ChatMessage message : messages) {
+            if ("FORM".equals(message.getMessageType())) {
+                message.setFormData(newFormData);
+                chatService.save(message);
+            }
         }
     }
 
