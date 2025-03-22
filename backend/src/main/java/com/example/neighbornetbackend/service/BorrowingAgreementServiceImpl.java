@@ -69,9 +69,7 @@ public class BorrowingAgreementServiceImpl implements BorrowingAgreementService 
                 .orElseThrow(() -> new RuntimeException("Borrower not found"));
 
         agreement.setStatus(status);
-        BorrowingAgreement updatedAgreement = borrowingAgreementRepository.save(agreement);
 
-        // If the status is ACCEPTED, reject all other pending requests for the same dates
         if ("ACCEPTED".equals(status.toUpperCase())) {
             List<BorrowingAgreement> overlappingAgreements = borrowingAgreementRepository
                     .findOverlappingAgreements(
@@ -80,24 +78,23 @@ public class BorrowingAgreementServiceImpl implements BorrowingAgreementService 
                             agreement.getBorrowingEnd()
                     );
 
-            // Reject all other pending agreements that overlap
-            for (BorrowingAgreement overlapping : overlappingAgreements) {
-                if (!overlapping.getId().equals(agreementId)) {
-                    overlapping.setStatus("REJECTED");
-                    borrowingAgreementRepository.save(overlapping);
+            overlappingAgreements.forEach(otherAgreement -> {
+                if (!otherAgreement.getId().equals(agreementId)) {
+                    otherAgreement.setStatus("REJECTED");
+                    otherAgreement.setRejectionReason("Another agreement has been accepted for this item");
+                    borrowingAgreementRepository.save(otherAgreement);
 
-                    // Send notification to rejected borrowers
+                    // Send notification
                     notificationService.createAndSendNotification(
-                            overlapping.getBorrowerId(),
+                            otherAgreement.getBorrowerId(),
                             "Borrowing Request Automatically Rejected",
-                            "Your request to borrow '" + item.getName() + "' has been automatically rejected as another request has been accepted for these dates.",
+                            "Your request to borrow '" + item.getName() + "' has been automatically rejected as another request has been accepted.",
                             "BORROW_REJECTED"
                     );
                 }
-            }
+            });
         }
 
-        // Original notification logic
         String title;
         String message;
         String type;
@@ -123,7 +120,7 @@ public class BorrowingAgreementServiceImpl implements BorrowingAgreementService 
                 recipientId = agreement.getLenderId();
                 break;
             default:
-                return updatedAgreement;
+                return borrowingAgreementRepository.save(agreement);
         }
 
         notificationService.createAndSendNotification(
@@ -133,7 +130,12 @@ public class BorrowingAgreementServiceImpl implements BorrowingAgreementService 
                 type
         );
 
-        return updatedAgreement;
+        return borrowingAgreementRepository.save(agreement);
+    }
+
+    private BorrowingAgreement addRejectionReasonToAgreement(BorrowingAgreement agreement, String reason) {
+        agreement.setRejectionReason(reason);
+        return agreement;
     }
 
     @Override

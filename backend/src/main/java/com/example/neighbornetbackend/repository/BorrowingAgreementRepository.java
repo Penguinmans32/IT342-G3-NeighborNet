@@ -16,6 +16,8 @@ public interface BorrowingAgreementRepository extends JpaRepository<BorrowingAgr
     List<BorrowingAgreement> findByItemIdAndStatusAndBorrowingEndGreaterThan(
             Long itemId, String status, LocalDateTime date);
 
+    List<BorrowingAgreement> findByItemIdAndStatus(Long itemId, String status);
+
     @Query("SELECT ba FROM BorrowingAgreement ba " +
             "WHERE ba.itemId = :itemId " +
             "AND ba.status = 'PENDING' " +

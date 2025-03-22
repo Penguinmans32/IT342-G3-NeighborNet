@@ -63,46 +63,26 @@ const Chat = ({ senderId, receiverId, receiverName, onMessageSent, stompClient }
 
   const handleAgreementResponse = async (agreementId, status) => {
     try {
-        const response = await fetch(`http://localhost:8080/chat/agreement/${agreementId}/respond`, {
-            method: "PUT",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ status }),
-        });
-
-        if (!response.ok) {
-            throw new Error("Failed to update agreement status");
-        }
-
-        const updatedAgreement = await response.json();
-        setMessages((prevMessages) =>
-            prevMessages.map((msg) => {
-                if (msg.messageType === "FORM") {
-                    try {
-                        const formData = JSON.parse(msg.formData);
-                        if (formData.id === agreementId) {
-                            return {
-                                ...msg,
-                                formData: JSON.stringify({
-                                    ...formData,
-                                    status: status
-                                })
-                            };
-                        }
-                    } catch (error) {
-                        console.error("Error parsing form data:", error);
-                    }
-                }
-                return msg;
-            })
-        );
-
+      const response = await fetch(`http://localhost:8080/chat/agreement/${agreementId}/respond`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ status }),
+      });
+  
+      if (!response.ok) {
+        throw new Error("Failed to update agreement status");
+      }
+  
+      await fetchMessages();
+  
     } catch (error) {
-        console.error("Error updating agreement status:", error);
-        alert("Failed to update agreement status. Please try again.");
+      console.error("Error updating agreement status:", error);
+      alert("Failed to update agreement status. Please try again.");
     }
-};
+  };
+
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -247,28 +227,61 @@ const Chat = ({ senderId, receiverId, receiverName, onMessageSent, stompClient }
 
         if (newMessage.messageType === "AGREEMENT_UPDATE") {
           const updatedAgreement = JSON.parse(newMessage.formData);
+          console.log("Received AGREEMENT_UPDATE:", updatedAgreement);
           
-          setMessages((prevMessages) =>
+           if (updatedAgreement.status === "ACCEPTED") {
+            setMessages((prevMessages) =>
               prevMessages.map((msg) => {
-                  if (msg.messageType === "FORM") {
-                      try {
-                          const formData = JSON.parse(msg.formData);
-                          if (formData.id === updatedAgreement.id) {
-                              return {
-                                  ...msg,
-                                  formData: JSON.stringify(updatedAgreement)
-                              };
-                          }
-                      } catch (error) {
-                          console.error("Error parsing form data:", error);
-                      }
+                if (msg.messageType === "FORM") {
+                  try {
+                    const formData = JSON.parse(msg.formData);
+                    if (formData.itemId === updatedAgreement.itemId && 
+                        formData.id !== updatedAgreement.id && 
+                        formData.status === "PENDING") {
+                      return {
+                        ...msg,
+                        formData: JSON.stringify({
+                          ...formData,
+                          status: "REJECTED",
+                          rejectionReason: "Another request has been accepted for this item"
+                        })
+                      };
+                    }
+                    else if (formData.id === updatedAgreement.id) {
+                      return {
+                        ...msg,
+                        formData: JSON.stringify(updatedAgreement)
+                      };
+                    }
+                  } catch (error) {
+                    console.error("Error parsing form data:", error);
                   }
-                  return msg;
+                }
+                return msg;
               })
-          );
+            );
+          } else {
+            setMessages((prevMessages) =>
+              prevMessages.map((msg) => {
+                if (msg.messageType === "FORM") {
+                  try {
+                    const formData = JSON.parse(msg.formData);
+                    if (formData.id === updatedAgreement.id) {
+                      return {
+                        ...msg,
+                        formData: JSON.stringify(updatedAgreement)
+                      };
+                    }
+                  } catch (error) {
+                    console.error("Error parsing form data:", error);
+                  }
+                }
+                return msg;
+              })
+            );
+          }
           return;
-      }
-
+        }
 
         if (newMessage.senderId === receiverId || newMessage.receiverId === receiverId) {
           const processedMessage = {
@@ -325,8 +338,9 @@ const Chat = ({ senderId, receiverId, receiverName, onMessageSent, stompClient }
     try {
       const response = await fetch(`http://localhost:8080/messages/${senderId}/${receiverId}`)
       const data = await response.json()
-
-      // Add message type weights for sorting
+  
+      console.log("Fetched messages from server:", data);
+      
       const getMessageTypeWeight = (type) => {
         switch (type) {
           case "FORM":
@@ -339,17 +353,17 @@ const Chat = ({ senderId, receiverId, receiverName, onMessageSent, stompClient }
             return 0
         }
       }
-
+  
       const sortedData = data.sort((a, b) => {
         const timestampA = new Date(a.timestamp).getTime()
         const timestampB = new Date(b.timestamp).getTime()
-
+  
         if (timestampA === timestampB) {
           return getMessageTypeWeight(a.messageType) - getMessageTypeWeight(b.messageType)
         }
         return timestampA - timestampB
       })
-
+  
       setMessages(sortedData)
       scrollToBottom()
     } catch (error) {
@@ -641,10 +655,33 @@ const Chat = ({ senderId, receiverId, receiverName, onMessageSent, stompClient }
                       (() => {
                         try {
                           const formData = JSON.parse(msg.formData)
+                          console.log("Rendering agreement:", formData);
                           const isLender = senderId === formData.lenderId
                           const isBorrower = senderId === formData.borrowerId
                           const isPending = formData.status === "PENDING"
-                          const canRespond = isPending && isLender && msg.senderId === formData.borrowerId
+                          const isOverlappingWithAccepted = messages.some(otherMsg => {
+                            if (otherMsg.messageType === "FORM") {
+                              try {
+                                const otherFormData = JSON.parse(otherMsg.formData);
+                                return (
+                                  otherFormData.itemId === formData.itemId &&
+                                  otherFormData.status === "ACCEPTED" &&
+                                  otherFormData.id !== formData.id
+                                );
+                              } catch (error) {
+                                return false;
+                              }
+                            }
+                            return false;
+                          });
+                          
+                          const canRespond = isPending && 
+                            isLender && 
+                            msg.senderId === formData.borrowerId && 
+                            formData.status === "PENDING" &&
+                            !isOverlappingWithAccepted;
+
+                            console.log("Can respond:", canRespond);
 
                           return (
                             <div
@@ -712,26 +749,81 @@ const Chat = ({ senderId, receiverId, receiverName, onMessageSent, stompClient }
                                       ? "✅ Accepted"
                                       : "❌ Rejected"}
                                 </div>
-                                {canRespond && (
-                                  <div className="mt-3 flex gap-2">
-                                    <motion.button
-                                      whileHover={{ scale: 1.05 }}
-                                      whileTap={{ scale: 0.95 }}
-                                      onClick={() => handleAgreementResponse(formData.id, "ACCEPTED")}
-                                      className="px-3 py-1.5 bg-green-500 text-white rounded-full hover:bg-green-600 text-sm font-medium shadow-sm transition-all duration-200"
-                                    >
-                                      Accept
-                                    </motion.button>
-                                    <motion.button
-                                      whileHover={{ scale: 1.05 }}
-                                      whileTap={{ scale: 0.95 }}
-                                      onClick={() => handleAgreementResponse(formData.id, "REJECTED")}
-                                      className="px-3 py-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 text-sm font-medium shadow-sm transition-all duration-200"
-                                    >
-                                      Reject
-                                    </motion.button>
-                                  </div>
-                                )}
+                                {(() => {
+                                        // First, check if ANY agreement for this item has been accepted
+                                        const hasAcceptedAgreement = messages.some(otherMsg => {
+                                            if (otherMsg.messageType === "FORM") {
+                                                try {
+                                                    const otherFormData = JSON.parse(otherMsg.formData);
+                                                    return otherFormData.itemId === formData.itemId && 
+                                                          otherFormData.status === "ACCEPTED";
+                                                } catch (error) {
+                                                    return false;
+                                                }
+                                            }
+                                            return false;
+                                        });
+
+                                        if (formData.status === "ACCEPTED") {
+                                            return (
+                                                <div className="mt-3 text-sm text-green-500">
+                                                    This request has been accepted.
+                                                </div>
+                                            );
+                                        }
+                                        
+                                        if (hasAcceptedAgreement) {
+                                            // If ANY agreement for this item has been accepted, show this message
+                                            // regardless of the current agreement's status or user role
+                                            return (
+                                                <div className="mt-3 text-sm text-red-500">
+                                                    Another request has been accepted for this item.
+                                                </div>
+                                            );
+                                        }
+
+                                        if (formData.status === "REJECTED") {
+                                            return (
+                                                <div className="mt-3 text-sm text-red-500">
+                                                    {formData.rejectionReason || "This request has been rejected."}
+                                                </div>
+                                            );
+                                        }
+
+                                        // ONLY show Accept/Reject buttons if:
+                                        // 1. User is the lender
+                                        // 2. No agreement has been accepted for this item yet (checked above with hasAcceptedAgreement)
+                                        // 3. This agreement is still pending
+                                        if (isLender && formData.status === "PENDING") {
+                                            return (
+                                                <div className="mt-3 flex gap-2">
+                                                    <motion.button
+                                                        whileHover={{ scale: 1.05 }}
+                                                        whileTap={{ scale: 0.95 }}
+                                                        onClick={() => handleAgreementResponse(formData.id, "ACCEPTED")}
+                                                        className="px-3 py-1.5 bg-green-500 text-white rounded-full hover:bg-green-600 text-sm font-medium shadow-sm transition-all duration-200"
+                                                    >
+                                                        Accept
+                                                    </motion.button>
+                                                    <motion.button
+                                                        whileHover={{ scale: 1.05 }}
+                                                        whileTap={{ scale: 0.95 }}
+                                                        onClick={() => handleAgreementResponse(formData.id, "REJECTED")}
+                                                        className="px-3 py-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 text-sm font-medium shadow-sm transition-all duration-200"
+                                                    >
+                                                        Reject
+                                                    </motion.button>
+                                                </div>
+                                            );
+                                        }
+
+                                        // For borrowers with pending agreements or any other case
+                                        return (
+                                            <div className="mt-3 text-sm text-yellow-200">
+                                                Awaiting response...
+                                            </div>
+                                        );
+                                    })()}
                               </div>
                             </div>
                           )
