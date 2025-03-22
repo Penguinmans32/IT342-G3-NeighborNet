@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import AnimatedBackground from './AnimatedBackground';
+import { format } from 'date-fns';
 import { 
   MdCloudUpload, 
   MdDelete, 
@@ -60,6 +61,16 @@ const AddBorrowingItem = () => {
       handleFiles(files);
     }
   };
+
+  const getCurrentDate = () => {
+    const today = new Date();
+    return format(today, 'yyyy-MM-dd');
+  };
+
+  const formatDateForInput = (date) => {
+    return format(new Date(date), 'yyyy-MM-dd');
+  };
+
 
   const handleFiles = (files) => {
     if (files && files.length > 0) {
@@ -124,28 +135,39 @@ const AddBorrowingItem = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    const today = new Date(getCurrentDate());
+    const startDate = new Date(itemData.availableFrom);
+    const endDate = new Date(itemData.availableUntil);
+
+    if (startDate < today) {
+      alert('Start date cannot be before today');
+      return;
+    }
+  
+    if (endDate < startDate) {
+      alert('End date cannot be before start date');
+      return;
+    }
+
     setLoading(true);
   
     try {
       const formData = new FormData();
       
-      // Add basic fields
       formData.append('name', itemData.name);
       formData.append('description', itemData.description);
       formData.append('category', itemData.category);
       formData.append('location', itemData.location);
-      
-      // Ensure coordinates are numbers and not null
+
       if (itemData.coordinates.lat && itemData.coordinates.lng) {
         formData.append('latitude', itemData.coordinates.lat);
         formData.append('longitude', itemData.coordinates.lng);
       } else {
-        // Use default Cebu coordinates if none selected
         formData.append('latitude', 10.3157);
         formData.append('longitude', 123.8854);
       }
   
-      // Add other fields
       formData.append('availabilityPeriod', itemData.availabilityPeriod);
       formData.append('terms', itemData.terms);
       formData.append('availableFrom', itemData.availableFrom);
@@ -154,7 +176,6 @@ const AddBorrowingItem = () => {
       formData.append('email', itemData.email);
       formData.append('phone', itemData.phone);
   
-      // Add images
       itemData.images.forEach((img, index) => {
         formData.append(`images`, img.file);
       });
@@ -187,7 +208,23 @@ const AddBorrowingItem = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     
-    if (name === 'category') {
+    if (name === 'availableFrom') {
+      setItemData(prev => ({
+        ...prev,
+        [name]: value,
+        availableUntil: prev.availableUntil && prev.availableUntil < value ? value : prev.availableUntil
+      }));
+    } else if (name === 'availableUntil') {
+      if (!itemData.availableFrom || value >= itemData.availableFrom) {
+        setItemData(prev => ({
+          ...prev,
+          [name]: value
+        }));
+      } else {
+        alert('End date cannot be before start date');
+        return;
+      }
+    } else if (name === 'category') {
       if (value === 'other') {
         setIsOtherCategory(true);
         setItemData(prev => ({
@@ -511,35 +548,37 @@ const AddBorrowingItem = () => {
                   <div className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                          <MdCalendarToday className="text-blue-500" />
-                          Available From
-                        </label>
-                        <input
-                          type="date"
-                          name="availableFrom"
-                          value={itemData.availableFrom}
-                          onChange={handleChange}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 
-                                  focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                          <MdCalendarToday className="text-blue-500" />
-                          Available Until
-                        </label>
-                        <input
-                          type="date"
-                          name="availableUntil"
-                          value={itemData.availableUntil}
-                          onChange={handleChange}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 
-                                  focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                          required
-                        />
-                      </div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                            <MdCalendarToday className="text-blue-500" />
+                            Available From
+                          </label>
+                          <input
+                            type="date"
+                            name="availableFrom"
+                            value={itemData.availableFrom}
+                            min={getCurrentDate()} 
+                            onChange={handleChange}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 
+                                      focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                            <MdCalendarToday className="text-blue-500" />
+                            Available Until
+                          </label>
+                          <input
+                            type="date"
+                            name="availableUntil"
+                            value={itemData.availableUntil}
+                            min={itemData.availableFrom || getCurrentDate()}
+                            onChange={handleChange}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 
+                                      focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                            required
+                          />
+                        </div>
                     </div>
 
                     <div>
