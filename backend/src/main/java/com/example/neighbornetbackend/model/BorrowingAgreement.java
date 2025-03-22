@@ -31,8 +31,21 @@ public class BorrowingAgreement {
     @Column
     private String status;
 
+    @Column
+    private String rejectionReason;
+
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS", timezone = "UTC")
     private LocalDateTime createdAt;
+
+
+    public String getRejectionReason() {
+        return rejectionReason;
+    }
+
+    public void setRejectionReason(String rejectionReason) {
+        this.rejectionReason = rejectionReason;
+    }
+
 
     public Long getId() {
         return id;

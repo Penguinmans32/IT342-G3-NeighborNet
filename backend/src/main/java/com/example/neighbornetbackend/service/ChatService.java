@@ -8,4 +8,5 @@ public interface ChatService {
     List<ChatMessage> findChatMessages(Long senderId, Long receiverId);
 
     void markMessagesAsRead(Long senderId, Long receiverId);
+    List<ChatMessage> findAllMessagesWithAgreement(Long agreementId);
 }
