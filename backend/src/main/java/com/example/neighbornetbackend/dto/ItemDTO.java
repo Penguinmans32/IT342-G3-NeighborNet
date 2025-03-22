@@ -1,6 +1,7 @@
 package com.example.neighbornetbackend.dto;
 
 import com.example.neighbornetbackend.model.Item;
+import com.fasterxml.jackson.annotation.JsonFormat;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -26,6 +27,13 @@ public class ItemDTO {
     private Double latitude;
     private Double longitude;
     private CreatorDTO borrower;
+
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS", timezone = "UTC")
+    private LocalDateTime borrowingEnd;
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS", timezone = "UTC")
+    private LocalDateTime borrowingStart;
+
+    private Long borrowerId;
 
     public static ItemDTO fromItem(Item item) {
         ItemDTO dto = new ItemDTO();
@@ -220,5 +228,29 @@ public class ItemDTO {
 
     public void setBorrower(CreatorDTO borrower) {
         this.borrower = borrower;
+    }
+
+    public LocalDateTime getBorrowingEnd() {
+        return borrowingEnd;
+    }
+
+    public void setBorrowingEnd(LocalDateTime borrowingEnd) {
+        this.borrowingEnd = borrowingEnd;
+    }
+
+    public LocalDateTime getBorrowingStart() {
+        return borrowingStart;
+    }
+
+    public void setBorrowingStart(LocalDateTime borrowingStart) {
+        this.borrowingStart = borrowingStart;
+    }
+
+    public Long getBorrowerId() {
+        return borrowerId;
+    }
+
+    public void setBorrowerId(Long borrowerId) {
+        this.borrowerId = borrowerId;
     }
 }
