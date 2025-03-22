@@ -173,16 +173,21 @@ public class BorrowingAgreementServiceImpl implements BorrowingAgreementService 
                     if (item != null) {
                         // Set the borrower information from the agreement
                         User borrower = userRepository.findById(agreement.getBorrowerId()).orElse(null);
-                        item.setBorrower(borrower); // Make sure you've added setBorrower to Item class
+                        item.setBorrower(borrower);
 
                         // Create ItemDTO with borrower information
                         ItemDTO dto = ItemDTO.fromItem(item);
 
-                        // Log for debugging
-                        log.debug("Processing borrowed item: ItemId={}, BorrowerId={}, BorrowerName={}",
+                        // Add the borrowing details to the DTO
+                        dto.setBorrowingEnd(agreement.getBorrowingEnd());
+                        dto.setBorrowingStart(agreement.getBorrowingStart());
+                        dto.setBorrowerId(agreement.getBorrowerId());
+
+                        log.debug("Processing borrowed item: ItemId={}, BorrowerId={}, BorrowerName={}, BorrowingEnd={}",
                                 item.getId(),
                                 borrower != null ? borrower.getId() : "null",
-                                borrower != null ? borrower.getUsername() : "null");
+                                borrower != null ? borrower.getUsername() : "null",
+                                agreement.getBorrowingEnd());
 
                         return dto;
                     }
@@ -191,7 +196,6 @@ public class BorrowingAgreementServiceImpl implements BorrowingAgreementService 
                 .filter(item -> item != null)
                 .collect(Collectors.toList());
     }
-
     @Override
     public List<ItemDTO> getLentItems(Long userId) {
         List<BorrowingAgreement> agreements = borrowingAgreementRepository.findByLenderId(userId)
@@ -203,13 +207,25 @@ public class BorrowingAgreementServiceImpl implements BorrowingAgreementService 
         return agreements.stream()
                 .map(agreement -> {
                     Item item = itemRepository.findById(agreement.getItemId()).orElse(null);
-                    return item != null ? ItemDTO.fromItem(item) : null;
+                    if (item != null) {
+                        ItemDTO dto = ItemDTO.fromItem(item);
+                        dto.setBorrowingEnd(agreement.getBorrowingEnd());
+                        dto.setBorrowingStart(agreement.getBorrowingStart());
+                        dto.setBorrowerId(agreement.getBorrowerId());
+                        return dto;
+                    }
+                    return null;
                 })
-                .filter(item -> item != null)
+                .filter(Objects::nonNull)
                 .collect(Collectors.toList());
     }
 
     public List<BorrowingAgreement> getRecentBorrows() {
         return borrowingAgreementRepository.findTop10ByStatusOrderByCreatedAtDesc("ACCEPTED");
+    }
+
+    @Override
+    public List<BorrowingAgreement> findByItemIdAndStatus(Long itemId, String status) {
+        return borrowingAgreementRepository.findByItemIdAndStatus(itemId, status);
     }
 }

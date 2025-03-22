@@ -16,4 +16,5 @@ public interface BorrowingAgreementService {
     List<ItemDTO> getLentItems(Long userId);
     List<BorrowingAgreement> getRecentBorrows();
     List<BorrowingAgreement> getUserBorrows(Long userId);
+    List<BorrowingAgreement> findByItemIdAndStatus(Long itemId, String status);
 }

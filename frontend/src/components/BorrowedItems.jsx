@@ -29,17 +29,30 @@ const BorrowedItems = () => {
     }
   }
 
-  // Function to calculate days remaining until return date
-  const getDaysRemaining = (borrowingEnd) => {
-    if (!borrowingEnd) return null
+const getDaysRemaining = (borrowingEnd) => {
+  if (!borrowingEnd) return null;
+  const endDate = new Date(borrowingEnd);
+  const today = new Date();
 
-    const endDate = new Date(borrowingEnd)
-    const today = new Date()
-    const diffTime = endDate - today
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+  const endUTC = new Date(Date.UTC(
+    endDate.getUTCFullYear(),
+    endDate.getUTCMonth(),
+    endDate.getUTCDate(),
+    0, 0, 0, 0
+  ));
 
-    return diffDays
-  }
+  const todayUTC = new Date(Date.UTC(
+    today.getUTCFullYear(),
+    today.getUTCMonth(),
+    today.getUTCDate(),
+    0, 0, 0, 0
+  ));
+
+  const diffTime = endUTC.getTime() - todayUTC.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  return diffDays;
+};
 
   // Function to determine status color based on days remaining
   const getStatusColor = (daysRemaining) => {

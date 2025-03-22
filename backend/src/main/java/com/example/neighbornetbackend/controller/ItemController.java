@@ -196,6 +196,31 @@ public class ItemController {
         }
     }
 
+    @GetMapping("/{itemId}/current-borrowing")
+    public ResponseEntity<?> getCurrentBorrowing(@PathVariable Long itemId) {
+        try {
+            BorrowingAgreement currentAgreement = borrowingAgreementService
+                    .findByItemIdAndStatus(itemId, "ACCEPTED")
+                    .stream()
+                    .findFirst()
+                    .orElse(null);
+
+            if (currentAgreement != null) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("borrowerId", currentAgreement.getBorrowerId());
+                response.put("borrowingStart", currentAgreement.getBorrowingStart());
+                response.put("borrowingEnd", currentAgreement.getBorrowingEnd());
+                response.put("status", currentAgreement.getStatus());
+                return ResponseEntity.ok(response);
+            } else {
+                return ResponseEntity.ok(new HashMap<>());
+            }
+        } catch (Exception e) {
+            logger.error("Error getting current borrowing for item: " + itemId, e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
     @GetMapping("/all-borrowed")
     public ResponseEntity<List<ItemDTO>> getAllBorrowedItems() {
         try {
