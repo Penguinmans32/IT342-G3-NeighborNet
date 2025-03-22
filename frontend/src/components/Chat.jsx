@@ -224,12 +224,14 @@ const Chat = ({ senderId, receiverId, receiverName, onMessageSent, stompClient }
     if (stompClient) {
       const subscription = stompClient.subscribe(`/user/${senderId}/queue/messages`, (message) => {
         const newMessage = JSON.parse(message.body)
+        console.log("Received websocket message:", newMessage);
 
         if (newMessage.messageType === "AGREEMENT_UPDATE") {
           const updatedAgreement = JSON.parse(newMessage.formData);
           console.log("Received AGREEMENT_UPDATE:", updatedAgreement);
           
            if (updatedAgreement.status === "ACCEPTED") {
+            console.log("Agreement update received:", JSON.parse(newMessage.formData)); // Add this debug log
             setMessages((prevMessages) =>
               prevMessages.map((msg) => {
                 if (msg.messageType === "FORM") {
@@ -681,7 +683,12 @@ const Chat = ({ senderId, receiverId, receiverName, onMessageSent, stompClient }
                             formData.status === "PENDING" &&
                             !isOverlappingWithAccepted;
 
-                            console.log("Can respond:", canRespond);
+                            console.log("Agreement Data:", {
+                              formData,
+                              itemId: formData.itemId,
+                              status: formData.status,
+                              agreementId: formData.id
+                          });
 
                           return (
                             <div
@@ -767,7 +774,7 @@ const Chat = ({ senderId, receiverId, receiverName, onMessageSent, stompClient }
                                         if (formData.status === "ACCEPTED") {
                                             return (
                                                 <div className="mt-3 text-sm text-green-500">
-                                                    This request has been accepted.
+                                                    This request has been accepted. Please don't accept another transaction outside of this.
                                                 </div>
                                             );
                                         }
