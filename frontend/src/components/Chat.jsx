@@ -774,7 +774,7 @@ const Chat = ({ senderId, receiverId, receiverName, onMessageSent, stompClient }
                                         if (formData.status === "ACCEPTED") {
                                             return (
                                                 <div className="mt-3 text-sm text-green-500">
-                                                    This request has been accepted. Please don't accept another transaction outside of this.
+                                                    This request has been accepted.
                                                 </div>
                                             );
                                         }

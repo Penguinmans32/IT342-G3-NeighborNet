@@ -1,10 +1,14 @@
 package com.example.neighbornetbackend.controller;
 
+import com.example.neighbornetbackend.dto.ErrorResponse;
 import com.example.neighbornetbackend.dto.UpdateProfileRequest;
 import com.example.neighbornetbackend.dto.UserDTO;
 import com.example.neighbornetbackend.dto.UserSkillDTO;
 import com.example.neighbornetbackend.model.User;
 import com.example.neighbornetbackend.repository.UserRepository;
+import com.example.neighbornetbackend.security.CurrentUser;
+import com.example.neighbornetbackend.security.UserPrincipal;
+import com.example.neighbornetbackend.service.NotificationService;
 import com.example.neighbornetbackend.service.UserProfileStorageService;
 import com.example.neighbornetbackend.service.UserService;
 import org.springframework.core.io.Resource;
@@ -21,6 +25,7 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -32,11 +37,13 @@ public class UserProfileController {
     private final UserRepository userRepository;
     private final UserProfileStorageService userProfileStorageService;
     private final UserService userService;
+    private final NotificationService notificationService;
 
-    public UserProfileController(UserRepository userRepository, UserProfileStorageService userProfileStorageService, UserService userService) {
+    public UserProfileController(UserRepository userRepository, UserProfileStorageService userProfileStorageService, UserService userService, NotificationService notificationService) {
         this.userRepository = userRepository;
         this.userProfileStorageService = userProfileStorageService;
         this.userService = userService;
+        this.notificationService = notificationService;
     }
 
     @GetMapping("/profile-pictures/{filename:.+}")
@@ -74,7 +81,12 @@ public class UserProfileController {
 
         String userIdentifier = authentication.getName();
         return userRepository.findByUsernameOrEmail(userIdentifier, userIdentifier)
-                .map(user -> ResponseEntity.ok(UserDTO.fromEntity(user)))
+                .map(user -> {
+                    UserDTO dto = UserDTO.fromEntity(user);
+                    dto.setFollowersCount(user.getFollowers().size());
+                    dto.setFollowingCount(user.getFollowing().size());
+                    return ResponseEntity.ok(dto);
+                })
                 .orElse(ResponseEntity.notFound().build());
     }
 
@@ -156,6 +168,121 @@ public class UserProfileController {
             return ResponseEntity.ok(publicProfile);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/{userId}/follow")
+    public ResponseEntity<?> followUser(
+            @PathVariable Long userId,
+            @CurrentUser UserPrincipal currentUser) {
+        try {
+            User follower = userService.getUserById(currentUser.getId());
+            User userToFollow = userService.getUserById(userId);
+
+            if (follower.equals(userToFollow)) {
+                return ResponseEntity.badRequest()
+                        .body(new ErrorResponse("You cannot follow yourself"));
+            }
+
+            follower.follow(userToFollow);
+            userRepository.save(follower);
+            userRepository.save(userToFollow);
+
+            notificationService.createAndSendNotification(
+                    userId,
+                    "New Follower",
+                    follower.getUsername() + " started following you",
+                    "NEW_FOLLOWER"
+            );
+
+            // Return updated counts
+            Map<String, Object> response = new HashMap<>();
+            response.put("followersCount", userToFollow.getFollowers().size());
+            response.put("isFollowing", true);
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(new ErrorResponse(e.getMessage()));
+        }
+    }
+
+    @PostMapping("/{userId}/unfollow")
+    public ResponseEntity<?> unfollowUser(
+            @PathVariable Long userId,
+            @CurrentUser UserPrincipal currentUser) {
+        try {
+            User follower = userService.getUserById(currentUser.getId());
+            User userToUnfollow = userService.getUserById(userId);
+
+            follower.unfollow(userToUnfollow);
+            userRepository.save(follower);
+            userRepository.save(userToUnfollow);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("followersCount", userToUnfollow.getFollowers().size());
+            response.put("isFollowing", false);
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(new ErrorResponse(e.getMessage()));
+        }
+    }
+
+    @GetMapping("/{userId}/followers")
+    public ResponseEntity<List<UserDTO>> getFollowers(
+            @PathVariable Long userId,
+            @CurrentUser UserPrincipal currentUser) {
+        try {
+            User user = userService.getUserById(userId);
+            User currentUserEntity = userService.getUserById(currentUser.getId());
+
+            List<UserDTO> followers = user.getFollowers().stream()
+                    .map(follower -> UserDTO.fromEntity(follower, currentUserEntity))
+                    .collect(Collectors.toList());
+
+            return ResponseEntity.ok(followers);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @GetMapping("/{userId}/following")
+    public ResponseEntity<List<UserDTO>> getFollowing(
+            @PathVariable Long userId,
+            @CurrentUser UserPrincipal currentUser) {
+        try {
+            User user = userService.getUserById(userId);
+            User currentUserEntity = userService.getUserById(currentUser.getId());
+
+            List<UserDTO> following = user.getFollowing().stream()
+                    .map(followed -> UserDTO.fromEntity(followed, currentUserEntity))
+                    .collect(Collectors.toList());
+
+            return ResponseEntity.ok(following);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @GetMapping("/{userId}/followers-data")
+    public ResponseEntity<?> getFollowersData(
+            @PathVariable Long userId,
+            @CurrentUser UserPrincipal currentUser) {
+        try {
+            User targetUser = userService.getUserById(userId);
+            User currentUserEntity = userService.getUserById(currentUser.getId());
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("followersCount", targetUser.getFollowers().size());
+            response.put("followingCount", targetUser.getFollowing().size());
+            response.put("isFollowing", targetUser.getFollowers().contains(currentUserEntity));
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(new ErrorResponse(e.getMessage()));
         }
     }
 }

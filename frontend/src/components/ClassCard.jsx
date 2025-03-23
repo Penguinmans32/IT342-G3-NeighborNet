@@ -1,5 +1,6 @@
 import { memo, useCallback } from 'react';
-import { MdBookmark, MdBookmarkBorder, MdStar } from "react-icons/md";
+import { MdBookmark, MdBookmarkBorder, MdStar, MdAccessTime} from "react-icons/md";
+import { FileText, BookOpen, AlignLeft } from 'lucide-react';
 import { motion } from "framer-motion";
 
 const ClassCard = memo (({ 
@@ -9,7 +10,8 @@ const ClassCard = memo (({
     toggleSaveClass, 
     navigate,
     getFullThumbnailUrl,
-    getFullProfileImageUrl 
+    getFullProfileImageUrl,
+    user
 }) => {
     // Use useCallback for event handlers
     const handleCardClick = useCallback(() => {
@@ -21,6 +23,14 @@ const ClassCard = memo (({
         e.stopPropagation();
         toggleSaveClass(classItem.id);
     }, [classItem.id, toggleSaveClass]);
+
+    const navigateToProfile = (userId) => {
+      if (userId === user?.id) {
+        navigate('/profile');
+      } else {
+        navigate(`/profile/${userId}`);
+      }
+    };
 
     const isSaved = savedClasses.includes(classItem.id);
 
@@ -65,34 +75,45 @@ const ClassCard = memo (({
                   isDarkMode ? "bg-indigo-900/50 text-indigo-300" : "bg-blue-50 text-blue-600"
                 } text-xs font-medium rounded-full`}
               >
-                {classItem.category || "Uncategorized"}
+                {classItem.category 
+                  ? classItem.category.charAt(0).toUpperCase() + classItem.category.slice(1).toLowerCase()
+                  : "Uncategorized"}
               </span>
-              <span className={`text-sm ${isDarkMode ? "text-gray-400" : "text-gray-400"}`}>
+              <span className={`text-sm ${isDarkMode ? "text-gray-400" : "text-gray-400"} flex items-center gap-1`}>
+                <MdAccessTime className="text-base" />
                 {classItem.duration || "1h 30m"}
               </span>
             </div>
-            <h3
-              className={`text-lg font-semibold ${
-                isDarkMode ? "text-white" : "text-gray-900"
-              } mb-2 line-clamp-1`}
-            >
-              {classItem.title}
-            </h3>
-            <p className={`${isDarkMode ? "text-gray-300" : "text-gray-500"} text-sm mb-4 line-clamp-2`}>
-              {classItem.description}
-            </p>
+            <div className="flex items-center gap-2">
+                <BookOpen className="h-5 w-5 text-blue-500" />
+                <h3
+                  className={`text-lg font-semibold ${
+                    isDarkMode ? "text-white" : "text-gray-900"
+                  } mb-2 line-clamp-1`}
+                >
+                  {classItem.title}
+                </h3>
+              </div>
+              <div className="flex items-start gap-2">
+              <FileText className="h-4 w-4 text-gray-400 mt-1" /> {/* mt-1 to align with first line of text */}
+              <p className={`${isDarkMode ? "text-gray-300" : "text-gray-500"} text-sm mb-4 line-clamp-2`}>
+                {classItem.description}
+              </p>
+            </div>
   
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <img
-                  src={
-                    classItem.creator?.imageUrl
-                      ? getFullProfileImageUrl(classItem.creator.imageUrl)
-                      : "/images/defaultProfile.png"
-                  }
-                  alt={classItem.creator?.username || "Creator"}
-                  className="w-8 h-8 rounded-full object-cover"
-                />
+              <img
+                src={classItem.creator?.imageUrl 
+                  ? getFullProfileImageUrl(classItem.creator.imageUrl)
+                  : "/images/defaultProfile.png"}
+                alt={classItem.creator?.username || "Creator"}
+                className="w-6 h-6 rounded-full object-cover cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation(); 
+                  navigateToProfile(classItem.creatorId);
+                }}
+              />
                 <div>
                   <h4 className={`text-sm font-medium ${isDarkMode ? "text-white" : "text-gray-900"}`}>
                     {classItem.creatorName}

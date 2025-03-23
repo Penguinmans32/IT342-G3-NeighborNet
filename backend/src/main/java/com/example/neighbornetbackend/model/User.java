@@ -5,7 +5,9 @@ import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Entity
 @Table(name = "users", uniqueConstraints = {
@@ -31,8 +33,6 @@ public class User {
 
     @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
     private List<SavedClass> savedClasses = new ArrayList<>();
-
-
 
     @Column(name = "email_verified")
     private boolean emailVerified = false;
@@ -76,6 +76,42 @@ public class User {
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<UserAchievement> achievements = new ArrayList<>();
 
+    @ManyToMany
+    @JoinTable(
+            name = "user_followers",
+            joinColumns = @JoinColumn(name = "followed_id"),
+            inverseJoinColumns = @JoinColumn(name = "follower_id")
+    )
+    private Set<User> followers = new HashSet<>();
+
+    @ManyToMany(mappedBy = "followers")
+    private Set<User> following = new HashSet<>();
+
+    public Set<User> getFollowers() {
+        return followers;
+    }
+
+    public void setFollowers(Set<User> followers) {
+        this.followers = followers;
+    }
+
+    public Set<User> getFollowing() {
+        return following;
+    }
+
+    public void setFollowing(Set<User> following) {
+        this.following = following;
+    }
+
+    public void follow(User userToFollow) {
+        userToFollow.getFollowers().add(this);
+        this.following.add(userToFollow);
+    }
+
+    public void unfollow(User userToUnfollow) {
+        userToUnfollow.getFollowers().remove(this);
+        this.following.remove(userToUnfollow);
+    }
 
     @PrePersist
     protected void onCreate() {

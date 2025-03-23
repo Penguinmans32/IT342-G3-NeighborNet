@@ -109,17 +109,6 @@ const Homepage = () => {
     }
 };
 
-  const categories = [
-    { id: "all", name: "All Classes", icon: <MdApps className="text-blue-500" /> },
-    { id: "programming", name: "Programming", icon: <MdCode className="text-purple-500" /> },
-    { id: "design", name: "Design", icon: <MdBrush className="text-pink-500" /> },
-    { id: "business", name: "Business", icon: <MdBusinessCenter className="text-green-500" /> },
-    { id: "marketing", name: "Marketing", icon: <MdTrendingUp className="text-red-500" /> },
-    { id: "photography", name: "Photography", icon: <MdCamera className="text-yellow-500" /> },
-    { id: "music", name: "Music", icon: <MdMusicNote className="text-indigo-500" /> },
-    { id: "writing", name: "Writing", icon: <MdEdit className="text-cyan-500" /> },
-  ]
-
   const categoryIcons = {
     programming: <MdCode className="text-purple-500" />,
     design: <MdBrush className="text-pink-500" />,
@@ -130,12 +119,6 @@ const Homepage = () => {
     writing: <MdEdit className="text-cyan-500" />,
     all: <MdApps className="text-blue-500" />,
     default: <MdSchool className="text-gray-500" />,
-  }
-
-  const categoryVariants = {
-    hidden: { opacity: 0, x: -20 },
-    visible: { opacity: 1, x: 0 },
-    hover: { x: 8 },
   }
 
   const fetchSavedClasses = async () => {
@@ -149,6 +132,14 @@ const Homepage = () => {
       setSavedClassesSet(new Set(savedClassIds));
     } catch (error) {
       console.error("Error fetching saved classes:", error);
+    }
+  };
+
+  const navigateToProfile = (userId) => {
+    if (userId === user?.id) {
+      navigate('/profile');
+    } else {
+      navigate(`/profile/${userId}`);
     }
   };
 
@@ -833,6 +824,7 @@ const Homepage = () => {
                           navigate={navigate}
                           getFullThumbnailUrl={getFullThumbnailUrl}
                           getFullProfileImageUrl={getFullProfileImageUrl}
+                          user={user}
                         />
                       ))
                     ) : (
@@ -853,6 +845,7 @@ const Homepage = () => {
                           navigate={navigate}
                           getFullThumbnailUrl={getFullThumbnailUrl}
                           getFullProfileImageUrl={getFullProfileImageUrl}
+                          user={user}
                       />
                     ))
                   )}
@@ -958,14 +951,16 @@ const Homepage = () => {
                         </p>
 
                         <div className="flex items-center gap-2">
-                          <img
-                            src={
-                              classItem.creator?.imageUrl
-                                ? getFullProfileImageUrl(classItem.creator.imageUrl)
-                                : "/images/defaultProfile.png"
-                            }
+                        <img
+                            src={classItem.creator?.imageUrl
+                              ? getFullProfileImageUrl(classItem.creator.imageUrl)
+                              : "/images/defaultProfile.png"}
                             alt={classItem.creator?.username || "Creator"}
-                            className="w-6 h-6 rounded-full object-cover"
+                            className="w-6 h-6 rounded-full object-cover cursor-pointer"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigateToProfile(classItem.creatorId);
+                            }}
                           />
                           <span className={`text-xs ${isDarkMode ? "text-gray-300" : "text-gray-600"}`}>
                             {classItem.creatorName}
