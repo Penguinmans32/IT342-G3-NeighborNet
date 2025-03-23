@@ -43,6 +43,9 @@ export default function Profile() {
     communityScore: 0,
   })
   const [isSavedClassesLoading, setIsSavedClassesLoading] = useState(true)
+  const [isFollowing, setIsFollowing] = useState(false)
+  const [followerCount, setFollowerCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
   const [profileData, setProfileData] = useState({
     username: "",
     email: "",
@@ -61,55 +64,55 @@ export default function Profile() {
   const [scrollY, setScrollY] = useState(0)
   const profileRef = useRef(null)
 
-  const formatMessageTime = (timestamp) => {
+
+  const handleFollowToggle = async () => {
     try {
-      // First check if we have a valid timestamp
-      if (!timestamp) {
-        console.error('No timestamp provided');
-        return 'Invalid Time';
-      }
+      const endpoint = isFollowing 
+        ? `http://localhost:8080/api/users/${userId}/unfollow`
+        : `http://localhost:8080/api/users/${userId}/follow`;
   
-      if (timestamp instanceof Date) {
-        return new Intl.DateTimeFormat('en-US', {
-          hour: 'numeric',
-          minute: 'numeric',
-          hour12: true,
-          timeZone: 'Asia/Singapore'
-        }).format(timestamp);
-      }
+      const response = await axios.post(endpoint, {}, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
   
-      let date;
-      if (typeof timestamp === 'string') {
-        if (timestamp.includes('.')) {
-          const cleanTimestamp = timestamp.replace(/(\.\d{3})\d+/, '$1');
-          if (!timestamp.includes('T')) {
-            timestamp = cleanTimestamp.replace(' ', 'T');
-          }
-          if (!timestamp.endsWith('Z')) {
-            timestamp = timestamp + 'Z';
-          }
-        }
-        date = new Date(timestamp);
+      if (response.data) {
+        setFollowerCount(response.data.followersCount);
+        setIsFollowing(response.data.isFollowing);
       }
-  
-      if (!date || isNaN(date.getTime())) {
-        console.error('Invalid timestamp format:', timestamp);
-        return 'Invalid Time';
-      }
-  
-      return new Intl.DateTimeFormat('en-US', {
-        hour: 'numeric',
-        minute: 'numeric',
-        hour12: true,
-        timeZone: 'Asia/Singapore'
-      }).format(date);
     } catch (error) {
-      console.error('Error formatting time:', error, timestamp);
-      return 'Invalid Time';
+      console.error("Error toggling follow:", error);
     }
   };
 
-  // Handle scroll effects
+  useEffect(() => {
+    const fetchFollowData = async () => {
+      try {
+        const targetId = userId || user?.id;
+        if (!targetId) return;
+  
+        const response = await axios.get(`http://localhost:8080/api/users/${targetId}/followers-data`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        });
+        
+        setFollowerCount(response.data.followersCount);
+        setFollowingCount(response.data.followingCount);
+        setIsFollowing(response.data.isFollowing);
+        console.log("Follow data:", response.data);
+      } catch (error) {
+        console.error("Error fetching follow data:", error);
+      }
+    };
+  
+    if (user) {
+      fetchFollowData();
+    }
+  }, [userId, user]);
+
+
   useEffect(() => {
     const handleScroll = () => {
       setScrollY(window.scrollY)
@@ -508,16 +511,32 @@ export default function Profile() {
                     className="flex flex-col items-center p-4 bg-slate-50 rounded-xl border border-slate-100"
                   >
                     <span className="text-slate-500 text-sm mb-1">Followers</span>
-                    <span className="text-slate-800 font-bold text-xl">128</span>
+                    <span className="text-slate-800 font-bold text-xl">{followerCount}</span>
                   </motion.div>
                   <motion.div
                     whileHover={{ y: -3 }}
                     className="flex flex-col items-center p-4 bg-slate-50 rounded-xl border border-slate-100"
                   >
                     <span className="text-slate-500 text-sm mb-1">Following</span>
-                    <span className="text-slate-800 font-bold text-xl">86</span>
+                    <span className="text-slate-800 font-bold text-xl">{followingCount}</span>
                   </motion.div>
                 </div>
+
+                {userId && userId !== user?.id?.toString() && (
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={handleFollowToggle}
+                    className={`w-full py-2.5 px-4 rounded-lg shadow-sm hover:shadow-md 
+                      transition-all duration-200 flex items-center justify-center mb-6
+                      ${isFollowing 
+                        ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' 
+                        : 'bg-blue-500 text-white hover:bg-blue-600'
+                      }`}
+                  >
+                    {isFollowing ? 'Unfollow' : 'Follow'}
+                  </motion.button>
+                )}
 
                 {/* Social links */}
                 <div className="w-full mb-8">

@@ -16,6 +16,9 @@ public class UserDTO {
     private List<UserSkillDTO> skills;
     private List<String> interests;
     private Map<String, String> socialLinks;
+    private int followersCount;
+    private int followingCount;
+    private boolean isFollowing;
 
 
     public UserDTO(Long id, String username, String imageUrl) {
@@ -32,7 +35,7 @@ public class UserDTO {
         this.bio = bio;
     }
 
-    public static UserDTO fromEntity(User user) {
+    public static UserDTO fromEntity(User user, User currentUser) {
         UserDTO dto = new UserDTO(
                 user.getId(),
                 user.getUsername(),
@@ -55,8 +58,15 @@ public class UserDTO {
         socialLinks.put("linkedin", user.getLinkedinUrl());
         socialLinks.put("facebook", user.getFacebookUrl());
         dto.setSocialLinks(socialLinks);
+        dto.setFollowersCount(user.getFollowers().size());
+        dto.setFollowingCount(user.getFollowing().size());
+        dto.setFollowing(currentUser != null && user.getFollowers().contains(currentUser));
 
         return dto;
+    }
+
+    public static UserDTO fromEntity(User user) {
+        return fromEntity(user, null);
     }
 
     public UserDTO() {}
@@ -123,5 +133,29 @@ public class UserDTO {
 
     public void setInterests(List<String> interests) {
         this.interests = interests;
+    }
+
+    public boolean isFollowing() {
+        return isFollowing;
+    }
+
+    public void setFollowing(boolean following) {
+        isFollowing = following;
+    }
+
+    public int getFollowingCount() {
+        return followingCount;
+    }
+
+    public void setFollowingCount(int followingCount) {
+        this.followingCount = followingCount;
+    }
+
+    public int getFollowersCount() {
+        return followersCount;
+    }
+
+    public void setFollowersCount(int followersCount) {
+        this.followersCount = followersCount;
     }
 }

@@ -243,35 +243,49 @@ function SignIn() {
             </form>
 
             {/* Navigation Buttons */}
-            <div className="flex items-center space-x-6">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="group relative px-6 py-2.5 text-white hover:text-blue-100 
-                        transition-all duration-300 overflow-hidden shimmer-hover"
-                onClick={openSignInModal}
-              >
-                Sign In
-                <span
-                  className="absolute bottom-0 left-0 w-full h-0.5 bg-white transform 
-                            scale-x-0 group-hover:scale-x-100 transition-transform duration-300"
-                ></span>
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="relative px-8 py-2.5 bg-white text-blue-600 rounded-full 
-                        overflow-hidden group transform hover:-translate-y-0.5 
-                        transition-all duration-300 hover:shadow-xl border border-white/10 shimmer-hover"
-                onClick={openSignUpModal}
-              >
-                <span className="relative z-10 font-medium">Sign Up</span>
-                <div
-                  className="absolute inset-0 bg-gradient-to-r from-blue-100 to-blue-200 
-                            opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                ></div>
-              </motion.button>
-            </div>
+            <div className="flex items-center space-x-4">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="group relative px-6 py-2.5 text-white/90 hover:text-white
+                            font-medium tracking-wide transition-all duration-300"
+                  onClick={openSignInModal}
+                >
+                  <span className="relative z-10">Sign In</span>
+                  <span className="absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-transparent via-white to-transparent
+                                  transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 ease-out" />
+                  <span className="absolute inset-0 rounded-lg border border-white/0 group-hover:border-white/20
+                                  transform scale-95 group-hover:scale-100 transition-all duration-300" />
+                </motion.button>
+
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="relative group px-8 py-2.5 rounded-lg overflow-hidden
+                            transform transition-all duration-300"
+                  onClick={openSignUpModal}
+                >
+                  {/* Gradient Background */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-white/95 to-white/100 
+                                  opacity-90 group-hover:opacity-100 transition-opacity duration-300" />
+                  
+                  {/* Animated Border */}
+                  <div className="absolute inset-[1px] rounded-lg bg-gradient-to-r from-blue-500 to-purple-500 
+                                  opacity-0 group-hover:opacity-10 transition-opacity duration-300" />
+
+                  {/* Button Content */}
+                  <span className="relative z-10 font-medium bg-gradient-to-r from-blue-600 to-blue-700 
+                                  bg-clip-text text-transparent group-hover:from-blue-500 group-hover:to-blue-600
+                                  transition-all duration-300">
+                    Sign Up
+                  </span>
+
+                  {/* Shine Effect */}
+                  <div className="absolute inset-0 transform translate-x-full group-hover:translate-x-[-100%] 
+                                  bg-gradient-to-r from-transparent via-white/20 to-transparent 
+                                  transition-transform duration-1000 ease-out" />
+                </motion.button>
+              </div>
           </div>
         </div>
       </header>
