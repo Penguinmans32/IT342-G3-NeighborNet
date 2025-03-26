@@ -1,11 +1,14 @@
 import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
+import { useAuth } from "../backendApi/AuthContext"
 
 const BorrowedItems = () => {
+  const { user } = useAuth();
   const [borrowedItems, setBorrowedItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [selectedItem, setSelectedItem] = useState(null)
+  const [returnStatus, setReturnStatus] = useState({})
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -29,30 +32,111 @@ const BorrowedItems = () => {
     }
   }
 
-const getDaysRemaining = (borrowingEnd) => {
-  if (!borrowingEnd) return null;
-  const endDate = new Date(borrowingEnd);
-  const today = new Date();
+  useEffect(() => {
+    const fetchReturnStatuses = async () => {
+      try {
+        const statuses = {};
+        for (const item of borrowedItems) {
+          const response = await fetch(`http://localhost:8080/api/borrowing/returns/status/${item.id}`, {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          });
+          const data = await response.json();
+          if (data.status) {
+            statuses[item.id] = data.status;
+          }
+        }
+        setReturnStatus(statuses);
+      } catch (error) {
+        console.error("Error fetching return statuses:", error);
+      }
+    };
+  
+    if (borrowedItems.length > 0) {
+      fetchReturnStatuses();
+    }
+  }, [borrowedItems]);
 
-  const endUTC = new Date(Date.UTC(
-    endDate.getUTCFullYear(),
-    endDate.getUTCMonth(),
-    endDate.getUTCDate(),
-    0, 0, 0, 0
-  ));
+  const getDaysRemaining = (borrowingEnd) => {
+    if (!borrowingEnd) return null;
+    const endDate = new Date(borrowingEnd);
+    const today = new Date();
 
-  const todayUTC = new Date(Date.UTC(
-    today.getUTCFullYear(),
-    today.getUTCMonth(),
-    today.getUTCDate(),
-    0, 0, 0, 0
-  ));
+    const endUTC = new Date(Date.UTC(
+      endDate.getUTCFullYear(),
+      endDate.getUTCMonth(),
+      endDate.getUTCDate(),
+      0, 0, 0, 0
+    ));
 
-  const diffTime = endUTC.getTime() - todayUTC.getTime();
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const todayUTC = new Date(Date.UTC(
+      today.getUTCFullYear(),
+      today.getUTCMonth(),
+      today.getUTCDate(),
+      0, 0, 0, 0
+    ));
 
-  return diffDays;
-};
+    const diffTime = endUTC.getTime() - todayUTC.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    return diffDays;
+  };
+
+  const handleReturnRequest = async (item) => {
+    try {
+      if (!item.borrowingAgreementId) {
+        console.error('No borrowing agreement found for this item');
+        return;
+      }
+  
+      setSelectedItem(null);
+  
+      const returnRequest = {
+        itemId: item.id,
+        itemName: item.name,
+        borrowingStart: item.borrowingStart,
+        borrowingEnd: item.borrowingEnd,
+        borrowerId: user.id,
+        lenderId: item.owner.id,
+        agreementId: item.borrowingAgreementId,
+        item: item
+      };
+  
+      setReturnStatus(prev => ({
+        ...prev,
+        [item.id]: 'RETURN_REQUESTED'
+      }));
+  
+      navigate(`/chat/${item.owner.id}`, {
+        state: {
+          contactId: item.owner.id,
+          contactName: item.owner.username,
+          returnRequest,
+          timestamp: new Date().toISOString()
+        },
+        replace: true
+      });
+  
+    } catch (error) {
+      console.error('Error initiating return request:', error);
+      alert('Failed to initiate return request. Please try again.');
+    }
+  };
+
+  const getReturnStatusLabel = (item) => {
+    const status = returnStatus[item.id]
+    if (!status) return null
+    
+    switch (status) {
+      case 'RETURN_REQUESTED':
+        return 'Return Requested'
+      case 'RETURN_CONFIRMED':
+        return 'Return Confirmed'
+      default:
+        return null
+    }
+  }
 
   // Function to determine status color based on days remaining
   const getStatusColor = (daysRemaining) => {
@@ -205,9 +289,14 @@ const getDaysRemaining = (borrowingEnd) => {
                             : `${daysRemaining} Days Left`}
                     </div>
 
-                    {/* Owner Badge */}
-                    <div className="absolute top-4 right-4 bg-indigo-600/90 backdrop-blur-sm text-white px-3 py-1 rounded-full text-xs font-medium">
-                      Borrowed
+                    <div className="absolute top-4 right-4 flex gap-2">
+                      <div className={`backdrop-blur-sm text-white px-3 py-1 rounded-full text-xs font-medium ${
+                        returnStatus[item.id] 
+                          ? "bg-blue-600/90"
+                          : "bg-indigo-600/90"
+                      }`}>
+                        {returnStatus[item.id] ? getReturnStatusLabel(item) : "Borrowed"}
+                      </div>
                     </div>
                   </div>
 
@@ -333,7 +422,7 @@ const getDaysRemaining = (borrowingEnd) => {
             <h3 className="text-xl font-semibold text-indigo-900 mb-2">No Borrowed Items</h3>
             <p className="text-indigo-600 mb-6">You haven't borrowed any items yet.</p>
             <button
-              onClick={() => navigate("/homepage")}
+              onClick={() => navigate("/borrowing")}
               className="bg-indigo-600 text-white px-6 py-2.5 rounded-full shadow-md hover:bg-indigo-700 transition-all duration-300 inline-flex items-center gap-2"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -481,27 +570,56 @@ const getDaysRemaining = (borrowingEnd) => {
                   )}
                 </div>
 
-                <div className="mt-6 flex gap-3">
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => setSelectedItem(null)}
-                    className="flex-1 bg-gray-200 text-gray-700 px-4 py-3 rounded-lg hover:bg-gray-300 transition-all duration-300 font-medium"
-                  >
-                    Close
-                  </motion.button>
+                <div className="mt-6 flex flex-col gap-3">
+                    {getReturnStatusLabel(selectedItem) && (
+                      <div className="w-full bg-blue-50 text-blue-700 px-4 py-3 rounded-lg text-center font-medium">
+                        <div className="flex items-center justify-center gap-2">
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" 
+                              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                          </svg>
+                          {getReturnStatusLabel(selectedItem)}
+                        </div>
+                      </div>
+                    )}
 
-                  {selectedItem.owner?.email && (
-                    <motion.a
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      href={`mailto:${selectedItem.owner.email}`}
-                      className="flex-1 bg-indigo-600 text-white px-4 py-3 rounded-lg hover:bg-indigo-700 transition-all duration-300 font-medium text-center"
-                    >
-                      Contact Owner
-                    </motion.a>
-                  )}
-                </div>
+                    <div className="flex gap-3">
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => setSelectedItem(null)}
+                        className="flex-1 bg-gray-200 text-gray-700 px-4 py-3 rounded-lg hover:bg-gray-300 transition-all duration-300 font-medium"
+                      >
+                        Close
+                      </motion.button>
+
+                      {!returnStatus[selectedItem.id] && (
+                        <motion.button
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={() => handleReturnRequest(selectedItem)}
+                          className="flex-1 bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 transition-all duration-300 font-medium flex items-center justify-center gap-2"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" 
+                              d="M16 15v-1a4 4 0 00-4-4H8m0 0l3 3m-3-3l3-3" />
+                          </svg>
+                          Request Return
+                        </motion.button>
+                      )}
+
+                      {selectedItem.owner?.email && (
+                        <motion.a
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          href={`mailto:${selectedItem.owner.email}`}
+                          className="flex-1 bg-indigo-600 text-white px-4 py-3 rounded-lg hover:bg-indigo-700 transition-all duration-300 font-medium text-center"
+                        >
+                          Contact Owner
+                        </motion.a>
+                      )}
+                    </div>
+                  </div>
               </div>
             </motion.div>
           </motion.div>

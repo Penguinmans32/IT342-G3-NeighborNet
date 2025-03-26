@@ -113,6 +113,9 @@ const ClassCard = memo (({
                   e.stopPropagation(); 
                   navigateToProfile(classItem.creatorId);
                 }}
+                onError={(e) => {
+                  e.currentTarget.src = "/images/defaultProfile.png?height=36&width=36"
+                }}
               />
                 <div>
                   <h4 className={`text-sm font-medium ${isDarkMode ? "text-white" : "text-gray-900"}`}>

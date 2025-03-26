@@ -331,12 +331,12 @@ export default function Profile() {
                       ? profileData.imageUrl.startsWith("http")
                         ? profileData.imageUrl
                         : `http://localhost:8080${profileData.imageUrl}`
-                      : "/placeholder.svg?height=36&width=36"
+                      : "/images/defaultProfile.png?height=36&width=36"
                   }
                   alt="Profile"
                   className="h-full w-full object-cover"
                   onError={(e) => {
-                    e.currentTarget.src = "/placeholder.svg?height=36&width=36"
+                    e.currentTarget.src = "/images/defaultProfile.png?height=36&width=36"
                   }}
                 />
                 {!profileData?.imageUrl && (
@@ -385,12 +385,12 @@ export default function Profile() {
                           ? profileData.imageUrl.startsWith("http")
                             ? profileData.imageUrl
                             : `http://localhost:8080${profileData.imageUrl}`
-                          : "/placeholder.svg?height=128&width=128"
+                          : "/images/defaultProfile.png?height=128&width=128"
                       }
                       alt="Profile picture"
                       className="h-full w-full object-cover"
                       onError={(e) => {
-                        e.currentTarget.src = "/placeholder.svg?height=128&width=128"
+                        e.currentTarget.src = "/images/defaultProfile.png?height=128&width=128"
                       }}
                     />
 
@@ -457,13 +457,9 @@ export default function Profile() {
                               }
                             );
 
-                            // Navigate to messages page
                             router(`/messages`);
 
-                            // You can also add a small delay to ensure the messages page is loaded
-                            // before trying to open the specific chat
                             setTimeout(() => {
-                              // Emit an event to open this specific chat
                               const event = new CustomEvent('openChat', {
                                 detail: {
                                   contactId: userId,

@@ -35,6 +35,7 @@ import {
   MdEdit,
   MdDelete,
   MdKeyboardArrowLeft,
+  MdLibraryBooks,
   MdKeyboardArrowRight,
 } from "react-icons/md"
 import axios from "axios"
@@ -1355,6 +1356,43 @@ const ClassDetails = () => {
                 </div>
               </div>
             )}
+
+            {/* Class Sections */}
+                {classData?.sections && classData.sections.length > 0 && (
+                  <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
+                    <h2 className="text-2xl font-bold text-gray-900 mb-6">Course Sections</h2>
+                    <div className="grid gap-4">
+                      {classData.sections.map((section, index) => (
+                        <motion.div
+                          key={index}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: index * 0.1 }}
+                          className="flex flex-col gap-3 p-6 rounded-xl bg-gray-50 hover:bg-gray-100
+                                    transition-colors duration-300"
+                        >
+                          <div className="flex items-start gap-4">
+                            <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
+                              <MdLibraryBooks className="text-blue-600" />
+                            </div>
+                            <div className="flex-1">
+                              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                                {section.title}
+                              </h3>
+                              <p className="text-gray-700 mb-3">
+                                {section.content}
+                              </p>
+                              <div className="flex items-center gap-2 text-sm text-gray-500">
+                                <MdAccessTime className="text-blue-500" />
+                                <span>{section.duration}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </div>
+                )}
           </div>
 
           {/* Right Column - Sticky Sidebar */}

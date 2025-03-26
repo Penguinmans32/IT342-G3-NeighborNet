@@ -50,6 +50,9 @@ public class Item {
     private String email;
     private String phone;
 
+    @Column(name = "borrowing_agreement_id")
+    private Long borrowingAgreementId;
+
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(
             name = "item_image_urls",
@@ -249,5 +252,13 @@ public class Item {
 
     public void setBorrower(User borrower) {
         this.borrower = borrower;
+    }
+
+    public Long getBorrowingAgreementId() {
+        return borrowingAgreementId;
+    }
+
+    public void setBorrowingAgreementId(Long borrowingAgreementId) {
+        this.borrowingAgreementId = borrowingAgreementId;
     }
 }

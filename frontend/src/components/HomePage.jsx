@@ -77,6 +77,9 @@ const Homepage = () => {
   const [isDarkMode, setIsDarkMode] = useState(false)
   const [savedClasses, setSavedClasses] = useState([])
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(6); 
+
   // Refs for click outside handling
   const profileMenuRef = useRef(null)
   const notificationsRef = useRef(null)
@@ -142,6 +145,10 @@ const Homepage = () => {
       navigate(`/profile/${userId}`);
     }
   };
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedCategory, searchTerm, showOnlyUserClasses]);
 
 
   useEffect(() => {
@@ -803,53 +810,75 @@ const Homepage = () => {
               </div>
 
               {/* Classes Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {loading ? (
-                    [...Array(6)].map((_, i) => (
-                      <div key={i} className="animate-pulse">
-                        <div className={`aspect-video rounded-xl ${isDarkMode ? "bg-gray-800" : "bg-gray-200"} mb-4`} />
-                        <div className={`h-4 ${isDarkMode ? "bg-gray-800" : "bg-gray-200"} rounded w-3/4 mb-2`} />
-                        <div className={`h-4 ${isDarkMode ? "bg-gray-800" : "bg-gray-200"} rounded w-1/2`} />
-                      </div>
-                    ))
-                  ) : hasSearched ? (
-                    displayedResults.length > 0 ? (
-                      displayedResults.map((classItem) => (
-                        <ClassCard 
-                          key={classItem.id} 
-                          classItem={classItem} 
-                          isDarkMode={isDarkMode}
-                          savedClasses={Array.from(savedClassesSet)}
-                          toggleSaveClass={toggleSaveClass}
-                          navigate={navigate}
-                          getFullThumbnailUrl={getFullThumbnailUrl}
-                          getFullProfileImageUrl={getFullProfileImageUrl}
-                          user={user}
-                        />
-                      ))
-                    ) : (
-                      <div className={`col-span-3 py-12 text-center ${isDarkMode ? "text-gray-300" : "text-gray-500"}`}>
-                        <MdSearch className={`text-5xl mx-auto mb-4 ${isDarkMode ? "text-gray-600" : "text-gray-300"}`} />
-                        <h3 className="text-xl font-medium mb-2">No results found</h3>
-                        <p>We couldn't find any classes matching "{searchQuery}"</p>
-                      </div>
-                    )
-                  ) : (
-                    filteredClasses.map((classItem) => (
-                      <ClassCard 
-                          key={classItem.id} 
-                          classItem={classItem} 
-                          isDarkMode={isDarkMode}
-                          savedClasses={Array.from(savedClassesSet)}
-                          toggleSaveClass={toggleSaveClass}
-                          navigate={navigate}
-                          getFullThumbnailUrl={getFullThumbnailUrl}
-                          getFullProfileImageUrl={getFullProfileImageUrl}
-                          user={user}
-                      />
-                    ))
-                  )}
-                </div>
+                  <div className="space-y-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {loading ? (
+                        // Loading skeletons remain the same
+                        [...Array(6)].map((_, i) => (
+                          <div key={i} className="animate-pulse">
+                            <div className={`aspect-video rounded-xl ${isDarkMode ? "bg-gray-800" : "bg-gray-200"} mb-4`} />
+                            <div className={`h-4 ${isDarkMode ? "bg-gray-800" : "bg-gray-200"} rounded w-3/4 mb-2`} />
+                            <div className={`h-4 ${isDarkMode ? "bg-gray-800" : "bg-gray-200"} rounded w-1/2`} />
+                          </div>
+                        ))
+                      ) : (
+                        (() => {
+                          const filteredItems = hasSearched
+                            ? displayedResults
+                            : filteredClasses;
+
+                          // Calculate pagination
+                          const indexOfLastItem = currentPage * itemsPerPage;
+                          const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+                          const currentItems = filteredItems.slice(indexOfFirstItem, indexOfLastItem);
+                          const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
+
+                          return (
+                            <>
+                              {currentItems.length > 0 ? (
+                                currentItems.map((classItem) => (
+                                  <ClassCard 
+                                    key={classItem.id} 
+                                    classItem={classItem} 
+                                    isDarkMode={isDarkMode}
+                                    savedClasses={Array.from(savedClassesSet)}
+                                    toggleSaveClass={toggleSaveClass}
+                                    navigate={navigate}
+                                    getFullThumbnailUrl={getFullThumbnailUrl}
+                                    getFullProfileImageUrl={getFullProfileImageUrl}
+                                    user={user}
+                                  />
+                                ))
+                              ) : (
+                                <div className={`col-span-3 py-12 text-center ${isDarkMode ? "text-gray-300" : "text-gray-500"}`}>
+                                  <MdSearch className={`text-5xl mx-auto mb-4 ${isDarkMode ? "text-gray-600" : "text-gray-300"}`} />
+                                  <h3 className="text-xl font-medium mb-2">No results found</h3>
+                                  <p>We couldn't find any classes matching your criteria</p>
+                                </div>
+                              )}
+
+                              {/* Pagination */}
+                              {filteredItems.length > itemsPerPage && (
+                                <div className="col-span-full">
+                                  <Pagination
+                                    currentPage={currentPage}
+                                    totalPages={totalPages}
+                                    onPageChange={(page) => {
+                                      setCurrentPage(page);
+                                      window.scrollTo({
+                                        top: document.querySelector('.grid').offsetTop - 100,
+                                        behavior: 'smooth'
+                                      });
+                                    }}
+                                  />
+                                </div>
+                              )}
+                            </>
+                          );
+                        })()
+                      )}
+                    </div>
+                  </div>
             </section>
 
             {/* Popular Categories Section */}
@@ -1139,7 +1168,6 @@ const Homepage = () => {
                 }}
               />
 
-              {/* Status indicator */}
               <div className="absolute bottom-0 right-0 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
             </motion.div>
             <h3 className={`font-semibold text-lg ${isDarkMode ? "text-white" : "text-gray-900"}`}>
@@ -1149,7 +1177,6 @@ const Homepage = () => {
               {profileData?.email || "Add your email"}
             </p>
 
-            {/* Only show View Profile button if not on profile page */}
             {!isProfilePage && (
               <motion.button
                 whileHover={{ scale: 1.02 }}
@@ -1160,7 +1187,7 @@ const Homepage = () => {
                 } text-white rounded-lg transition-colors shadow-sm`}
                 onClick={() => navigate("/profile")}
               >
-                View Profile
+                Your Profile
               </motion.button>
             )}
           </div>
@@ -1175,7 +1202,6 @@ const Homepage = () => {
                 Main Features
               </div>
               {[
-                { icon: <MdDashboard />, label: "Dashboard", path: "/dashboard" },
                 { icon: <MdSchool />, label: "Skills", path: "/skills" },
                 { icon: <MdPeople />, label: "Community", path: "/community" },
               ].map((item, index) => (

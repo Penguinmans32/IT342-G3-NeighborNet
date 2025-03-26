@@ -9,4 +9,5 @@ public interface ChatService {
 
     void markMessagesAsRead(Long senderId, Long receiverId);
     List<ChatMessage> findAllMessagesWithAgreement(Long agreementId);
+    List<ChatMessage> findAllReturnMessages(Long agreementId);
 }

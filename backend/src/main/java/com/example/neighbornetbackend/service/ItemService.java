@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -71,14 +72,68 @@ public class ItemService {
 
     @Transactional(readOnly = true)
     public List<ItemDTO> getAllItems() {
+        LocalDate today = LocalDate.now();
+        LocalDate nearExpirationThreshold = today.plusDays(3);
+
         return itemRepository.findAll().stream()
+                .filter(item -> {
+                    LocalDate availableUntil = item.getAvailableUntil();
+                    if (availableUntil == null || availableUntil.isBefore(today)) {
+                        if (availableUntil != null && availableUntil.isBefore(today)) {
+                            notifyOwnerAboutExpiredItem(item);
+                        }
+                        return false;
+                    }
+
+                    if (availableUntil.isBefore(nearExpirationThreshold) || availableUntil.isEqual(nearExpirationThreshold)) {
+                        notifyOwnerAboutExpiringItem(item);
+                    }
+
+                    return true;
+                })
                 .map(item -> {
                     ItemDTO dto = convertToDTO(item);
-                    // Force initialization of the collection
+                    dto.setExpirationStatus(getExpirationStatus(item.getAvailableUntil()));
                     dto.setImageUrls(new ArrayList<>(item.getImageUrls()));
                     return dto;
                 })
                 .collect(Collectors.toList());
+    }
+
+    private String getExpirationStatus(LocalDate availableUntil) {
+        if (availableUntil == null) return "NO_DATE";
+
+        LocalDate today = LocalDate.now();
+        if (availableUntil.isBefore(today)) return "EXPIRED";
+
+        LocalDate nearExpirationThreshold = today.plusDays(3);
+        if (availableUntil.isBefore(nearExpirationThreshold) || availableUntil.isEqual(nearExpirationThreshold))
+            return "EXPIRING_SOON";
+
+        return "ACTIVE";
+    }
+
+
+    private void notifyOwnerAboutExpiredItem(Item item) {
+        activityService.trackActivity(
+                item.getOwner().getId(),
+                "item_expired",
+                "Your item has expired",
+                item.getName(),
+                "Warning",
+                item.getId()
+        );
+    }
+
+    private void notifyOwnerAboutExpiringItem(Item item) {
+        activityService.trackActivity(
+                item.getOwner().getId(),
+                "item_expiring",
+                "Your item will expire soon",
+                item.getName(),
+                "Info",
+                item.getId()
+        );
     }
 
     public List<ItemDTO> getItemsByUser(Long userId) {
@@ -117,6 +172,13 @@ public class ItemService {
             dto.setOwner(CreatorDTO.fromUser(item.getOwner()));
         }
 
+        if (item.getBorrower() != null) {
+            CreatorDTO borrowerDTO = CreatorDTO.fromUser(item.getBorrower());
+            dto.setBorrower(borrowerDTO);
+            Long agreementId = findActiveAgreementId(item.getId(), item.getBorrower().getId());
+            dto.setBorrowingAgreementId(agreementId);
+        }
+
         return dto;
     }
 
@@ -140,18 +202,15 @@ public class ItemService {
                 itemId
         );
 
-        // Check if the user is the owner
         if (!item.getOwner().getId().equals(userId)) {
             throw new RuntimeException("You don't have permission to delete this item");
         }
 
-        // Delete associated images if needed
         if (item.getImageUrls() != null && !item.getImageUrls().isEmpty()) {
             for (String imageUrl : item.getImageUrls()) {
                 try {
                     itemImageStorageService.deleteItemImage(imageUrl);
                 } catch (IOException e) {
-                    // Log the error but continue with deletion
                     logger.error("Failed to delete image: " + imageUrl, e);
                 }
             }
@@ -168,7 +227,6 @@ public class ItemService {
             throw new RuntimeException("You don't have permission to update this item");
         }
 
-        // Update the fields
         existingItem.setName(updatedItem.getName());
         existingItem.setDescription(updatedItem.getDescription());
         existingItem.setCategory(updatedItem.getCategory());
@@ -211,7 +269,14 @@ public class ItemService {
 
     public List<ItemDTO> getAllCurrentlyBorrowedItems() {
         List<BorrowingAgreement> activeAgreements = borrowingAgreementRepository
-                .findByStatusAndBorrowingEndGreaterThan("ACCEPTED", LocalDateTime.now());
+                .findByStatusInAndBorrowingEndGreaterThan(
+                        List.of(
+                                "ACCEPTED",
+                                "RETURN_PENDING",
+                                "RETURN_REQUESTED",
+                                "RETURN_REJECTED"
+                        ),
+                        LocalDateTime.now());
 
         return activeAgreements.stream()
                 .map(agreement -> {
@@ -222,6 +287,7 @@ public class ItemService {
                         if (borrower != null) {
                             CreatorDTO borrowerDTO = CreatorDTO.fromUser(borrower);
                             itemDTO.setBorrower(borrowerDTO);
+                            itemDTO.setBorrowingAgreementId(agreement.getId());
                         }
                         return itemDTO;
                     }
@@ -229,5 +295,21 @@ public class ItemService {
                 })
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
+    }
+
+    private Long findActiveAgreementId(Long itemId, Long borrowerId) {
+        BorrowingAgreement agreement = borrowingAgreementRepository
+                .findFirstByItemIdAndBorrowerIdAndStatusIn(
+                        itemId,
+                        borrowerId,
+                        List.of(
+                                "ACCEPTED",
+                                "RETURN_PENDING",
+                                "RETURN_REQUESTED",
+                                "RETURN_REJECTED"
+                        )
+                )
+                .orElse(null);
+        return agreement != null ? agreement.getId() : null;
     }
 }

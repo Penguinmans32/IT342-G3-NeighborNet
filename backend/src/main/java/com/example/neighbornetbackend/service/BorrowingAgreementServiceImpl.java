@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -133,11 +134,6 @@ public class BorrowingAgreementServiceImpl implements BorrowingAgreementService 
         return borrowingAgreementRepository.save(agreement);
     }
 
-    private BorrowingAgreement addRejectionReasonToAgreement(BorrowingAgreement agreement, String reason) {
-        agreement.setRejectionReason(reason);
-        return agreement;
-    }
-
     @Override
     public List<BorrowingAgreement> getByBorrowerId(Long borrowerId) {
         return borrowingAgreementRepository.findByBorrowerId(borrowerId);
@@ -163,22 +159,25 @@ public class BorrowingAgreementServiceImpl implements BorrowingAgreementService 
     public List<ItemDTO> getBorrowedItems(Long userId) {
         List<BorrowingAgreement> agreements = borrowingAgreementRepository.findByBorrowerId(userId)
                 .stream()
-                .filter(agreement -> "ACCEPTED".equals(agreement.getStatus()))
-                .filter(agreement -> agreement.getBorrowingEnd().isAfter(LocalDateTime.now()))
+                .filter(agreement -> {
+                    return ("ACCEPTED".equals(agreement.getStatus()) &&
+                            agreement.getBorrowingEnd().isAfter(LocalDateTime.now())) ||
+                            "RETURN_PENDING".equals(agreement.getStatus()) ||
+                            "RETURN_REQUESTED".equals(agreement.getStatus()) ||
+                            "RETURN_REJECTED".equals(agreement.getStatus());
+                })
                 .collect(Collectors.toList());
 
         return agreements.stream()
                 .map(agreement -> {
                     Item item = itemRepository.findById(agreement.getItemId()).orElse(null);
                     if (item != null) {
-                        // Set the borrower information from the agreement
                         User borrower = userRepository.findById(agreement.getBorrowerId()).orElse(null);
                         item.setBorrower(borrower);
 
-                        // Create ItemDTO with borrower information
                         ItemDTO dto = ItemDTO.fromItem(item);
 
-                        // Add the borrowing details to the DTO
+                        dto.setBorrowingAgreementId(agreement.getId());
                         dto.setBorrowingEnd(agreement.getBorrowingEnd());
                         dto.setBorrowingStart(agreement.getBorrowingStart());
                         dto.setBorrowerId(agreement.getBorrowerId());
@@ -196,6 +195,8 @@ public class BorrowingAgreementServiceImpl implements BorrowingAgreementService 
                 .filter(item -> item != null)
                 .collect(Collectors.toList());
     }
+
+
     @Override
     public List<ItemDTO> getLentItems(Long userId) {
         List<BorrowingAgreement> agreements = borrowingAgreementRepository.findByLenderId(userId)
@@ -227,5 +228,15 @@ public class BorrowingAgreementServiceImpl implements BorrowingAgreementService 
     @Override
     public List<BorrowingAgreement> findByItemIdAndStatus(Long itemId, String status) {
         return borrowingAgreementRepository.findByItemIdAndStatus(itemId, status);
+    }
+
+    @Override
+    public BorrowingAgreement save(BorrowingAgreement agreement) {
+        return borrowingAgreementRepository.save(agreement);
+    }
+
+    @Override
+    public Optional<BorrowingAgreement> findById(Long id) {
+        return borrowingAgreementRepository.findById(id);
     }
 }

@@ -4,6 +4,7 @@ import com.example.neighbornetbackend.dto.ItemDTO;
 import com.example.neighbornetbackend.model.BorrowingAgreement;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface BorrowingAgreementService {
     BorrowingAgreement create(BorrowingAgreement agreement);
@@ -17,4 +18,6 @@ public interface BorrowingAgreementService {
     List<BorrowingAgreement> getRecentBorrows();
     List<BorrowingAgreement> getUserBorrows(Long userId);
     List<BorrowingAgreement> findByItemIdAndStatus(Long itemId, String status);
+    BorrowingAgreement save(BorrowingAgreement agreement);
+    Optional<BorrowingAgreement> findById(Long id);
 }

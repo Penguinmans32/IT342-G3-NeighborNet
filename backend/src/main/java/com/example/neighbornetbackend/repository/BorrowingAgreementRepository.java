@@ -8,6 +8,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface BorrowingAgreementRepository extends JpaRepository<BorrowingAgreement, Long> {
@@ -47,7 +48,17 @@ public interface BorrowingAgreementRepository extends JpaRepository<BorrowingAgr
             LocalDateTime date
     );
 
-    List<BorrowingAgreement> findByStatusAndBorrowingEndGreaterThan(String status, LocalDateTime date);
+    List<BorrowingAgreement> findByStatusInAndBorrowingEndGreaterThan(
+            List<String> statuses,
+            LocalDateTime date
+    );
 
     List<BorrowingAgreement> findByItemId(Long itemId);
+
+    Optional<BorrowingAgreement> findFirstByItemIdAndBorrowerIdAndStatusIn(
+            Long itemId,
+            Long borrowerId,
+            List<String> statuses
+    );
+
 }

@@ -22,4 +22,6 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
     void markMessagesAsRead(@Param("senderId") Long senderId, @Param("receiverId") Long receiverId);
 
     List<ChatMessage> findByMessageType(String messageType);
+
+    List<ChatMessage> findByMessageTypeAndFormDataContaining(String messageType, String formDataFragment);
 }

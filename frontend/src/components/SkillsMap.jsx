@@ -117,7 +117,7 @@ const SkillsMap = () => {
                     whileTap={{ scale: 0.95 }}
                     className="bg-indigo-600 text-white px-8 py-3 rounded-full font-semibold 
                              hover:bg-indigo-700 transition-colors duration-300 shadow-lg"
-                    onClick={() => navigate('/browse-classes')}
+                    onClick={() => navigate('/homepage')}
                 >
                     Explore Classes
                 </motion.button>

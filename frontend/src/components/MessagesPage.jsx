@@ -1,12 +1,14 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useAuth } from "../backendApi/AuthContext"
 import { useNavigate } from "react-router-dom"
 import Chat from "./Chat"
 import { Client } from "@stomp/stompjs"
 import SockJS from "sockjs-client"
 import { motion } from "framer-motion"
+import { useLocation } from "react-router-dom"
 
 const MessagesPage = () => {
+  const location = useLocation();
   const navigate = useNavigate()
   const { user } = useAuth()
   const [conversations, setConversations] = useState([])
@@ -14,30 +16,105 @@ const MessagesPage = () => {
   const [loading, setLoading] = useState(true)
   const [stompClient, setStompClient] = useState(null)
   const [searchQuery, setSearchQuery] = useState("")
+  const [stompReady, setStompReady] = useState(false);
+  const hasProcessedReturnRequest = useRef(false);
+
+
+  const handleSendReturnRequest = async (returnRequestData) => {
+    if (hasProcessedReturnRequest.current) {
+      return;
+    }
+  
+    if (!returnRequestData || !returnRequestData.lenderId) {
+      console.error('Invalid return request data:', returnRequestData);
+      return;
+    }
+  
+    if (!stompClient?.connected) {
+      console.error("WebSocket not connected");
+      alert("Connection lost. Please refresh the page.");
+      return;
+    }
+  
+    try {
+      const now = new Date();
+      const currentTimestamp = `${now.toISOString().slice(0, 19)}.000`;
+  
+      const requestData = {
+        ...returnRequestData,
+        status: "PENDING",
+        createdAt: currentTimestamp,
+      };
+  
+      const returnRequestMessage = {
+        id: Date.now(),
+        senderId: user.id,
+        receiverId: returnRequestData.lenderId,
+        messageType: "RETURN_REQUEST",
+        content: "Sent a return request",
+        formData: JSON.stringify(requestData),
+        timestamp: currentTimestamp,
+      };
+  
+      stompClient.publish({
+        destination: '/app/chat',
+        body: JSON.stringify(returnRequestMessage)
+      });
+  
+      hasProcessedReturnRequest.current = true;
+  
+    } catch (error) {
+      console.error("Error sending return request:", error);
+      alert("Failed to send return request. Please try again.");
+    }
+  };
+
 
   const handleContactSelect = async (contact) => {
-    setSelectedContact(contact)
-
+    if (!contact) {
+      console.error('No contact provided');
+      return;
+    }
+  
+    if (!contact.id) {
+      console.error('Contact has no ID:', contact);
+      return;
+    }
+  
+    if (!user?.id) {
+      console.error('No user ID available');
+      return;
+    }
+  
     try {
-      await fetch(`http://localhost:8080/messages/read/${contact.id}/${user.id}`, {
+      setSelectedContact(contact);
+  
+      const response = await fetch(`http://localhost:8080/messages/read/${contact.id}/${user.id}`, {
         method: "PUT",
-      })
-
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        }
+      });
+  
+      if (!response.ok) {
+        throw new Error(`Failed to mark messages as read: ${response.status}`);
+      }
+  
       setConversations((prevConversations) => {
         return prevConversations.map((conv) => {
           if (conv.participant.id === contact.id) {
             return {
               ...conv,
               unreadCount: 0,
-            }
+            };
           }
-          return conv
-        })
-      })
+          return conv;
+        });
+      });
     } catch (error) {
-      console.error("Error marking messages as read:", error)
+      console.error("Error marking messages as read:", error);
     }
-  }
+  };
 
   useEffect(() => {
     const handleOpenChat = (event) => {
@@ -55,42 +132,91 @@ const MessagesPage = () => {
 
   useEffect(() => {
     if (user?.id) {
-      const socket = new SockJS("http://localhost:8080/ws")
+      const socket = new SockJS("http://localhost:8080/ws");
       const stomp = new Client({
         webSocketFactory: () => socket,
         debug: (str) => {
-          console.log(str)
+          console.log(str);
         },
         reconnectDelay: 5000,
         heartbeatIncoming: 4000,
         heartbeatOutgoing: 4000,
-      })
-
+      });
+  
       stomp.onConnect = () => {
-        console.log("Connected to WebSocket")
-        stomp.subscribe(`/user/${user.id}/queue/messages`, (message) => {
-          const newMessage = JSON.parse(message.body)
-          console.log("Received new message:", newMessage)
-          handleNewMessage(newMessage)
-        })
-      }
-
-      stomp.activate()
-      setStompClient(stomp)
-
+        console.log("Connected to WebSocket");
+        setStompClient(stomp);
+        setStompReady(true);
+      };
+  
+      stomp.onStompError = (frame) => {
+        console.error('STOMP error:', frame);
+      };
+  
+      console.log("Activating STOMP client...");
+      stomp.activate();
+  
       return () => {
-        if (stomp) {
-          stomp.deactivate()
+        if (stomp.connected) {
+          console.log("Deactivating STOMP client...");
+          stomp.deactivate();
         }
-      }
+      };
     }
-  }, [user])
+  }, [user]);
 
   useEffect(() => {
     if (user?.id) {
       fetchConversations()
     }
   }, [user?.id])
+
+  useEffect(() => {
+    return () => {
+      hasProcessedReturnRequest.current = false;
+    };
+  }, []);
+
+
+  useEffect(() => {
+    const initializeChat = async () => {
+      if (location.state) {
+        const { contactId, contactName, returnRequest } = location.state;
+        
+        if (!contactId && returnRequest?.lenderId) {
+          console.log('Using lenderId from returnRequest as contactId');
+          const contact = {
+            id: returnRequest.lenderId,
+            username: returnRequest.item?.owner?.username || 'Unknown User'
+          };
+          await handleContactSelect(contact);
+          
+          if (stompClient?.connected) {
+            await handleSendReturnRequest(returnRequest);
+          }
+          return;
+        }
+  
+        if (contactId && contactName) {
+          const contact = {
+            id: contactId,
+            username: contactName
+          };
+          await handleContactSelect(contact);
+          
+          if (returnRequest && stompClient?.connected) {
+            await handleSendReturnRequest(returnRequest);
+          }
+          return;
+        }
+
+        console.log('Insufficient contact information provided');
+        navigate('/messages'); 
+      }
+    };
+  
+    initializeChat();
+  }, [location.state, stompClient?.connected]);
 
   const handleNewMessage = (message) => {
     setConversations((prevConversations) => {
@@ -414,7 +540,7 @@ console.log('Conversations:', conversations);
 
               {/* Chat Area with modern styling */}
               <div className="flex-1 flex flex-col bg-gray-50">
-                {selectedContact ? (
+                {selectedContact && stompReady ? (
                   <Chat
                     senderId={user.id}
                     receiverId={selectedContact.id}
@@ -449,7 +575,7 @@ console.log('Conversations:', conversations);
                         whileTap={{ scale: 0.95 }}
                         className="mt-6 px-6 py-2 bg-indigo-500 text-white rounded-full font-medium hover:bg-indigo-600 transition-colors duration-200 shadow-md"
                       >
-                        Start New Chat
+                        Start New Chat or Make a Request Borrow
                       </motion.button>
                     </motion.div>
                   </div>

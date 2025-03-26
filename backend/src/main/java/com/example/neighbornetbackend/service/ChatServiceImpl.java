@@ -1,8 +1,10 @@
 package com.example.neighbornetbackend.service;
 
+import com.example.neighbornetbackend.model.BorrowingAgreement;
 import com.example.neighbornetbackend.model.ChatMessage;
 import com.example.neighbornetbackend.model.Item;
 import com.example.neighbornetbackend.model.User;
+import com.example.neighbornetbackend.repository.BorrowingAgreementRepository;
 import com.example.neighbornetbackend.repository.ChatMessageRepository;
 import com.example.neighbornetbackend.repository.ItemRepository;
 import com.example.neighbornetbackend.repository.UserRepository;
@@ -25,6 +27,9 @@ public class ChatServiceImpl implements ChatService {
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
     private final ItemRepository itemRepository;
+
+    @Autowired
+    private BorrowingAgreementRepository borrowingAgreementRepository;
 
 
     public ChatServiceImpl(ChatMessageRepository chatMessageRepository,
@@ -64,7 +69,6 @@ public class ChatServiceImpl implements ChatService {
             User sender = userRepository.findById(chatMessage.getSenderId())
                     .orElseThrow(() -> new RuntimeException("Sender not found"));
 
-            // Send appropriate notification
             if (chatMessage.getItem() != null) {
                 Item item = chatMessage.getItem();
                 notificationService.createAndSendNotification(
@@ -102,6 +106,25 @@ public class ChatServiceImpl implements ChatService {
                         senderId, receiverId, senderId, receiverId);
 
         messages.forEach(message -> {
+            if ("RETURN_REQUEST".equals(message.getMessageType())) {
+                try {
+                    JsonNode formData = objectMapper.readTree(message.getFormData());
+                    if (formData.has("agreementId")) {
+                        Long agreementId = formData.get("agreementId").asLong();
+                        BorrowingAgreement agreement = borrowingAgreementRepository.findById(agreementId)
+                                .orElse(null);
+
+                        if (agreement != null) {
+                            ObjectNode updatedFormData = (ObjectNode) formData;
+                            updatedFormData.put("status", agreement.getStatus());
+                            message.setFormData(objectMapper.writeValueAsString(updatedFormData));
+                        }
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+
             if (message.getItem() != null) {
                 Item item = message.getItem();
                 if (item.getImageUrls() != null) {
@@ -139,5 +162,13 @@ public class ChatServiceImpl implements ChatService {
         }
 
         return result;
+    }
+
+    @Override
+    public List<ChatMessage> findAllReturnMessages(Long agreementId) {
+        return chatMessageRepository.findByMessageTypeAndFormDataContaining(
+                "RETURN_REQUEST",
+                "\"agreementId\":" + agreementId
+        );
     }
 }
