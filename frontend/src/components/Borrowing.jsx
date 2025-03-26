@@ -23,6 +23,53 @@ import {
 import { ArrowLeft } from 'lucide-react';
 import axios from 'axios';
 
+
+const Pagination = ({ currentPage, totalPages, onPageChange }) => {
+  return (
+    <div className="flex justify-center items-center gap-2 mt-8">
+      <button
+        onClick={() => onPageChange(currentPage - 1)}
+        disabled={currentPage === 1}
+        className={`px-4 py-2 rounded-lg ${
+          currentPage === 1
+            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+            : 'bg-white text-blue-500 hover:bg-blue-50'
+        }`}
+      >
+        Previous
+      </button>
+      
+      <div className="flex items-center gap-1">
+        {[...Array(totalPages)].map((_, index) => (
+          <button
+            key={index + 1}
+            onClick={() => onPageChange(index + 1)}
+            className={`w-10 h-10 rounded-lg ${
+              currentPage === index + 1
+                ? 'bg-blue-500 text-white'
+                : 'bg-white text-blue-500 hover:bg-blue-50'
+            }`}
+          >
+            {index + 1}
+          </button>
+        ))}
+      </div>
+
+      <button
+        onClick={() => onPageChange(currentPage + 1)}
+        disabled={currentPage === totalPages}
+        className={`px-4 py-2 rounded-lg ${
+          currentPage === totalPages
+            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+            : 'bg-white text-blue-500 hover:bg-blue-50'
+        }`}
+      >
+        Next
+      </button>
+    </div>
+  );
+};
+
 const MessageModal = ({ isOpen, onClose, onSend, ownerName, item}) => {
   const [messageType, setMessageType] = useState('custom');
   const [customMessage, setCustomMessage] = useState('');
@@ -333,6 +380,8 @@ const Borrowing = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [stompClient, setStompClient] = useState(null);
   const [borrowedItems, setBorrowedItems] = useState(new Map());
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(6);
   const [galleryModal, setGalleryModal] = useState({
     isOpen: false,
     images: [],
@@ -463,11 +512,16 @@ const Borrowing = () => {
   }, [items]);
 
   const handleMessageClick = (ownerId, ownerName, item) => {
+    if (!ownerId || !ownerName) {
+      console.error('Missing owner information');
+      return;
+    }
+  
     setMessageModal({
       isOpen: true,
-      ownerId,
-      ownerName,
-      item,
+      ownerId: ownerId,
+      ownerName: ownerName,
+      item: item
     });
   };
 
@@ -572,7 +626,7 @@ const Borrowing = () => {
       { 
         id: 'all', 
         name: 'All Items', 
-        icon: <MdCategory className="text-blue-500" />,
+        icon: <MdCategory className="text-green-500" />,
         count: items.length
       },
       ...uniqueCategories.map(category => ({
@@ -618,6 +672,11 @@ const Borrowing = () => {
     fetchItems();
     fetchBorrowedItemsStatus();
   }, []);
+
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedCategory]);
 
   const handleAddItem = () => {
     navigate('/borrowing/add-item');
@@ -704,251 +763,316 @@ const Borrowing = () => {
           </div>
 
         {/* Items Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {loading ? (
-              // Loading skeletons
-              [...Array(6)].map((_, i) => (
-                <div key={i} className="animate-pulse">
-                  <div className="bg-gray-200 rounded-xl aspect-video mb-4" />
-                  <div className="h-4 bg-gray-200 rounded w-3/4 mb-2" />
-                  <div className="h-4 bg-gray-200 rounded w-1/2" />
+            <div className="space-y-8"> {/* Changed from grid to space-y-8 for vertical spacing */}
+              {loading ? (
+                // Loading skeletons
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {[...Array(6)].map((_, i) => (
+                    <div key={i} className="animate-pulse">
+                      <div className="bg-gray-200 rounded-xl aspect-video mb-4" />
+                      <div className="h-4 bg-gray-200 rounded w-3/4 mb-2" />
+                      <div className="h-4 bg-gray-200 rounded w-1/2" />
+                    </div>
+                  ))}
                 </div>
-              ))
-            ) : (
-              // Actual items
-              items
-                .filter(item => 
-                  (selectedCategory === 'all' || item.category === selectedCategory) &&
-                  (item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                  item.description.toLowerCase().includes(searchTerm.toLowerCase()))
-                )
-                .map(item => (
-                  <motion.div
-                    key={item.id}
-                    whileHover={{ y: -5 }}
-                    className={`bg-white rounded-xl shadow-sm overflow-hidden group 
-                      ${borrowedItems.has(item.id) ? 'opacity-85' : ''}`}
-                  >
-                    {/* Image Gallery */}
-                    <div className="aspect-[4/3] relative overflow-hidden bg-gray-100">
-                      {/* Images - Always show these */}
-                      {item.imageUrls && item.imageUrls.length > 0 ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 p-2 h-full">
-                          {/* Main Image */}
-                          <div className="col-span-2 h-48 relative rounded-lg overflow-hidden">
-                            <img
-                              src={item.imageUrls[0]}
-                              alt={`${item.name} - Main`}
-                              className="w-full h-full object-cover"
-                              onError={(e) => {
-                                e.target.onerror = null;
-                                e.target.src = 'https://via.placeholder.com/400x300?text=No+Image';
-                              }}
-                            />
-                          </div>
-                          
-                          {/* Thumbnail Images */}
-                          {item.imageUrls.length > 1 && (
-                            <div className="grid grid-cols-3 gap-2 col-span-2">
-                              {item.imageUrls.slice(1, 4).map((url, index) => (
-                                <div key={index} className="aspect-square relative rounded-lg overflow-hidden">
-                                  <img
-                                    src={url}
-                                    alt={`${item.name} - ${index + 2}`}
-                                    className="w-full h-full object-cover"
-                                    onError={(e) => {
-                                      e.target.onerror = null;
-                                      e.target.src = 'https://via.placeholder.com/150?text=No+Image';
-                                    }}
-                                  />
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="flex flex-col items-center justify-center h-full p-4">
-                          <MdImage className="text-4xl text-gray-400 mb-2" />
-                          <p className="text-gray-500 text-sm text-center">No images available</p>
-                        </div>
-                      )}
+              ) : (
+                (() => {
+                  const filteredItems = items.filter(item => {
+                    const isExpired = new Date(item.availableUntil) < new Date();
+                    if (isExpired) return false;
+                    
+                    return (
+                      (selectedCategory === 'all' || item.category === selectedCategory) &&
+                      (item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                      item.description.toLowerCase().includes(searchTerm.toLowerCase()))
+                    );
+                  });
 
-                      {/* Borrowed Overlay - Show only if borrowed */}
-                      {borrowedItems.has(item.id) && (
-                        <div className="absolute inset-0 z-20 bg-black/60 flex flex-col items-center justify-center">
-                          <div className="bg-red-500 text-white px-6 py-2 rounded-full font-bold mb-2">
-                            Currently Borrowed
-                          </div>
-                          {borrowedItems.get(item.id)?.borrowerInfo?.username && (
-                            <div className="text-white text-sm bg-black/40 px-4 py-1 rounded-full">
-                              by {borrowedItems.get(item.id).borrowerInfo.username}
-                            </div>
-                          )}
-                        </div>
-                      )}
+                  const indexOfLastItem = currentPage * itemsPerPage;
+                  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+                  const currentItems = filteredItems.slice(indexOfFirstItem, indexOfLastItem);
+                  const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
 
-                      {/* Hover Overlay - Show only if NOT borrowed */}
-                      {!borrowedItems.has(item.id) && (
-                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 
-                                        transition-opacity flex items-center justify-center">
-                          <div className="flex gap-2">
-                            {item.imageUrls && item.imageUrls.length > 0 && (
-                              <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={() => setGalleryModal({
-                                  isOpen: true,
-                                  images: item.imageUrls,
-                                  currentIndex: 0
-                                })}
-                                className="px-4 py-2 bg-white text-blue-600 rounded-full font-medium"
+                  return (
+                    <div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {currentItems.map(item => {
+                          const now = new Date();
+                          const expirationDate = new Date(item.availableUntil);
+                          const daysUntilExpiration = Math.ceil(
+                            (expirationDate - now) / (1000 * 60 * 60 * 24)
+                          );
+
+                          const expirationStatus = 
+                            daysUntilExpiration <= 0 ? "EXPIRED" :
+                            daysUntilExpiration <= 3 ? "EXPIRING_SOON" : "ACTIVE";
+
+                            return (
+                              <motion.div
+                                key={item.id}
+                                whileHover={{ y: -5 }}
+                                className={`bg-white rounded-xl shadow-sm overflow-hidden group 
+                                  ${borrowedItems.has(item.id) ? 'opacity-85' : ''}
+                                  ${expirationStatus === "EXPIRING_SOON" ? 'border-2 border-yellow-400' : ''}`}
                               >
-                                View Images
-                              </motion.button>
-                            )}
-                            <motion.button
-                              whileHover={{ scale: 1.05 }}
-                              whileTap={{ scale: 0.95 }}
-                              onClick={() => navigate(`/borrowing/item/${item.id}`)}
-                              className="px-4 py-2 bg-blue-500 text-white rounded-full font-medium"
-                            >
-                              {item.owner?.id === user?.id ? 'Manage Item' : 'View Details'}
-                            </motion.button>
-                          </div>
+                                {/* Add expiration warning banner if needed */}
+                                  {expirationStatus === "EXPIRING_SOON" && (
+                                    <div className="bg-yellow-100 text-yellow-800 px-4 py-2 text-sm">
+                                      <div className="flex items-center gap-2">
+                                        <MdAccessTime className="text-yellow-600" />
+                                        Expires in {daysUntilExpiration} days
+                                      </div>
+                                    </div>
+                                  )}
+            
+                                {/* Image Gallery */}
+                                <div className="aspect-[4/3] relative overflow-hidden bg-gray-100">
+                                  {/* Images - Always show these */}
+                                  {item.imageUrls && item.imageUrls.length > 0 ? (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 p-2 h-full">
+                                      {/* Main Image */}
+                                      <div className="col-span-2 h-48 relative rounded-lg overflow-hidden">
+                                        <img
+                                          src={item.imageUrls[0]}
+                                          alt={`${item.name} - Main`}
+                                          className="w-full h-full object-cover"
+                                          onError={(e) => {
+                                            e.target.onerror = null;
+                                            e.target.src = 'https://via.placeholder.com/400x300?text=No+Image';
+                                          }}
+                                        />
+                                      </div>
+                                      
+                                      {/* Thumbnail Images */}
+                                      {item.imageUrls.length > 1 && (
+                                        <div className="grid grid-cols-3 gap-2 col-span-2">
+                                          {item.imageUrls.slice(1, 4).map((url, index) => (
+                                            <div key={index} className="aspect-square relative rounded-lg overflow-hidden">
+                                              <img
+                                                src={url}
+                                                alt={`${item.name} - ${index + 2}`}
+                                                className="w-full h-full object-cover"
+                                                onError={(e) => {
+                                                  e.target.onerror = null;
+                                                  e.target.src = 'https://via.placeholder.com/150?text=No+Image';
+                                                }}
+                                              />
+                                            </div>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <div className="flex flex-col items-center justify-center h-full p-4">
+                                      <MdImage className="text-4xl text-gray-400 mb-2" />
+                                      <p className="text-gray-500 text-sm text-center">No images available</p>
+                                    </div>
+                                  )}
+            
+                                  {/* Borrowed Overlay - Show only if borrowed */}
+                                  {borrowedItems.has(item.id) && (
+                                    <div className="absolute inset-0 z-20 bg-black/60 flex flex-col items-center justify-center">
+                                      <div className="bg-red-500 text-white px-6 py-2 rounded-full font-bold mb-2">
+                                        Currently Borrowed
+                                      </div>
+                                      {borrowedItems.get(item.id)?.borrowerInfo?.username && (
+                                        <div className="text-white text-sm bg-black/40 px-4 py-1 rounded-full">
+                                          by {borrowedItems.get(item.id).borrowerInfo.username}
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+            
+                                  {/* Hover Overlay - Show only if NOT borrowed */}
+                                  {!borrowedItems.has(item.id) && (
+                                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 
+                                                    transition-opacity flex items-center justify-center">
+                                      <div className="flex gap-2">
+                                        {item.imageUrls && item.imageUrls.length > 0 && (
+                                          <motion.button
+                                            whileHover={{ scale: 1.05 }}
+                                            whileTap={{ scale: 0.95 }}
+                                            onClick={() => setGalleryModal({
+                                              isOpen: true,
+                                              images: item.imageUrls,
+                                              currentIndex: 0
+                                            })}
+                                            className="px-4 py-2 bg-white text-blue-600 rounded-full font-medium"
+                                          >
+                                            View Images
+                                          </motion.button>
+                                        )}
+                                        <motion.button
+                                          whileHover={{ scale: 1.05 }}
+                                          whileTap={{ scale: 0.95 }}
+                                          onClick={() => navigate(`/borrowing/item/${item.id}`)}
+                                          className="px-4 py-2 bg-blue-500 text-white rounded-full font-medium"
+                                        >
+                                          {item.owner?.id === user?.id ? 'Manage Item' : 'View Details'}
+                                        </motion.button>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+            
+                                {/* Item Details */}
+                                <div className="p-6">
+                                  {/* Category and Location */}
+                                  <div className="flex items-center gap-2 mb-3">
+                                    <span className="px-3 py-1 bg-blue-50 text-blue-600 text-xs font-medium rounded-full">
+                                      {item.category}
+                                    </span>
+                                    <span className="text-sm text-gray-500 flex items-center gap-1">
+                                      <MdLocationOn />
+                                      {item.location}
+                                    </span>
+                                  </div>
+            
+                                  {/* Item Name */}
+                                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                                    {item.name}
+                                  </h3>
+            
+                                  {/* Borrowed Status Badge */}
+                                    {borrowedItems.has(item.id) && (
+                                      <div className="mb-3 bg-red-50 border border-red-200 rounded-lg p-3">
+                                        <div className="flex flex-col gap-2">
+                                          <div className="flex items-center gap-2">
+                                            <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" 
+                                                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                            </svg>
+                                            <span className="text-red-700 font-medium">Not Available</span>
+                                          </div>
+                                          <div className="flex items-center gap-2 text-sm text-red-600">
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" 
+                                                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                            </svg>
+                                            <span>
+                                              Currently borrowed by:{' '}
+                                              {borrowedItems.get(item.id)?.borrowerInfo?.username || 'Another User'}
+                                            </span>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    )}
+            
+                                  {/* Star Rating */}
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <StarRating
+                                      rating={itemRatings[item.id] || 0}
+                                      onRate={(rating) => handleRateItem(item.id, rating, item.owner?.id === user?.id)}
+                                      isOwner={item.owner?.id === user?.id}
+                                      size="text-lg"
+                                    />
+                                    {ratingLoading[item.id] ? (
+                                      <span className="text-sm text-gray-500">Updating...</span>
+                                    ) : (
+                                      <span className="text-sm text-gray-500">
+                                        {itemRatings[item.id]?.toFixed(1) || "Not rated"}
+                                      </span>
+                                    )}
+                                  </div>
+            
+                                  {/* Description */}
+                                  <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                                    {item.description}
+                                  </p>
+            
+                                  {/* Owner Info and Contact Button */}
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                      {/* Replace the MdPerson icon with actual profile image */}
+                                      <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
+                                        {item.owner?.imageUrl ? (
+                                          <img
+                                            src={getFullProfileImageUrl(item.owner.imageUrl)}
+                                            alt={item.owner?.username || "Anonymous"}
+                                            className="w-full h-full object-cover"
+                                            onError={(e) => {
+                                              e.target.onerror = null;
+                                              e.target.src = "/images/defaultProfile.png";
+                                            }}
+                                          />
+                                        ) : (
+                                          <MdPerson className="text-gray-500 text-xl" />
+                                        )}
+                                      </div>
+                                      <div className="text-sm">
+                                        <p className="font-medium text-gray-900">
+                                          {item.owner?.username || "Anonymous"}
+                                        </p>
+                                        <p className="text-gray-500">{item.availabilityPeriod}</p>
+                                      </div>
+                                    </div>
+                                    {/* Show message button only if not borrowed and not owner */}
+                                    {item.owner?.id !== user?.id && !borrowedItems.has(item.id) && (
+                                      <motion.button
+                                        whileHover={{ scale: 1.05 }}
+                                        whileTap={{ scale: 0.95 }}
+                                        onClick={() => handleMessageClick(item.owner.id, item.owner.username, item)}
+                                        className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium
+                                                  hover:bg-blue-600 transition-colors"
+                                      >
+                                        Message
+                                      </motion.button>
+                                    )}
+                                  </div>
+            
+                                  {/* Availability Dates */}
+                                  <div className="mt-4 flex items-center gap-2 text-sm">
+                                    <MdCalendarToday 
+                                      className={
+                                        expirationStatus === "EXPIRING_SOON" 
+                                          ? "text-yellow-500" 
+                                          : "text-blue-500"
+                                      } 
+                                    />
+                                    <span className={
+                                      expirationStatus === "EXPIRING_SOON" 
+                                        ? "text-yellow-700" 
+                                        : "text-gray-500"
+                                    }>
+                                      Available dates: {new Date(item.availableFrom).toLocaleDateString()} - {' '}
+                                      {new Date(item.availableUntil).toLocaleDateString()}
+                                      {expirationStatus === "EXPIRING_SOON" && " (Expiring Soon)"}
+                                    </span>
+                                  </div>
+                                </div>
+                              </motion.div>
+                            );
+                        })}
+                      </div>
+
+                      {filteredItems.length > itemsPerPage && (
+                        <div className="col-span-full">
+                          <Pagination
+                            currentPage={currentPage}
+                            totalPages={totalPages}
+                            onPageChange={(page) => {
+                              setCurrentPage(page);
+                              window.scrollTo({
+                                top: document.querySelector('.grid').offsetTop - 100,
+                                behavior: 'smooth'
+                              });
+                            }}
+                          />
                         </div>
                       )}
                     </div>
-
-                    {/* Item Details */}
-                    <div className="p-6">
-                      {/* Category and Location */}
-                      <div className="flex items-center gap-2 mb-3">
-                        <span className="px-3 py-1 bg-blue-50 text-blue-600 text-xs font-medium rounded-full">
-                          {item.category}
-                        </span>
-                        <span className="text-sm text-gray-500 flex items-center gap-1">
-                          <MdLocationOn />
-                          {item.location}
-                        </span>
-                      </div>
-
-                      {/* Item Name */}
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                        {item.name}
-                      </h3>
-
-                      {/* Borrowed Status Badge */}
-                        {borrowedItems.has(item.id) && (
-                          <div className="mb-3 bg-red-50 border border-red-200 rounded-lg p-3">
-                            <div className="flex flex-col gap-2">
-                              <div className="flex items-center gap-2">
-                                <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" 
-                                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                </svg>
-                                <span className="text-red-700 font-medium">Not Available</span>
-                              </div>
-                              <div className="flex items-center gap-2 text-sm text-red-600">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" 
-                                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-                                </svg>
-                                <span>
-                                  Currently borrowed by:{' '}
-                                  {borrowedItems.get(item.id)?.borrowerInfo?.username || 'Another User'}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                      {/* Star Rating */}
-                      <div className="flex items-center gap-2 mb-2">
-                        <StarRating
-                          rating={itemRatings[item.id] || 0}
-                          onRate={(rating) => handleRateItem(item.id, rating, item.owner?.id === user?.id)}
-                          isOwner={item.owner?.id === user?.id}
-                          size="text-lg"
-                        />
-                        {ratingLoading[item.id] ? (
-                          <span className="text-sm text-gray-500">Updating...</span>
-                        ) : (
-                          <span className="text-sm text-gray-500">
-                            {itemRatings[item.id]?.toFixed(1) || "Not rated"}
-                            {item.owner?.id === user?.id && (
-                              <span className="ml-2 text-gray-400">(Can't rate own item)</span>
-                            )}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Description */}
-                      <p className="text-gray-600 text-sm mb-4 line-clamp-2">
-                        {item.description}
-                      </p>
-
-                      {/* Owner Info and Contact Button */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          {/* Replace the MdPerson icon with actual profile image */}
-                          <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
-                            {item.owner?.imageUrl ? (
-                              <img
-                                src={getFullProfileImageUrl(item.owner.imageUrl)}
-                                alt={item.owner?.username || "Anonymous"}
-                                className="w-full h-full object-cover"
-                                onError={(e) => {
-                                  e.target.onerror = null;
-                                  e.target.src = "/images/defaultProfile.png";
-                                }}
-                              />
-                            ) : (
-                              <MdPerson className="text-gray-500 text-xl" />
-                            )}
-                          </div>
-                          <div className="text-sm">
-                            <p className="font-medium text-gray-900">
-                              {item.owner?.username || "Anonymous"}
-                            </p>
-                            <p className="text-gray-500">{item.availabilityPeriod}</p>
-                          </div>
-                        </div>
-                        {/* Show message button only if not borrowed and not owner */}
-                        {item.owner?.id !== user?.id && !borrowedItems.has(item.id) && (
-                          <motion.button
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => handleMessageClick(item.owner.id, item.owner.username, item)}
-                            className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium
-                                      hover:bg-blue-600 transition-colors"
-                          >
-                            Message
-                          </motion.button>
-                        )}
-                      </div>
-
-                      {/* Availability Dates */}
-                      <div className="mt-4 flex items-center gap-2 text-sm text-gray-500">
-                        <MdCalendarToday className="text-blue-500" />
-                        <span>
-                          Available dates: {new Date(item.availableFrom).toLocaleDateString()} - 
-                          {new Date(item.availableUntil).toLocaleDateString()}
-                        </span>
-                      </div>
-                    </div>
-                  </motion.div>
-                ))
-            )}
-          </div>
+                  );
+                })()
+              )}
+            </div>
       </div>
-
       <MessageModal
         isOpen={messageModal.isOpen}
         onClose={() => setMessageModal({ 
           isOpen: false, 
           ownerId: null, 
           ownerName: '', 
-          item: null  // Add this line
+          item: null  
         })}
         onSend={handleSendMessage}
         ownerName={messageModal.ownerName}

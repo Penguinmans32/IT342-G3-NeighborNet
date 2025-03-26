@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import BorrowingAgreementForm from "./BorrowingAgreementForm"
 import { MdImage } from "react-icons/md"
 import ImageGalleryModal from "./ImageGalleryModal"
+import { useLocation, useNavigate } from "react-router-dom"
 
 const formatMessageTime = (timestamp) => {
   try {
@@ -40,7 +41,7 @@ const formatMessageTime = (timestamp) => {
   }
 }
 
-const Chat = ({ senderId, receiverId, receiverName, onMessageSent, stompClient }) => {
+const Chat = ({ senderId, receiverId, receiverName = '?', onMessageSent, stompClient }) => {
   const [messages, setMessages] = useState([])
   const [messageInput, setMessageInput] = useState("")
   const messagesEndRef = useRef(null)
@@ -54,12 +55,152 @@ const Chat = ({ senderId, receiverId, receiverName, onMessageSent, stompClient }
   const [galleryStartIndex, setGalleryStartIndex] = useState(0)
   const [showItemDetails, setShowItemDetails] = useState(false)
   const chatContainerRef = useRef(null)
+  const location = useLocation();
+  const navigate = useNavigate(); 
+  const getInitial = (name) => {
+    return name ? name.charAt(0).toUpperCase() : '?';
+  };
+
+  if (!senderId || !receiverId) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-gray-500">Loading chat...</div>
+      </div>
+    );
+  }
 
   const handleOpenGallery = (images, startIndex = 0) => {
     setSelectedGalleryImages(images)
     setGalleryStartIndex(startIndex)
     setIsGalleryOpen(true)
   }
+
+  const handleReturnResponse = async (returnRequestId, status) => {
+    console.log("Handling return response:", { returnRequestId, status });
+  
+    if (!returnRequestId) {
+      console.error("No return request ID provided");
+      return;
+    }
+  
+    try {
+      const response = await fetch(`http://localhost:8080/api/borrowing/returns/return/${returnRequestId}/respond`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify({ 
+          status,
+          returnRequestId 
+        }),
+      });
+  
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Error response:", errorText);
+        throw new Error(`Failed to update return request status: ${errorText}`);
+      }
+
+      const updatedAgreement = await response.json();
+
+
+      setMessages(prevMessages => 
+        prevMessages.map(msg => {
+          if (msg.messageType === "RETURN_REQUEST") {
+            try {
+              const returnData = JSON.parse(msg.formData);
+              if (returnData.agreementId === returnRequestId) {
+                const updatedData = {
+                  ...returnData,
+                  status: status === "CONFIRMED" ? "RETURNED" : "RETURN_REJECTED"
+                };
+                return {
+                  ...msg,
+                  formData: JSON.stringify(updatedData)
+                };
+              }
+            } catch (error) {
+              console.error("Error parsing return data:", error);
+            }
+          }
+          return msg;
+        })
+      );
+
+      await fetchMessages();
+  
+      console.log("Return request updated successfully");
+  
+    } catch (error) {
+      console.error("Error updating return request status:", error);
+      alert("Failed to update return request status. Please try again.");
+    }
+  };
+
+  const handleSendReturnRequest = async (returnRequestData) => {
+    try {
+      const now = new Date();
+      const currentTimestamp = `${now.toISOString().slice(0, 19)}.000`;
+  
+      const requestData = {
+        ...returnRequestData,
+        agreementId: returnRequestData.agreementId,
+        status: "PENDING",
+        createdAt: currentTimestamp,
+      };
+      
+      const response = await fetch("http://localhost:8080/api/borrowing/returns/send-return-request", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify(requestData),
+      });
+  
+      if (!response.ok) {
+        throw new Error("Failed to send return request");
+      }
+  
+      const returnRequestMessage = {
+        id: `temp-return-${Date.now()}`,
+        senderId,
+        receiverId,
+        messageType: "RETURN_REQUEST",
+        content: "Sent a return request",
+        formData: JSON.stringify({
+          ...requestData,
+          id: requestData.agreementId,
+          status: "PENDING"
+        }),
+        timestamp: currentTimestamp,
+      };
+  
+      setMessages((prev) => [...prev, returnRequestMessage]);
+      scrollToBottom();
+    } catch (error) {
+      console.error("Error sending return request:", error);
+      alert("An unexpected error occurred. Please try again.");
+    }
+  };
+
+  useEffect(() => {
+    const handleReturnRequest = async (returnRequest) => {
+      if (!returnRequest || !stompClient?.connected) return;
+  
+      try {
+        await handleSendReturnRequest(returnRequest);
+        navigate(location.pathname, { replace: true, state: {} });
+      } catch (error) {
+        console.error("Error sending return request:", error);
+      }
+    };
+  
+    if (location.state?.returnRequest) {
+      handleReturnRequest(location.state.returnRequest);
+    }
+  }, [location.state]);
 
   const handleAgreementResponse = async (agreementId, status) => {
     try {
@@ -221,157 +362,202 @@ const Chat = ({ senderId, receiverId, receiverName, onMessageSent, stompClient }
 };
 
   useEffect(() => {
-    if (stompClient) {
-      const subscription = stompClient.subscribe(`/user/${senderId}/queue/messages`, (message) => {
-        const newMessage = JSON.parse(message.body)
-        console.log("Received websocket message:", newMessage);
+    let subscription;
 
-        if (newMessage.messageType === "AGREEMENT_UPDATE") {
-          const updatedAgreement = JSON.parse(newMessage.formData);
-          console.log("Received AGREEMENT_UPDATE:", updatedAgreement);
-          
-           if (updatedAgreement.status === "ACCEPTED") {
-            console.log("Agreement update received:", JSON.parse(newMessage.formData)); // Add this debug log
-            setMessages((prevMessages) =>
-              prevMessages.map((msg) => {
-                if (msg.messageType === "FORM") {
-                  try {
-                    const formData = JSON.parse(msg.formData);
-                    if (formData.itemId === updatedAgreement.itemId && 
-                        formData.id !== updatedAgreement.id && 
-                        formData.status === "PENDING") {
-                      return {
-                        ...msg,
-                        formData: JSON.stringify({
-                          ...formData,
-                          status: "REJECTED",
-                          rejectionReason: "Another request has been accepted for this item"
-                        })
-                      };
-                    }
-                    else if (formData.id === updatedAgreement.id) {
-                      return {
-                        ...msg,
-                        formData: JSON.stringify(updatedAgreement)
-                      };
-                    }
-                  } catch (error) {
-                    console.error("Error parsing form data:", error);
-                  }
-                }
-                return msg;
-              })
-            );
-          } else {
-            setMessages((prevMessages) =>
-              prevMessages.map((msg) => {
-                if (msg.messageType === "FORM") {
-                  try {
-                    const formData = JSON.parse(msg.formData);
-                    if (formData.id === updatedAgreement.id) {
-                      return {
-                        ...msg,
-                        formData: JSON.stringify(updatedAgreement)
-                      };
-                    }
-                  } catch (error) {
-                    console.error("Error parsing form data:", error);
-                  }
-                }
-                return msg;
-              })
-            );
-          }
-          return;
+    const setupWebSocketConnection = async () => {
+      if (!stompClient) {
+        console.log("No STOMP client available");
+        return;
+      }
+
+      try {
+        // Wait for client to be fully connected
+        while (!stompClient.connected) {
+          console.log("Waiting for STOMP connection...");
+          await new Promise(resolve => setTimeout(resolve, 100));
         }
 
-        if (newMessage.senderId === receiverId || newMessage.receiverId === receiverId) {
-          const processedMessage = {
-            ...newMessage,
-            timestamp: newMessage.timestamp || new Date().toISOString(),
-          }
+        console.log("STOMP client connected, setting up subscription...");
+        
+        subscription = stompClient.subscribe(`/user/${senderId}/queue/messages`, (message) => {
+          const newMessage = JSON.parse(message.body);
+          console.log("Received websocket message:", newMessage);
 
-          setMessages((prev) => {
-            const filteredMessages = prev.filter(
-              (msg) => !msg.id?.startsWith("temp-") || msg.content !== processedMessage.content,
-            )
-
-            const getMessageTypeWeight = (type) => {
-              switch (type) {
-                case "FORM":
-                  return 3
-                case "IMAGE":
-                  return 2
-                case "TEXT":
-                  return 1
-                default:
-                  return 0
-              }
+          // Handle Agreement Updates
+          if (newMessage.messageType === "AGREEMENT_UPDATE") {
+            const updatedAgreement = JSON.parse(newMessage.formData);
+            console.log("Received AGREEMENT_UPDATE:", updatedAgreement);
+            
+            if (updatedAgreement.status === "ACCEPTED") {
+              console.log("Agreement update received:", JSON.parse(newMessage.formData));
+              setMessages((prevMessages) =>
+                prevMessages.map((msg) => {
+                  if (msg.messageType === "FORM") {
+                    try {
+                      const formData = JSON.parse(msg.formData);
+                      if (formData.itemId === updatedAgreement.itemId && 
+                          formData.id !== updatedAgreement.id && 
+                          formData.status === "PENDING") {
+                        return {
+                          ...msg,
+                          formData: JSON.stringify({
+                            ...formData,
+                            status: "REJECTED",
+                            rejectionReason: "Another request has been accepted for this item"
+                          })
+                        };
+                      }
+                      else if (formData.id === updatedAgreement.id) {
+                        return {
+                          ...msg,
+                          formData: JSON.stringify(updatedAgreement)
+                        };
+                      }
+                    } catch (error) {
+                      console.error("Error parsing form data:", error);
+                    }
+                  }
+                  return msg;
+                })
+              );
+            } else {
+              setMessages((prevMessages) =>
+                prevMessages.map((msg) => {
+                  if (msg.messageType === "FORM") {
+                    try {
+                      const formData = JSON.parse(msg.formData);
+                      if (formData.id === updatedAgreement.id) {
+                        return {
+                          ...msg,
+                          formData: JSON.stringify(updatedAgreement)
+                        };
+                      }
+                    } catch (error) {
+                      console.error("Error parsing form data:", error);
+                    }
+                  }
+                  return msg;
+                })
+              );
             }
+            return;
+          }
 
-            const updatedMessages = [...filteredMessages, processedMessage].sort((a, b) => {
-              const timestampA = new Date(a.timestamp).getTime()
-              const timestampB = new Date(b.timestamp).getTime()
-
-              if (timestampA === timestampB) {
-                return getMessageTypeWeight(a.messageType) - getMessageTypeWeight(b.messageType)
+          if (newMessage.messageType === "RETURN_REQUEST") {
+            setMessages(prev => {
+              const messageExists = prev.some(msg => 
+                msg.messageType === "RETURN_REQUEST" && 
+                JSON.parse(msg.formData).agreementId === JSON.parse(newMessage.formData).agreementId
+              );
+              
+              if (messageExists) {
+                return prev;
               }
-              return timestampA - timestampB
-            })
+              
+              return [...prev, newMessage];
+            });
+            scrollToBottom();
+            return;
+          }
 
-            return updatedMessages
-          })
+          // Handle Regular Messages
+          if (newMessage.senderId === receiverId || newMessage.receiverId === receiverId) {
+            const processedMessage = {
+              ...newMessage,
+              timestamp: newMessage.timestamp || new Date().toISOString(),
+            };
 
-          scrollToBottom()
-        }
-      })
+            setMessages((prev) => {
+              const filteredMessages = prev.filter(
+                (msg) => !msg.id?.startsWith("temp-") || msg.content !== processedMessage.content,
+              );
 
-      fetchMessages()
+              const getMessageTypeWeight = (type) => {
+                switch (type) {
+                  case "FORM":
+                    return 3;
+                  case "IMAGE":
+                    return 2;
+                  case "TEXT":
+                    return 1;
+                  default:
+                    return 0;
+                }
+              };
 
-      return () => {
-        if (subscription) {
-          subscription.unsubscribe()
+              const updatedMessages = [...filteredMessages, processedMessage].sort((a, b) => {
+                const timestampA = new Date(a.timestamp).getTime();
+                const timestampB = new Date(b.timestamp).getTime();
+
+                if (timestampA === timestampB) {
+                  return getMessageTypeWeight(a.messageType) - getMessageTypeWeight(b.messageType);
+                }
+                return timestampA - timestampB;
+              });
+
+              return updatedMessages;
+            });
+
+            scrollToBottom();
+          }
+        });
+
+        console.log("Subscription set up, fetching messages...");
+        await fetchMessages();
+        console.log("Initial messages fetched");
+
+      } catch (error) {
+        console.error("Error in WebSocket setup:", error);
+      }
+    };
+    setupWebSocketConnection();
+
+    return () => {
+      if (subscription) {
+        try {
+          console.log("Cleaning up subscription...");
+          subscription.unsubscribe();
+        } catch (error) {
+          console.error("Error unsubscribing:", error);
         }
       }
-    }
-  }, [senderId, receiverId, stompClient])
+    };
+  }, [senderId, receiverId, stompClient]);
 
   const fetchMessages = async () => {
-    try {
-      const response = await fetch(`http://localhost:8080/messages/${senderId}/${receiverId}`)
-      const data = await response.json()
+    if (!senderId || !receiverId) {
+      console.error('Missing senderId or receiverId');
+      return;
+    }
   
-      console.log("Fetched messages from server:", data);
+    try {
+      const response = await fetch(`http://localhost:8080/messages/${senderId}/${receiverId}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
       
-      const getMessageTypeWeight = (type) => {
-        switch (type) {
-          case "FORM":
-            return 3
-          case "IMAGE":
-            return 2
-          case "TEXT":
-            return 1
-          default:
-            return 0
-        }
+      if (!Array.isArray(data)) {
+        console.error('Received non-array data:', data);
+        return;
       }
   
       const sortedData = data.sort((a, b) => {
-        const timestampA = new Date(a.timestamp).getTime()
-        const timestampB = new Date(b.timestamp).getTime()
+        const timestampA = new Date(a.timestamp).getTime();
+        const timestampB = new Date(b.timestamp).getTime();
   
         if (timestampA === timestampB) {
-          return getMessageTypeWeight(a.messageType) - getMessageTypeWeight(b.messageType)
+          return getMessageTypeWeight(a.messageType) - getMessageTypeWeight(b.messageType);
         }
-        return timestampA - timestampB
-      })
+        return timestampA - timestampB;
+      });
   
-      setMessages(sortedData)
-      scrollToBottom()
+      setMessages(sortedData);
+      scrollToBottom();
     } catch (error) {
-      console.error("Error fetching messages:", error)
+      console.error("Error fetching messages:", error);
     }
-  }
+  };
 
   const sendMessage = () => {
     if (messageInput.trim() && stompClient && stompClient.connected) {
@@ -448,12 +634,12 @@ const Chat = ({ senderId, receiverId, receiverName, onMessageSent, stompClient }
           {/* Left side - User info */}
           <div className="flex items-center space-x-4">
             <div className="relative">
-              <div
+            <div
                 className="h-12 w-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 
                           flex items-center justify-center text-white text-lg font-semibold shadow-md
                           border-2 border-white"
               >
-                {receiverName.charAt(0).toUpperCase()}
+                {receiverName ? receiverName.charAt(0).toUpperCase() : '?'}
               </div>
               <motion.div
                 initial={{ scale: 0 }}
@@ -796,11 +982,6 @@ const Chat = ({ senderId, receiverId, receiverName, onMessageSent, stompClient }
                                                 </div>
                                             );
                                         }
-
-                                        // ONLY show Accept/Reject buttons if:
-                                        // 1. User is the lender
-                                        // 2. No agreement has been accepted for this item yet (checked above with hasAcceptedAgreement)
-                                        // 3. This agreement is still pending
                                         if (isLender && formData.status === "PENDING") {
                                             return (
                                                 <div className="mt-3 flex gap-2">
@@ -837,6 +1018,108 @@ const Chat = ({ senderId, receiverId, receiverName, onMessageSent, stompClient }
                         } catch (error) {
                           console.error("Error parsing agreement data:", error)
                           return null
+                        }
+                      })()
+                    ) : msg.messageType === "RETURN_REQUEST" ? (
+                      // Return Request handling
+                      (() => {
+                        try {
+                          const returnData = JSON.parse(msg.formData);
+                          const isOwner = senderId === returnData.lenderId;
+                          const isBorrower = senderId === returnData.borrowerId;
+                          const isPending = returnData.status === "RETURN_PENDING" || returnData.status === "PENDING";
+                    
+                          return (
+                            <div className={`${msg.senderId === senderId ? "bg-white/20" : "bg-white/90"} p-4 rounded-lg`}>
+                              <h4 className={`font-semibold ${msg.senderId === senderId ? "text-white" : "text-gray-900"}`}>
+                                <span className="mr-2">🔄</span> Return Request
+                              </h4>
+                              <div className={`text-sm mt-2 ${msg.senderId === senderId ? "text-white/90" : "text-gray-700"}`}>
+                                <div className="mb-2">
+                                  <p>
+                                    <strong>Item:</strong> {returnData.itemName}
+                                  </p>
+                                  <p>
+                                    <strong>Borrowing Period:</strong>{" "}
+                                    {new Date(returnData.borrowingStart).toLocaleDateString()} -{" "}
+                                    {new Date(returnData.borrowingEnd).toLocaleDateString()}
+                                  </p>
+                                  {returnData.returnNote && (
+                                    <p>
+                                      <strong>Return Note:</strong> {returnData.returnNote}
+                                    </p>
+                                  )}
+                                </div>
+                                <div
+                                  className={`font-medium ${
+                                    returnData.status === "PENDING" || returnData.status === "RETURN_PENDING"
+                                      ? msg.senderId === senderId
+                                        ? "text-yellow-200"
+                                        : "text-yellow-600"
+                                      : returnData.status === "RETURNED"
+                                      ? msg.senderId === senderId
+                                        ? "text-green-200"
+                                        : "text-green-600"
+                                      : msg.senderId === senderId
+                                      ? "text-red-200"
+                                      : "text-red-600"
+                                  }`}
+                                >
+                                  {returnData.status === "RETURN_PENDING" || returnData.status === "PENDING"
+                                    ? "⏳ Pending Confirmation"
+                                    : returnData.status === "RETURNED"
+                                    ? "✅ Return Confirmed"
+                                    : "❌ Return Rejected"}
+                                </div>
+                    
+                                {isPending && isOwner && (
+                                  <div className="mt-3 flex gap-2">
+                                    <motion.button
+                                      whileHover={{ scale: 1.05 }}
+                                      whileTap={{ scale: 0.95 }}
+                                      onClick={() => {
+                                        // Make sure we have the agreement ID from the return data
+                                        if (returnData && returnData.agreementId) {
+                                          handleReturnResponse(returnData.agreementId, "CONFIRMED");
+                                        } else {
+                                          console.error("No agreement ID found in return data");
+                                        }
+                                      }}
+                                      className="px-3 py-1.5 bg-green-500 text-white rounded-full hover:bg-green-600 text-sm font-medium shadow-sm transition-all duration-200"
+                                    >
+                                      Confirm Return
+                                    </motion.button>
+                                    <motion.button
+                                      whileHover={{ scale: 1.05 }}
+                                      whileTap={{ scale: 0.95 }}
+                                      onClick={() => {
+                                        if (returnData && returnData.agreementId) {
+                                          handleReturnResponse(returnData.agreementId, "REJECTED");
+                                        } else {
+                                          console.error("No agreement ID found in return data");
+                                        }
+                                      }}
+                                      className="px-3 py-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 text-sm font-medium shadow-sm transition-all duration-200"
+                                    >
+                                      Reject
+                                    </motion.button>
+                                  </div>
+                                )}
+                    
+                                {returnData.status === "RETURNED" && (
+                                  <div className="mt-3 text-sm text-green-500">Return has been confirmed.</div>
+                                )}
+                                {(returnData.status === "RETURN_REJECTED" || returnData.status === "REJECTED") && (
+                                  <div className="mt-3 text-sm text-red-500">
+                                    {returnData.rejectionReason || "Return request has been rejected."}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        } catch (error) {
+                          console.error("Error parsing return request data:", error);
+                          return null;
                         }
                       })()
                     ) : msg.messageType === "TEXT" ? (

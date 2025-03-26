@@ -204,7 +204,7 @@ public class ChatController {
             chatMessage.setMessageType("FORM");
             chatMessage.setContent("Sent a borrowing agreement");
             chatMessage.setFormData(toJson(savedAgreement));
-            chatMessage.setTimestamp(LocalDateTime.now());
+            chatMessage.setTimestamp(LocalDateTime.now(ZoneOffset.UTC));
 
             ChatMessage savedMessage = chatService.save(chatMessage);
 
@@ -230,13 +230,13 @@ public class ChatController {
             node.put("itemId", agreement.getItemId());
             node.put("borrowerId", agreement.getBorrowerId());
             node.put("lenderId", agreement.getLenderId());
-            node.put("borrowingStart", agreement.getBorrowingStart().toString());
-            node.put("borrowingEnd", agreement.getBorrowingEnd().toString());
+            node.put("borrowingStart", agreement.getBorrowingStart().atOffset(ZoneOffset.UTC).toString());
+            node.put("borrowingEnd", agreement.getBorrowingEnd().atOffset(ZoneOffset.UTC).toString());
             node.put("terms", agreement.getTerms());
-            // Add this line
             node.put("rejectionReason",
                     agreement.getRejectionReason() != null ?
                             agreement.getRejectionReason() : null);
+            node.put("createdAt", agreement.getCreatedAt().atOffset(ZoneOffset.UTC).toString());
 
             return objectMapper.writeValueAsString(node);
         } catch (JsonProcessingException e) {
@@ -437,6 +437,72 @@ public class ChatController {
 
             return ResponseEntity.ok(response);
         } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @PutMapping("/chat/return/{id}/respond")
+    @ResponseBody
+    public ResponseEntity<BorrowingAgreement> respondToReturnRequest(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> request) {
+        try {
+            String status = request.get("status");
+
+            BorrowingAgreement currentAgreement = borrowingAgreementRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Agreement not found"));
+
+            if ("CONFIRMED".equals(status)) {
+                currentAgreement.setStatus("RETURNED");
+            } else if ("REJECTED".equals(status)) {
+                currentAgreement.setStatus("RETURN_REJECTED");
+            }
+
+            BorrowingAgreement updatedAgreement = borrowingAgreementRepository.save(currentAgreement);
+
+            ObjectNode returnUpdateObj = objectMapper.createObjectNode();
+            returnUpdateObj.put("id", updatedAgreement.getId());
+            returnUpdateObj.put("status", status);
+            returnUpdateObj.put("itemId", updatedAgreement.getItemId());
+            Item item = itemRepository.findById(updatedAgreement.getItemId())
+                    .orElseThrow(() -> new RuntimeException("Item not found"));
+            returnUpdateObj.put("itemName", item.getName());
+            returnUpdateObj.put("borrowerId", updatedAgreement.getBorrowerId());
+            returnUpdateObj.put("lenderId", updatedAgreement.getLenderId());
+            returnUpdateObj.put("borrowingStart", updatedAgreement.getBorrowingStart().toString());
+            returnUpdateObj.put("borrowingEnd", updatedAgreement.getBorrowingEnd().toString());
+            returnUpdateObj.put("agreementId", updatedAgreement.getId());
+
+            String returnUpdateData = objectMapper.writeValueAsString(returnUpdateObj);
+
+            List<ChatMessage> messages = chatService.findAllReturnMessages(id);
+            for (ChatMessage message : messages) {
+                if ("RETURN_REQUEST".equals(message.getMessageType())) {
+                    message.setFormData(returnUpdateData);
+                    chatService.save(message);
+                }
+            }
+
+            messagingTemplate.convertAndSendToUser(
+                    String.valueOf(updatedAgreement.getBorrowerId()),
+                    "/queue/messages",
+                    new ChatMessage() {{
+                        setMessageType("RETURN_UPDATE");
+                        setFormData(returnUpdateData);
+                    }}
+            );
+            messagingTemplate.convertAndSendToUser(
+                    String.valueOf(updatedAgreement.getLenderId()),
+                    "/queue/messages",
+                    new ChatMessage() {{
+                        setMessageType("RETURN_UPDATE");
+                        setFormData(returnUpdateData);
+                    }}
+            );
+
+            return ResponseEntity.ok(updatedAgreement);
+        } catch (Exception e) {
+            e.printStackTrace();
             return ResponseEntity.badRequest().build();
         }
     }

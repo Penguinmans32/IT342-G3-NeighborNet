@@ -125,6 +125,16 @@ const Dashboard = () => {
     },
   })
 
+  const calculatePercentage = (current, total) => {
+    if (total === 0) return 0;
+    return ((current / total) * 100);
+  };
+  
+  const totalActivities = stats.skillsShared + stats.itemsBorrowed + stats.activeUsers;
+  const skillsSharedPercentage = calculatePercentage(stats.skillsShared, totalActivities);
+  const itemsBorrowedPercentage = calculatePercentage(stats.itemsBorrowed, totalActivities);
+  const activeUsersPercentage = calculatePercentage(stats.activeUsers, totalActivities);
+
   const getFullThumbnailUrl = (thumbnailUrl) => {
     if (!thumbnailUrl) return "/default-class-image.jpg"
     return thumbnailUrl.startsWith("http") ? thumbnailUrl : `http://localhost:8080${thumbnailUrl}`
@@ -582,17 +592,16 @@ const Dashboard = () => {
   }
 
   const getPercentageColor = (value) => {
-    if (!value) return "text-gray-500"
-    if (value > 0) return "text-green-500"
-    if (value < 0) return "text-red-500"
-    return "text-gray-500"
-  }
-
+    if (!value || value === 0) return "text-gray-500";
+    if (value > 0) return "text-green-500";
+    if (value < 0) return "text-red-500";
+    return "text-gray-500";
+  };
   const formatPercentage = (value) => {
-    if (value === undefined || value === null) return "0%"
-    const rounded = Math.round(value * 10) / 10
-    return `${rounded > 0 ? "↑" : rounded < 0 ? "↓" : ""}${Math.abs(rounded)}%`
-  }
+    if (!value || value === 0) return "0%";
+    const rounded = Math.round(value * 10) / 10;
+    return `${rounded > 0 ? "↑" : rounded < 0 ? "↓" : ""}${Math.abs(rounded)}%`;
+  };
 
   useEffect(() => {
     const fetchDashboardStats = async () => {
@@ -680,21 +689,21 @@ const Dashboard = () => {
             transition={{ duration: 0.3, delay: 0.1 }}
             className="bg-white rounded-2xl shadow-md p-6 hover:shadow-lg transition-all duration-300 border-l-4 border-blue-500 group hover:translate-y-[-5px]"
           >
-            <div className="flex items-center justify-between">
-              <div className="p-3 bg-blue-100 rounded-xl group-hover:bg-blue-200 transition-colors">
-                <BookOpen className="w-6 h-6 text-blue-600" />
-              </div>
-              <span
-                className={`${getPercentageColor(stats?.changes?.skillsSharedChange)} text-sm font-medium px-3 py-1 rounded-full bg-opacity-10 ${getPercentageColor(stats?.changes?.skillsSharedChange).replace("text-", "bg-")}`}
-              >
-                {formatPercentage(stats?.changes?.skillsSharedChange)}
-              </span>
+           <div className="flex items-center justify-between">
+            <div className="p-3 bg-blue-100 rounded-xl group-hover:bg-blue-200 transition-colors">
+              <BookOpen className="w-6 h-6 text-blue-600" />
             </div>
-            <h3 className="text-4xl font-bold mt-4 mb-1 text-blue-700 group-hover:scale-110 transition-transform origin-left">
-              {stats.skillsShared}
-            </h3>
-            <p className="text-blue-600 text-sm font-medium">Skills Shared</p>
-          </motion.div>
+            <span
+              className={`${getPercentageColor(skillsSharedPercentage)} text-sm font-medium px-3 py-1 rounded-full bg-opacity-10 ${getPercentageColor(skillsSharedPercentage).replace("text-", "bg-")}`}
+            >
+              {formatPercentage(skillsSharedPercentage)}
+            </span>
+          </div>
+          <h3 className="text-4xl font-bold mt-4 mb-1 text-blue-700 group-hover:scale-110 transition-transform origin-left">
+            {stats.skillsShared}
+          </h3>
+          <p className="text-blue-600 text-sm font-medium">Skills Shared</p>
+        </motion.div>
 
           {/* Items Borrowed Card */}
           <motion.div
@@ -708,9 +717,9 @@ const Dashboard = () => {
                 <Calendar className="w-6 h-6 text-indigo-600" />
               </div>
               <span
-                className={`${getPercentageColor(stats?.changes?.itemsBorrowedChange)} text-sm font-medium px-3 py-1 rounded-full bg-opacity-10 ${getPercentageColor(stats?.changes?.itemsBorrowedChange).replace("text-", "bg-")}`}
+                className={`${getPercentageColor(itemsBorrowedPercentage)} text-sm font-medium px-3 py-1 rounded-full bg-opacity-10 ${getPercentageColor(itemsBorrowedPercentage).replace("text-", "bg-")}`}
               >
-                {formatPercentage(stats?.changes?.itemsBorrowedChange)}
+                {formatPercentage(itemsBorrowedPercentage)}
               </span>
             </div>
             <h3 className="text-4xl font-bold mt-4 mb-1 text-indigo-700 group-hover:scale-110 transition-transform origin-left">
@@ -726,14 +735,14 @@ const Dashboard = () => {
             transition={{ duration: 0.3, delay: 0.3 }}
             className="bg-white rounded-2xl shadow-md p-6 hover:shadow-lg transition-all duration-300 border-l-4 border-purple-500 group hover:translate-y-[-5px]"
           >
-            <div className="flex items-center justify-between">
+             <div className="flex items-center justify-between">
               <div className="p-3 bg-purple-100 rounded-xl group-hover:bg-purple-200 transition-colors">
                 <Users className="w-6 h-6 text-purple-600" />
               </div>
               <span
-                className={`${getPercentageColor(stats?.changes?.activeUsersChange)} text-sm font-medium px-3 py-1 rounded-full bg-opacity-10 ${getPercentageColor(stats?.changes?.activeUsersChange).replace("text-", "bg-")}`}
+                className={`${getPercentageColor(activeUsersPercentage)} text-sm font-medium px-3 py-1 rounded-full bg-opacity-10 ${getPercentageColor(activeUsersPercentage).replace("text-", "bg-")}`}
               >
-                {formatPercentage(stats?.changes?.activeUsersChange)}
+                {formatPercentage(activeUsersPercentage)}
               </span>
             </div>
             <h3 className="text-4xl font-bold mt-4 mb-1 text-purple-700 group-hover:scale-110 transition-transform origin-left">
@@ -1202,7 +1211,7 @@ const Dashboard = () => {
                     key={classItem.id}
                     whileHover={{ scale: 1.02 }}
                     className="flex items-start gap-4 p-3 rounded-xl hover:bg-purple-50 transition-colors cursor-pointer border border-transparent hover:border-purple-200"
-                    onClick={() => navigate(`/classes/${classItem.id}`)}
+                    onClick={() => navigate(`/class/${classItem.id}`)}
                   >
                     <div className="w-14 h-14 rounded-xl bg-purple-100 overflow-hidden shadow-sm">
                       {classItem.thumbnailUrl ? (

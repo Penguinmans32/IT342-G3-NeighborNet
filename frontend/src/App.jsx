@@ -189,6 +189,14 @@ function App() {
                 </ProtectedRoute>
               } 
             />
+            <Route 
+              path="/chat/:userId"
+              element={
+                <ProtectedRoute>
+                  <MessagesPage />
+                </ProtectedRoute>
+              }
+            />
           </Routes>
           </NotificationProvider>
         </AuthProviderWithErrorBoundary>

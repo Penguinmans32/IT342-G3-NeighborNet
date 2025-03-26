@@ -27,6 +27,9 @@ public class ItemDTO {
     private Double latitude;
     private Double longitude;
     private CreatorDTO borrower;
+    private Long borrowingAgreementId;
+
+    private String expirationStatus;
 
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS", timezone = "UTC")
     private LocalDateTime borrowingEnd;
@@ -252,5 +255,21 @@ public class ItemDTO {
 
     public void setBorrowerId(Long borrowerId) {
         this.borrowerId = borrowerId;
+    }
+
+    public Long getBorrowingAgreementId() {
+        return borrowingAgreementId;
+    }
+
+    public void setBorrowingAgreementId(Long borrowingAgreementId) {
+        this.borrowingAgreementId = borrowingAgreementId;
+    }
+
+    public String getExpirationStatus() {
+        return expirationStatus;
+    }
+
+    public void setExpirationStatus(String expirationStatus) {
+        this.expirationStatus = expirationStatus;
     }
 }
