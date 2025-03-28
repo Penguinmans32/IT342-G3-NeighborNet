@@ -41,6 +41,7 @@ fun ClassDetailsScreen(
     viewModelStoreOwner: ViewModelStoreOwner = checkNotNull(LocalViewModelStoreOwner.current) {
         "No ViewModelStoreOwner was provided via LocalViewModelStoreOwner"
     }
+
 ) {
 
     val viewModel = hiltViewModel<ClassViewModel>(viewModelStoreOwner)

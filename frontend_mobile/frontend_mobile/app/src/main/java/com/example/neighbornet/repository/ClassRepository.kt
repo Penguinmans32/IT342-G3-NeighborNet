@@ -22,7 +22,23 @@ class ClassRepository @Inject constructor(
     suspend fun getAllClasses(): List<Class> {
         val response = classApiService.getAllClasses()
         if (response.isSuccessful) {
-            return response.body() ?: emptyList()
+            return response.body()?.map { classResponse ->
+                Class(
+                    id = classResponse.id,
+                    title = classResponse.title,
+                    description = classResponse.description,
+                    category = classResponse.category,
+                    thumbnailUrl = classResponse.thumbnailUrl,
+                    creatorName = classResponse.creatorName,
+                    creatorImageUrl = classResponse.creator?.imageUrl,
+                    duration = classResponse.duration,
+                    sections = classResponse.sections,
+                    sectionsCount = classResponse.sections.size, 
+                    rating = classResponse.averageRating.toFloat(),
+                    createdAt = classResponse.createdAt,
+                    updatedAt = classResponse.updatedAt
+                )
+            } ?: emptyList()
         } else {
             throw Exception("Failed to fetch classes: ${response.message()}")
         }

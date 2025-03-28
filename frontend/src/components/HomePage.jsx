@@ -276,6 +276,7 @@ const Homepage = () => {
         }
   
         setClasses(classesData);
+        console.log("Fetched classes:", classesData);
   
         // Separately fetch user's own classes if needed
         const myClassesResponse = await axios.get("http://localhost:8080/api/classes/my-classes", {

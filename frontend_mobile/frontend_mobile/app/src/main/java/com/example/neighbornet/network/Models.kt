@@ -5,6 +5,7 @@ import androidx.compose.ui.graphics.Color
 import com.example.neighbornet.utils.ArrayDate
 import com.example.neighbornet.utils.StringDate
 import com.google.gson.annotations.SerializedName
+import kotlinx.serialization.Serializable
 
 data class LoginRequest(
     val username: String,
@@ -74,7 +75,8 @@ data class Class(
     val creatorName: String,
     val creatorImageUrl: String?,
     val duration: String,
-    val sectionsCount: Int,
+    val sections: List<Section>? = null,
+    val sectionsCount: Int = sections?.size ?: 0,
     val rating: Float = 0f,
     @SerializedName("createdAt")
     val createdAt: ArrayDate? = null,
@@ -99,6 +101,7 @@ data class ClassResponse(
     val portfolioUrl: String?,
     val requirements: List<String>,
     val sections: List<Section>,
+    val sectionsCount: Int = sections.size,
     val creator: CreatorDTO?,
     @SerializedName("createdAt")
     val createdAt: ArrayDate,
@@ -233,4 +236,77 @@ data class UpdateProgressRequest(
     val completed: Boolean,
     val progress: Double
 )
+
+data class Message(
+    val id: String,
+    val senderId: String,
+    val receiverId: String,
+    val content: String,
+    val messageType: MessageType,
+    val timestamp: String,
+    val formData: String? = null,
+    val imageUrl: String? = null,
+    val item: Item? = null
+)
+
+@Serializable
+enum class MessageType {
+    TEXT, IMAGE, FORM, RETURN_REQUEST, BORROWING_UPDATE,
+    RATING_UPDATE,
+    CHAT_MESSAGE
+}
+
+data class Item(
+    val id: String,
+    val name: String,
+    val category: String,
+    val description: String?,
+    val imageUrls: List<String>,
+    val availableFrom: String,
+    val availableUntil: String,
+    val location: String,
+    val contactPreference: String,
+    val terms: String
+)
+
+data class ReturnRequest(
+    val agreementId: String,
+    val itemName: String,
+    val borrowingStart: String,
+    val borrowingEnd: String,
+    val returnNote: String?,
+    val status: ReturnRequestStatus,
+    val lenderId: String,
+    val borrowerId: String
+)
+
+enum class ReturnRequestStatus {
+    PENDING,
+    CONFIRMED,
+    REJECTED
+}
+
+data class AgreementRequest(
+    val lenderId: String,
+    val borrowerId: String,
+    val itemId: String,
+    val borrowingStart: String,
+    val borrowingEnd: String,
+    val terms: String
+)
+
+data class AgreementResponse(
+    val id: String,
+    val status: String,
+    val lenderId: String,
+    val borrowerId: String,
+    val itemId: String,
+    val borrowingStart: String,
+    val borrowingEnd: String,
+    val terms: String,
+    val createdAt: String
+)
+
+
+
 

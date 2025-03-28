@@ -28,6 +28,9 @@ import com.example.neighbornet.auth.AuthViewModel
 import kotlinx.coroutines.launch
 import androidx.compose.ui.res.painterResource
 import android.util.Log
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
@@ -38,6 +41,9 @@ import dagger.hilt.android.AndroidEntryPoint
 import androidx.navigation.compose.composable
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
+import com.example.neighbornet.auth.ChatViewModel
+import com.example.neighbornet.utils.ChatListScreen
+import com.example.neighbornet.utils.ItemDetailsScreen
 import com.example.neighbornet.utils.PreferencesManager
 
 @AndroidEntryPoint
@@ -189,6 +195,35 @@ class MainActivity : ComponentActivity() {
                                             )
                                         }
                                     }
+
+                                    composable(
+                                        route = Screen.ItemDetails.route,
+                                        arguments = listOf(
+                                            navArgument("itemId") {
+                                                type = NavType.LongType
+                                                nullable = false
+                                            }
+                                        )
+                                    ) { backStackEntry ->
+                                        val itemId = backStackEntry.arguments?.getLong("itemId") ?: return@composable
+                                        CompositionLocalProvider(
+                                            LocalViewModelStoreOwner provides this@MainActivity
+                                        ) {
+                                            ItemDetailsScreen(
+                                                itemId = itemId,
+                                                onBackClick = { navController.navigateUp() }
+                                            )
+                                        }
+                                    }
+                                  /*  composable(Screen.AddItem.route) {
+                                        CompositionLocalProvider(
+                                            LocalViewModelStoreOwner provides this@MainActivity
+                                        ) {
+                                            AddItemScreen(
+                                                onBackClick = { navController.navigateUp() }
+                                            )
+                                        }
+                                    }*/
                                     composable(Screen.Categories.route) {
                                         CategoriesContent(
                                             onCategoryClick = { category ->
@@ -197,7 +232,101 @@ class MainActivity : ComponentActivity() {
                                         )
                                     }
                                     composable(Screen.Chat.route) {
-                                        ChatContent()
+                                        val chatViewModel = hiltViewModel<ChatViewModel>()
+                                        val currentUser by chatViewModel.currentUser.collectAsState()
+                                        val messages by chatViewModel.messages.collectAsState()
+                                        val isConnected by chatViewModel.isConnected.collectAsState()
+
+                                        var selectedChat by remember { mutableStateOf<Pair<String, String>?>(null) }
+
+                                        when {
+                                            currentUser == null -> {
+                                                Box(
+                                                    modifier = Modifier.fillMaxSize(),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Column(
+                                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                                                    ) {
+                                                        Text(
+                                                            text = "Please log in to use chat",
+                                                            style = MaterialTheme.typography.titleMedium
+                                                        )
+                                                        Button(
+                                                            onClick = {
+                                                                navController.navigate("login") {
+                                                                    popUpTo(Screen.Chat.route) { inclusive = true }
+                                                                }
+                                                            }
+                                                        ) {
+                                                            Text("Login")
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            selectedChat == null -> {
+                                                ChatListScreen(
+                                                    onChatSelected = { userId, userName ->
+                                                        selectedChat = userId to userName
+                                                        currentUser?.let { user ->
+                                                            chatViewModel.connectWebSocket(user, userId)
+                                                        }
+                                                    }
+                                                )
+                                            }
+                                            else -> {
+                                                val (receiverId, receiverName) = selectedChat!!
+                                                currentUser?.let { user ->
+                                                    Column(modifier = Modifier.fillMaxSize()) {
+                                                        // Back button
+                                                        IconButton(
+                                                            onClick = { selectedChat = null }
+                                                        ) {
+                                                            Icon(
+                                                                imageVector = Icons.Default.ArrowBack,
+                                                                contentDescription = "Back to chat list"
+                                                            )
+                                                        }
+
+                                                        // Chat content
+                                                        ChatContent(
+                                                            modifier = Modifier.weight(1f),
+                                                            senderId = user,
+                                                            receiverId = receiverId,
+                                                            receiverName = receiverName,
+                                                            messages = messages,
+                                                            onMessageSent = { message ->
+                                                                chatViewModel.sendMessage(
+                                                                    senderId = user,
+                                                                    receiverId = receiverId,
+                                                                    content = message.content
+                                                                )
+                                                            },
+                                                            onImageSelected = { uri ->
+                                                                chatViewModel.sendImage(
+                                                                    senderId = user,
+                                                                    receiverId = receiverId,
+                                                                    imageUri = uri
+                                                                )
+                                                            },
+                                                            onAgreementSubmit = { agreementData ->
+                                                                chatViewModel.sendAgreement(agreementData)
+                                                            }
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+
+                                        // Connect to WebSocket when chat is selected
+                                        LaunchedEffect(selectedChat) {
+                                            val chat = selectedChat
+                                            val user = currentUser
+                                            if (chat != null && user != null) {
+                                                chatViewModel.connectWebSocket(user, chat.first)
+                                            }
+                                        }
                                     }
                                     composable(Screen.Profile.route) {
                                         ProfileContent(

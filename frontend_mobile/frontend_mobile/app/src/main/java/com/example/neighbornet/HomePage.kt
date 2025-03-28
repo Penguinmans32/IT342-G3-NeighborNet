@@ -1,16 +1,15 @@
 package com.example.neighbornet
 
+import android.net.Uri
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.updateTransition
@@ -30,10 +29,12 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -47,6 +48,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -61,14 +63,33 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
+import coil.request.ImageRequest
 import com.example.neighbornet.auth.AuthViewModel
+import com.example.neighbornet.auth.ChatViewModel
 import com.example.neighbornet.auth.ClassListViewModel
+import com.example.neighbornet.auth.TokenManager
 import kotlinx.coroutines.launch
 import com.example.neighbornet.network.Class
 import com.example.neighbornet.network.CategoryData
 import com.example.neighbornet.network.CategoryInfo
+import com.example.neighbornet.network.Message
+import com.example.neighbornet.network.MessageType
+import com.example.neighbornet.utils.AgreementMessage
+import com.example.neighbornet.utils.Avatar
+import com.example.neighbornet.utils.BorrowingAgreementDialog
+import com.example.neighbornet.utils.BorrowingScreen
+import com.example.neighbornet.utils.ChatInputArea
+import com.example.neighbornet.utils.ChatListScreen
+import com.example.neighbornet.utils.ImageMessage
+import com.example.neighbornet.utils.TextMessage
+import com.example.neighbornet.utils.ReturnRequestMessage
 import com.example.neighbornet.utils.UrlUtils
+import com.example.neighbornet.utils.formatToTime
+import com.example.neighbornet.utils.toLocalDate
 import kotlinx.coroutines.delay
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import java.util.UUID
 
 
 @Composable
@@ -133,8 +154,9 @@ fun HomePage(
                         val items = listOf(
                             Triple(R.drawable.ic_home, "Home", 0),
                             Triple(R.drawable.ic_category, "Categories", 1),
-                            Triple(R.drawable.ic_chat, "Chat", 2),
-                            Triple(R.drawable.ic_profile, "Profile", 3)
+                            Triple(R.drawable.ic_borrowing, "Borrowing", 2),
+                            Triple(R.drawable.ic_chat, "Chat", 3),
+                            Triple(R.drawable.ic_profile, "Profile", 4)
                         )
 
                         items.forEach { (icon, label, index) ->
@@ -233,8 +255,99 @@ fun HomePage(
                                     selectedCategory = category
                                 }
                             )
-                            2 -> ChatContent()
-                            3 -> ProfileContent(onLogoutSuccess = {
+                            2 -> {
+                                BorrowingScreen(
+                                    onNavigateBack = { selectedTab = 0 },
+                                    onNavigateToAddItem = {
+                                        navController.navigate(Screen.AddItem.route)
+                                    },
+                                    onNavigateToItemDetails = { itemId ->
+                                        navController.navigate(Screen.ItemDetails.createRoute(itemId))
+                                    },
+                                    onNavigateToChat = { userId, username ->
+                                        navController.navigate(Screen.Chat.createRoute(userId, username))
+                                    }
+                                )
+                            }
+                            3 -> {
+                                val chatViewModel = hiltViewModel<ChatViewModel>()
+                                val currentUser by chatViewModel.currentUser.collectAsState()
+                                val messages by chatViewModel.messages.collectAsState()
+                                val isConnected by chatViewModel.isConnected.collectAsState()
+
+                                var selectedChat by remember { mutableStateOf<Pair<String, String>?>(null) }
+
+                                when {
+                                    currentUser == null -> {
+                                        Box(
+                                            modifier = Modifier.fillMaxSize(),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Column(
+                                                horizontalAlignment = Alignment.CenterHorizontally,
+                                                verticalArrangement = Arrangement.spacedBy(16.dp)
+                                            ) {
+                                                Text(
+                                                    text = "Please log in to use chat",
+                                                    style = MaterialTheme.typography.titleMedium
+                                                )
+                                                Button(
+                                                    onClick = { navController.navigate("login") }
+                                                ) {
+                                                    Text("Login")
+                                                }
+                                            }
+                                        }
+                                    }
+                                    selectedChat == null -> {
+                                        ChatListScreen(
+                                            onChatSelected = { userId, userName ->
+                                                selectedChat = userId to userName
+                                                currentUser?.let { user ->
+                                                    chatViewModel.connectWebSocket(user, userId)
+                                                }
+                                            }
+                                        )
+                                    }
+                                    else -> {
+                                        val (receiverId, receiverName) = selectedChat!!
+                                        currentUser?.let { user ->
+                                            ChatContent(
+                                                senderId = user,
+                                                receiverId = receiverId,
+                                                receiverName = receiverName,
+                                                messages = messages,
+                                                onMessageSent = { message ->
+                                                    chatViewModel.sendMessage(
+                                                        senderId = user,
+                                                        receiverId = receiverId,
+                                                        content = message.content
+                                                    )
+                                                },
+                                                onImageSelected = { uri ->
+                                                    chatViewModel.sendImage(
+                                                        senderId = user,
+                                                        receiverId = receiverId,
+                                                        imageUri = uri
+                                                    )
+                                                },
+                                                onAgreementSubmit = { agreementData ->
+                                                    chatViewModel.sendAgreement(agreementData)
+                                                }
+                                            )
+                                        }
+                                    }
+                                }
+
+                                LaunchedEffect(selectedChat) {
+                                    val chat = selectedChat
+                                    val user = currentUser
+                                    if (chat != null && user != null) {
+                                        chatViewModel.connectWebSocket(user, chat.first)
+                                    }
+                                }
+                            }
+                            4 -> ProfileContent(onLogoutSuccess = {
                                 selectedTab = 0
                             })
                         }
@@ -412,16 +525,13 @@ fun ClassCard(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 // Thumbnail with gradient overlay
-                AsyncImage(
-                    model = UrlUtils.getFullThumbnailUrl(classItem.thumbnailUrl),
-                    contentDescription = null,
+                AuthenticatedThumbnailImage(
+                    url = classItem.thumbnailUrl,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(180.dp),
-                    contentScale = ContentScale.Crop,
-                    error = rememberAsyncImagePainter(R.drawable.default_class_image)
+                    contentScale = ContentScale.Crop
                 )
-
                 // Gradient overlay
                 Box(
                     modifier = Modifier
@@ -551,13 +661,10 @@ fun ClassCard(
                                     shape = CircleShape
                                 )
                         ) {
-                            AsyncImage(
-                                model = UrlUtils.getFullImageUrl(classItem.creatorImageUrl),
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .clip(CircleShape),
-                                error = rememberAsyncImagePainter(R.drawable.default_profile)
+                            AuthenticatedProfileImage(
+                                url = classItem.creatorImageUrl,
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
                             )
                         }
                         Spacer(modifier = Modifier.width(12.dp))
@@ -602,6 +709,52 @@ fun ClassCard(
             }
         }
     }
+}
+
+@Composable
+fun AuthenticatedProfileImage(
+    url: String?,
+    modifier: Modifier = Modifier,
+    contentDescription: String? = null,
+    contentScale: ContentScale = ContentScale.Crop
+) {
+    val authenticatedUrl = remember(url) {
+        UrlUtils.getFullImageUrl(url)
+    }
+
+    AsyncImage(
+        model = ImageRequest.Builder(LocalContext.current)
+            .data(authenticatedUrl)
+            .crossfade(true)
+            .build(),
+        contentDescription = contentDescription,
+        modifier = modifier,
+        contentScale = contentScale,
+        error = painterResource(id = R.drawable.default_profile)
+    )
+}
+
+@Composable
+fun AuthenticatedThumbnailImage(
+    url: String?,
+    modifier: Modifier = Modifier,
+    contentDescription: String? = null,
+    contentScale: ContentScale = ContentScale.Crop
+) {
+    val authenticatedUrl = remember(url) {
+        UrlUtils.getFullThumbnailUrl(url)
+    }
+
+    AsyncImage(
+        model = ImageRequest.Builder(LocalContext.current)
+            .data(authenticatedUrl)
+            .crossfade(true)
+            .build(),
+        contentDescription = contentDescription,
+        modifier = modifier,
+        contentScale = contentScale,
+        error = painterResource(id = R.drawable.default_profile)
+    )
 }
 
 @Composable
@@ -794,41 +947,6 @@ fun ErrorView(
         }
     }
 }
-
-@Composable
-fun ShimmerEffect() {
-    val transition = rememberInfiniteTransition()
-    val translateAnim by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1000f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(
-                durationMillis = 1200,
-                easing = FastOutSlowInEasing
-            ),
-            repeatMode = RepeatMode.Restart
-        )
-    )
-
-    val shimmerColorShades = listOf(
-        Color.LightGray.copy(0.9f),
-        Color.LightGray.copy(0.2f),
-        Color.LightGray.copy(0.9f)
-    )
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                brush = Brush.linearGradient(
-                    colors = shimmerColorShades,
-                    start = Offset(translateAnim - 1000f, translateAnim - 1000f),
-                    end = Offset(translateAnim, translateAnim)
-                )
-            )
-    )
-}
-
 
 @Composable
 fun CategoryChip(
@@ -1090,10 +1208,259 @@ fun CategoryDetailScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ChatContent() {
-    // TODO: Implement chat content
+fun ChatContent(
+    modifier: Modifier = Modifier,
+    senderId: String,
+    receiverId: String,
+    receiverName: String,
+    messages: List<Message>,
+    onMessageSent: (Message) -> Unit,
+    onImageSelected: (Uri) -> Unit,
+    onAgreementSubmit: (Map<String, Any>) -> Unit
+) {
+    var messageInput by remember { mutableStateOf("") }
+    var showAgreementForm by remember { mutableStateOf(false) }
+    var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
+    val scope = rememberCoroutineScope()
+    val listState = rememberLazyListState()
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
+                        MaterialTheme.colorScheme.surface.copy(alpha = 0.85f)
+                    )
+                )
+            )
+    ) {
+        // Chat Header
+        ChatHeader(
+            receiverName = receiverName,
+            onInfoClick = { /* Handle info click */ }
+        )
+
+        // Messages List
+        LazyColumn(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth(),
+            state = listState,
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            val groupedMessages = messages.groupBy { message ->
+                message.timestamp.toLocalDate().format(DateTimeFormatter.ofPattern("MMMM dd, yyyy"))
+            }
+
+            groupedMessages.forEach { (date, messagesForDate) ->
+                item {
+                    DateDivider(date = date)
+                }
+
+                items(messagesForDate) { message ->
+                    MessageBubble(
+                        message = message,
+                        isFromCurrentUser = message.senderId == senderId,
+                        receiverName = receiverName
+                    )
+                }
+            }
+        }
+
+        ChatInputArea(
+            messageInput = messageInput,
+            onMessageInputChange = { messageInput = it },
+            onSendClick = {
+                if (messageInput.isNotBlank()) {
+                    onMessageSent(
+                        Message(
+                            id = UUID.randomUUID().toString(),
+                            senderId = senderId,
+                            receiverId = receiverId,
+                            content = messageInput,
+                            messageType = MessageType.TEXT,
+                            timestamp = LocalDateTime.now().toString()
+                        )
+                    )
+                    messageInput = ""
+                }
+            },
+            onImageClick = { /* Launch image picker */ },
+            onAgreementClick = { showAgreementForm = true },
+            selectedImageUri = selectedImageUri,
+            onClearImage = { selectedImageUri = null }
+        )
+    }
+
+    // Show agreement form dialog if needed
+    if (showAgreementForm) {
+        BorrowingAgreementDialog(
+            onDismiss = { showAgreementForm = false },
+            onSubmit = { agreementData ->
+                onAgreementSubmit(agreementData)
+                showAgreementForm = false
+            }
+        )
+    }
 }
+
+@Composable
+private fun ChatHeader(
+    receiverName: String,
+    onInfoClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(64.dp),
+        shadowElevation = 4.dp
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Avatar
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(
+                            brush = Brush.linearGradient(
+                                colors = listOf(
+                                    MaterialTheme.colorScheme.primary,
+                                    MaterialTheme.colorScheme.secondary
+                                )
+                            ),
+                            shape = CircleShape
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = receiverName.first().toString(),
+                        color = Color.White,
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                }
+
+                // Name and status
+                Column {
+                    Text(
+                        text = receiverName,
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text(
+                        text = "Online",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+
+            // Info button
+            IconButton(onClick = onInfoClick) {
+                Icon(
+                    imageVector = Icons.Outlined.Info,
+                    contentDescription = "Information"
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun MessageBubble(
+    message: Message,
+    isFromCurrentUser: Boolean,
+    receiverName: String
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = if (isFromCurrentUser) Alignment.End else Alignment.Start
+    ) {
+        Row(
+            modifier = Modifier.padding(vertical = 2.dp),
+            horizontalArrangement = if (isFromCurrentUser) Arrangement.End else Arrangement.Start
+        ) {
+            if (!isFromCurrentUser) {
+                Avatar(name = receiverName)
+                Spacer(modifier = Modifier.width(8.dp))
+            }
+
+            Column {
+                Surface(
+                    color = if (isFromCurrentUser)
+                        MaterialTheme.colorScheme.primary
+                    else
+                        MaterialTheme.colorScheme.surface,
+                    shape = RoundedCornerShape(
+                        topStart = 16.dp,
+                        topEnd = 16.dp,
+                        bottomStart = if (isFromCurrentUser) 16.dp else 4.dp,
+                        bottomEnd = if (isFromCurrentUser) 4.dp else 16.dp
+                    ),
+                    shadowElevation = 2.dp
+                ) {
+                    when (message.messageType) {
+                        MessageType.TEXT -> TextMessage(message.content)
+                        MessageType.IMAGE -> ImageMessage(message.imageUrl)
+                        MessageType.FORM -> AgreementMessage(message.formData)
+                        MessageType.RETURN_REQUEST -> ReturnRequestMessage(message.formData)
+                        MessageType.BORROWING_UPDATE -> TODO()
+                        MessageType.RATING_UPDATE -> TODO()
+                        MessageType.CHAT_MESSAGE -> TODO()
+                    }
+                }
+
+                Text(
+                    text = message.timestamp.formatToTime(),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
+
+            if (isFromCurrentUser) {
+                Spacer(modifier = Modifier.width(8.dp))
+                Avatar(name = "You")
+            }
+        }
+    }
+}
+
+@Composable
+private fun DateDivider(date: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.Center
+    ) {
+        Surface(
+            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Text(
+                text = date,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+            )
+        }
+    }
+}
+
+
 
 @Composable
 fun ProfileContent(

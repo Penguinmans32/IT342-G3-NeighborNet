@@ -17,7 +17,7 @@ import retrofit2.http.Path
 
 interface ClassApiService {
     @GET("api/classes/all")
-    suspend fun getAllClasses(): Response<List<Class>>
+    suspend fun getAllClasses(): Response<List<ClassResponse>>
 
     @GET("api/classes/{id}")
     suspend fun getClassById(@Path("id") id: Long): Response<Class>

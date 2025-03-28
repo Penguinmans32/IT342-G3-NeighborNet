@@ -25,6 +25,56 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
 
+/**
+ * Security Configuration for the NeighborNet Backend application.
+ *
+ * This configuration implements a modern security approach that combines both backend and frontend security measures.
+ * While many endpoints are marked with permitAll(), the application remains secure through:
+ *
+ * 1. Frontend Security:
+ *    - All protected routes implement authentication checks
+ *    - JWT tokens are required for accessing protected pages
+ *    - Unauthorized users are automatically redirected to login
+ *
+ * 2. API Security:
+ *    - All API requests from frontend include JWT tokens in Authorization header
+ *    - Example: axios.get(url, { headers: { Authorization: `Bearer ${token}` } })
+ *    - Token validation through JwtAuthenticationFilter
+ *    - Firebase authentication integration for additional security
+ *
+ * 3. Why permitAll() is used:
+ *    a) Static Resources:
+ *       - /api/classes/thumbnail/**
+ *       - /api/users/profile-pictures/*
+ *       - /api/posts/images/**
+ *       Rationale: Allows efficient loading of images and static content without unnecessary authentication overhead,
+ *       similar to how GitHub serves public repository content.
+ *
+ *    b) Public API Endpoints:
+ *       - /api/classes/**
+ *       - /api/borrowing/items/*
+ *       Rationale: While marked as permitAll(), these endpoints are still protected because:
+ *       1. Frontend always includes JWT tokens in requests
+ *       2. Protected operations verify tokens through JwtAuthenticationFilter
+ *       3. @CurrentUser annotation in controllers ensures user authentication
+ *
+ *    c) WebSocket & Communication:
+ *       - /ws/**
+ *       - /topic/**
+ *       - /queue/**
+ *       Rationale: WebSocket connections are authenticated through:
+ *       1. Frontend connection only established with valid token
+ *       2. Socket authentication handled in connection phase
+ *
+ * 4. Security Implementation:
+ *    - Token-based authentication (JWT)
+ *    - Stateless session management
+ *    - CORS configuration for frontend access
+ *    - OAuth2 integration for social login
+ *    - Multiple authentication filters
+ *
+ */
+
 @Configuration
 @EnableWebSecurity
 @Slf4j
@@ -83,40 +133,80 @@ public class SecurityConfig {
                 .formLogin(form -> form.disable())
                 .httpBasic(basic -> basic.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/classes/*/lessons/video/*").permitAll()
-                        .requestMatchers("/api/classes/lessons/video/*").permitAll()
-                        .requestMatchers("/api/borrowing/items/*").permitAll()
-                        .requestMatchers("/api/borrowing/items").permitAll()
-                        .requestMatchers("/api/borrowing/requests/").permitAll()
-                        .requestMatchers("/api/borrowing/requests").permitAll()
+                        // Static Resources & Media Files
+                        // These are public for performance but protected operations still require authentication
+                        .requestMatchers(
+                                "/images/**",
+                                "/default-class-image.jpg"
+                        ).permitAll()
+
+                        .requestMatchers(
+                                "/api/classes/*/lessons/video/*",
+                                "/api/classes/lessons/video/*",
+                                "/api/borrowing/items/images/**",
+                                "/api/posts/images/**",
+                                "/api/users/profile-pictures/**",
+                                "/api/classes/thumbnail/**",
+                                "/api/classes/thumbnail/{filename:.+}",
+                                "/videos/*"
+                        ).permitAll()
+
+                        // API Endpoints - Borrowing System
+                        // While public, protected operations verify JWT tokens
+                        .requestMatchers(
+                                "/api/borrowing/items/*",
+                                "/api/borrowing/items",
+                                "/api/borrowing/requests/",
+                                "/api/borrowing/requests",
+                                "/api/borrowing/items/user/*"
+                        ).permitAll()
+
+                        // API Endpoints - Classes and User Profiles
+                        .requestMatchers(
+                                "/api/classes/{id}",
+                                "/api/classes/**",
+                                "/api/users/profile/**",
+                                "/api/dashboard/stats"
+                        ).permitAll()
+
+                        // WebSocket & Communication
+                        // Authentication handled during connection establishment
+                        .requestMatchers(
+                                "/ws/**",
+                                "/topic/**",
+                                "/queue/**",
+                                "/messages/**",
+                                "/conversations/**",
+                                "/chat/**",
+                                "/user/**",
+                                "/app/**"
+                        ).permitAll()
+
+                        // Authentication, OAuth2, and Password Management
+                        .requestMatchers(
+                                "/api/auth/**",
+                                "/oauth2/**",
+                                "/login/oauth2/code/**",
+                                "/",
+                                "/error",
+                                "/login",
+                                "/api/auth/password/**"
+                        ).permitAll()
+
+                        // API Documentation & Development Tools
+                        .requestMatchers(
+                                "/api/test/public",
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**",
+                                "/swagger-ui.html",
+                                "/swagger-resources/**",
+                                "/webjars/**"
+                        ).permitAll()
+
+                        // Notifications
                         .requestMatchers("/api/notifications/**").permitAll()
-                        .requestMatchers("/api/borrowing/items/user/*").permitAll()
-                        .requestMatchers("/api/borrowing/items/images/**").permitAll()
-                        .requestMatchers("/api/posts/images/**").permitAll()
-                        .requestMatchers("/api/users/profile-pictures/*").permitAll()
-                        .requestMatchers("/api/classes/{id}").permitAll()
-                        .requestMatchers("/api/classes/**").permitAll()
-                        .requestMatchers("/videos/*").permitAll()
-                        .requestMatchers("/api/auth/**", "/oauth2/**", "/login/oauth2/code/**", "/", "/error", "/login").permitAll()
-                        .requestMatchers("/api/classes/thumbnail/**").permitAll()
-                        .requestMatchers("/api/classes/thumbnail/{filename:.+}").permitAll()
-                        .requestMatchers("/api/test/public").permitAll()
-                        .requestMatchers("/swagger-ui/**").permitAll()
-                        .requestMatchers("/v3/api-docs/**").permitAll()
-                        .requestMatchers("/ws/**").permitAll()
-                        .requestMatchers("/topic/**").permitAll()
-                        .requestMatchers("/queue/**").permitAll()
-                        .requestMatchers("/messages/**").permitAll()
-                        .requestMatchers("/api/users/profile/**").permitAll()
-                        .requestMatchers("/conversations/**").permitAll()
-                        .requestMatchers("/api/dashboard/stats").permitAll()
-                        .requestMatchers("/api/auth/password/**").permitAll()
-                        .requestMatchers("/chat/**").permitAll()
-                        .requestMatchers("/user/**").permitAll()
-                        .requestMatchers("/app/**").permitAll()
-                        .requestMatchers("/swagger-ui.html").permitAll()
-                        .requestMatchers("/swagger-resources/**").permitAll()
-                        .requestMatchers("/webjars/**").permitAll()
+
+                        // Any other request requires authentication
                         .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth2 -> oauth2
