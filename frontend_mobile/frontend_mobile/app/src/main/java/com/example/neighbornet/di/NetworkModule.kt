@@ -2,10 +2,13 @@ package com.example.neighbornet.di
 
 import android.content.Context
 import coil.ImageLoader
+import com.example.neighbornet.api.BorrowingApiService
+import com.example.neighbornet.api.ChatApiService
 import com.example.neighbornet.api.ClassApiService
 import com.example.neighbornet.auth.TokenManager
 import com.example.neighbornet.network.AuthInterceptor
 import com.example.neighbornet.network.AuthService
+import com.example.neighbornet.network.StompClient
 import com.example.neighbornet.utils.ArrayDate
 import com.example.neighbornet.utils.ArrayDateAdapter
 import com.example.neighbornet.utils.LoggingGsonConverterFactory
@@ -27,6 +30,7 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.scalars.ScalarsConverterFactory
 import java.lang.reflect.Type
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
@@ -34,7 +38,6 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
-
     @Provides
     @Singleton
     fun provideTokenManager(@ApplicationContext context: Context): TokenManager {
@@ -57,6 +60,16 @@ object NetworkModule {
 
     @Provides
     @Singleton
+    fun provideStompClient(
+        okHttpClient: OkHttpClient,
+        @ApplicationContext context: Context
+    ): StompClient {
+        val wsUrl = "ws://10.0.191.212:8080/ws"
+        return StompClient(wsUrl, okHttpClient)
+    }
+
+    @Provides
+    @Singleton
     fun provideOkHttpClient(
         loggingInterceptor: HttpLoggingInterceptor,
         authInterceptor: AuthInterceptor
@@ -73,7 +86,6 @@ object NetworkModule {
                     .build()
                 chain.proceed(request)
             }
-            .addInterceptor(loggingInterceptor)
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
@@ -95,9 +107,40 @@ object NetworkModule {
     @Singleton
     fun provideGson(): Gson {
         return GsonBuilder()
+            .registerTypeAdapter(LocalDate::class.java, object : JsonDeserializer<LocalDate> {
+                override fun deserialize(
+                    json: JsonElement,
+                    typeOfT: Type,
+                    context: JsonDeserializationContext
+                ): LocalDate {
+                    val array = json.asJsonArray
+                    return LocalDate.of(
+                        array[0].asInt,
+                        array[1].asInt,
+                        array[2].asInt
+                    )
+                }
+            })
+            .registerTypeAdapter(LocalDateTime::class.java, object : JsonDeserializer<LocalDateTime> {
+                override fun deserialize(
+                    json: JsonElement,
+                    typeOfT: Type,
+                    context: JsonDeserializationContext
+                ): LocalDateTime {
+                    val array = json.asJsonArray
+                    return LocalDateTime.of(
+                        array[0].asInt,
+                        array[1].asInt,
+                        array[2].asInt,
+                        array[3].asInt,
+                        array[4].asInt,
+                        array[5].asInt,
+                        array[6].asLong.toInt()
+                    )
+                }
+            })
             .registerTypeAdapter(ArrayDate::class.java, ArrayDateAdapter())
             .registerTypeAdapter(StringDate::class.java, StringDateAdapter())
-            // Add this general type adapter for any List<Int> that might be dates
             .registerTypeAdapter(object : TypeToken<List<Int>>() {}.type, object :
                 JsonDeserializer<List<Int>> {
                 override fun deserialize(json: JsonElement, typeOfT: Type, context: JsonDeserializationContext): List<Int> {
@@ -124,6 +167,18 @@ object NetworkModule {
     @Singleton
     fun provideClassApiService(retrofit: Retrofit): ClassApiService {
         return retrofit.create(ClassApiService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideChatApiService(retrofit: Retrofit): ChatApiService {
+        return retrofit.create(ChatApiService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideBorrowingApiService(retrofit: Retrofit): BorrowingApiService {
+        return retrofit.create(BorrowingApiService::class.java)
     }
 
     @Provides

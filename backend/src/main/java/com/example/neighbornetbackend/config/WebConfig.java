@@ -17,7 +17,9 @@ public class WebConfig implements WebMvcConfigurer {
                         "http://10.0.2.2:8080",
                         "http://10.0.2.2",
                         "http://10.0.118.40:8080",
-                        "http://10.0.118.40"
+                        "http://10.0.118.40",
+                        "http://10.0.191.212:8080",
+                        "http://10.0.191.212"
                 )
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*")

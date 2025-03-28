@@ -2,6 +2,7 @@ package com.example.neighbornet.utils
 
 import com.google.gson.*
 import java.lang.reflect.Type
+import java.time.LocalDate
 import java.time.LocalDateTime
 
 data class ArrayDate(

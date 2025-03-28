@@ -25,8 +25,20 @@ class TokenManager @Inject constructor(@ApplicationContext context: Context) {
         return token
     }
 
+    fun saveCurrentUser(username: String) {
+        Log.d("TokenManager", "Saving current user: $username")
+        prefs.edit().putString("current_user", username).apply()
+    }
+
+    fun getCurrentUser(): String? {
+        return prefs.getString("current_user", null)
+    }
+
     fun clearToken() {
-        Log.d("TokenManager", "Clearing token")
-        prefs.edit().remove("auth_token").apply()
+        Log.d("TokenManager", "Clearing token and user data")
+        prefs.edit()
+            .remove("auth_token")
+            .remove("current_user")
+            .apply()
     }
 }

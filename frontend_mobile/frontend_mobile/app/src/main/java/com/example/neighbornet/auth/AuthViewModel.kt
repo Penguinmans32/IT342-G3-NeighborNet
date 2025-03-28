@@ -86,6 +86,9 @@ class AuthViewModel @Inject constructor(
             }
 
             tokenManager.saveToken(authResponse.accessToken)
+            authResponse.username?.let { username ->
+                tokenManager.saveCurrentUser(username)
+            }
 
             val savedToken = tokenManager.getToken()
             Log.d("AuthViewModel", "Token saved and retrieved: ${savedToken != null}")
@@ -187,11 +190,9 @@ class AuthViewModel @Inject constructor(
                 }
 
                 tokenManager.clearToken()
-                // Clear local data
                 clearAuthData()
                 _authState.value = AuthState()
 
-                // Force Google account picker on next sign in
                 initGoogleSignIn(getApplication())
 
             } catch (e: Exception) {

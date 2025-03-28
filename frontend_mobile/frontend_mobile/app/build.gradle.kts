@@ -4,6 +4,7 @@ plugins {
     id("com.google.gms.google-services")
     id("com.google.dagger.hilt.android")
     id("com.google.devtools.ksp") version "1.9.0-1.0.13"
+    id("org.jetbrains.kotlin.plugin.serialization") version "1.8.20"
 }
 
 android {
@@ -77,6 +78,14 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.7.0")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.2")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.6.2")
+
+    // Google Play Services
+    implementation("com.google.android.gms:play-services-location:21.0.1")
+    implementation("com.google.android.gms:play-services-maps:18.1.0")
+
+    // WebSocket
+    implementation("org.java-websocket:Java-WebSocket:1.5.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.1")
 
     // Other dependencies
     implementation("com.google.android.gms:play-services-auth:20.7.0")
