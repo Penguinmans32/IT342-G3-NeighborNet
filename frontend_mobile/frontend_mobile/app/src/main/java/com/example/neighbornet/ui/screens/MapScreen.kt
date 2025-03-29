@@ -8,6 +8,7 @@ import android.location.LocationManager
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -30,7 +31,6 @@ import androidx.core.content.ContextCompat
 import org.osmdroid.config.Configuration
 import org.osmdroid.events.MapEventsReceiver
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
-import org.osmdroid.tileprovider.tilesource.XYTileSource
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
@@ -40,7 +40,14 @@ import org.osmdroid.views.overlay.compass.CompassOverlay
 import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 import kotlin.math.*
-import java.io.File
+import kotlinx.coroutines.launch
+import java.net.URL
+import org.json.JSONObject
+import org.osmdroid.util.BoundingBox
+import org.osmdroid.util.Distance
+import kotlinx.coroutines.Dispatchers
+import android.util.Log
+import kotlinx.coroutines.withContext
 
 // Helper functions moved outside the composable
 private fun calculateDistance(point1: GeoPoint, point2: GeoPoint): Double {
@@ -57,24 +64,127 @@ private fun calculateDistance(point1: GeoPoint, point2: GeoPoint): Double {
     return R * c
 }
 
-private fun drawRoute(
+private suspend fun getRoutePoints(
+    context: Context,
+    start: GeoPoint,
+    end: GeoPoint,
+    onDistanceUpdated: (Double) -> Unit
+): List<GeoPoint> {
+    return try {
+        val url = "https://router.project-osrm.org/route/v1/driving/${start.longitude},${start.latitude};${end.longitude},${end.latitude}?overview=full&geometries=polyline6"
+        val response = withContext(Dispatchers.IO) {
+            URL(url).openConnection().apply {
+                connectTimeout = 5000
+                readTimeout = 5000
+                setRequestProperty("User-Agent", "NeighborNet-App")
+            }.getInputStream().bufferedReader().readText()
+        }
+        
+        Log.d("MapScreen", "Route response: $response")
+        
+        val json = JSONObject(response)
+        val routes = json.getJSONArray("routes")
+        if (routes.length() > 0) {
+            val route = routes.getJSONObject(0)
+            val geometry = route.getString("geometry")
+            val distance = route.getDouble("distance") / 1000 // Convert to km
+            
+            // Update distance using callback
+            onDistanceUpdated(distance)
+            
+            decodePolyline(geometry)
+        } else {
+            Log.e("MapScreen", "No routes found in response")
+            listOf(start, end)
+        }
+    } catch (e: Exception) {
+        Log.e("MapScreen", "Error getting route: ${e.message}", e)
+        withContext(Dispatchers.Main) {
+            Toast.makeText(context, "Could not get route, showing direct line", Toast.LENGTH_SHORT).show()
+        }
+        listOf(start, end)
+    }
+}
+
+private fun decodePolyline(encoded: String): List<GeoPoint> {
+    val points = mutableListOf<GeoPoint>()
+    var index = 0
+    var lat = 0
+    var lng = 0
+
+    try {
+        while (index < encoded.length) {
+            var b: Int
+            var shift = 0
+            var result = 0
+            do {
+                b = encoded[index++].toInt() - 63
+                result = result or (b and 0x1f shl shift)
+                shift += 5
+            } while (b >= 0x20)
+            val dlat = if (result and 1 != 0) -(result shr 1) else result shr 1
+            lat += dlat
+
+            shift = 0
+            result = 0
+            do {
+                b = encoded[index++].toInt() - 63
+                result = result or (b and 0x1f shl shift)
+                shift += 5
+            } while (b >= 0x20)
+            val dlng = if (result and 1 != 0) -(result shr 1) else result shr 1
+            lng += dlng
+
+            val finalLat = lat * 1e-6
+            val finalLng = lng * 1e-6
+            points.add(GeoPoint(finalLat, finalLng))
+        }
+    } catch (e: Exception) {
+        Log.e("MapScreen", "Error decoding polyline: ${e.message}", e)
+    }
+
+    return if (points.isEmpty()) {
+        Log.e("MapScreen", "No points decoded from polyline")
+        emptyList()
+    } else {
+        points
+    }
+}
+
+private suspend fun drawRoute(
+    context: Context,
     mapView: MapView?,
     start: GeoPoint,
     end: GeoPoint,
-    routeLine: Polyline?,
-    color: Int
-): Polyline? {
-    routeLine?.let { mapView?.overlays?.remove(it) }
+    existingLine: Polyline?,
+    color: Int,
+    onDistanceUpdated: (Double) -> Unit
+): Polyline {
+    existingLine?.let { mapView?.overlays?.remove(it) }
     
-    val line = Polyline(mapView).apply {
+    val routePoints = getRoutePoints(context, start, end, onDistanceUpdated)
+    
+    return Polyline(mapView).apply {
         outlinePaint.color = color
         outlinePaint.strokeWidth = 5f
-        setPoints(arrayListOf(start, end))
+        
+        if (routePoints.size > 1) {
+            setPoints(routePoints)
+        } else {
+            // Fallback to straight line if no route points
+            setPoints(arrayListOf(start, end))
+        }
+        
+        mapView?.overlays?.add(this)
+        
+        // Only zoom to bounding box if we have actual route points
+        if (routePoints.size > 2) {
+            val boundingBox = BoundingBox.fromGeoPoints(routePoints)
+            mapView?.zoomToBoundingBox(boundingBox, true, 100)
+        }
+        
+        mapView?.invalidate()
     }
-    
-    mapView?.overlays?.add(line)
-    mapView?.invalidate()
-    return line
 }
 
 private fun removeMarker(
@@ -106,140 +216,119 @@ private fun removeAllMarkers(
 @Composable
 fun MapScreen() {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var mapView: MapView? by remember { mutableStateOf(null) }
-    var hasLocationPermission by remember { mutableStateOf(false) }
-    var myLocationOverlay by remember { mutableStateOf<MyLocationNewOverlay?>(null) }
-    var searchQuery by remember { mutableStateOf("") }
-    var markers by remember { mutableStateOf(mutableListOf<Marker>()) }
+    var markers = remember { mutableStateListOf<Marker>() }
     var routeLine by remember { mutableStateOf<Polyline?>(null) }
-    var distanceText by remember { mutableStateOf<String?>(null) }
+    var distanceText by remember { mutableStateOf("") }
     var showRemoveConfirmation by remember { mutableStateOf(false) }
     var markerToRemove by remember { mutableStateOf<Marker?>(null) }
-    var isFollowingLocation by remember { mutableStateOf(false) }
-
-    // Get the primary color for the route line
-    val primaryColor = MaterialTheme.colorScheme.primary.hashCode()
+    var userLocationMarker by remember { mutableStateOf<Marker?>(null) }
+    var destinationMarker by remember { mutableStateOf<Marker?>(null) }
+    var isSelectingLocation by remember { mutableStateOf(false) }
+    var isSelectingDestination by remember { mutableStateOf(false) }
+    var showInstructions by remember { mutableStateOf(false) }
 
     // Initialize OpenStreetMap configuration
     LaunchedEffect(Unit) {
-        val osmConfig = Configuration.getInstance()
-        osmConfig.load(context, context.getSharedPreferences("osm_prefs", Context.MODE_PRIVATE))
-        osmConfig.userAgentValue = context.packageName
-        val basePath = File(context.cacheDir.absolutePath, "osmdroid")
-        osmConfig.osmdroidBasePath = basePath
-        val tileCache = File(osmConfig.osmdroidBasePath.absolutePath, "tile")
-        osmConfig.osmdroidTileCache = tileCache
-    }
-
-    // Request location permission
-    val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        hasLocationPermission = isGranted
-        if (!isGranted) {
-            Toast.makeText(context, "Location permission is required for full functionality", Toast.LENGTH_SHORT).show()
+        Configuration.getInstance().apply {
+            load(context, context.getSharedPreferences("osm_prefs", Context.MODE_PRIVATE))
+            userAgentValue = context.packageName
+            osmdroidTileCache = context.cacheDir
         }
-    }
-
-    // Check if we have location permission
-    LaunchedEffect(Unit) {
-        hasLocationPermission = ContextCompat.checkSelfPermission(
-            context,
-            Manifest.permission.ACCESS_FINE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED
-
-        if (!hasLocationPermission) {
-            permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
-        }
-    }
-
-    // Confirmation dialog for removing marker
-    if (showRemoveConfirmation) {
-        AlertDialog(
-            onDismissRequest = { showRemoveConfirmation = false },
-            title = { Text("Remove Marker") },
-            text = { Text("Do you want to remove this marker?") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        markerToRemove?.let { removeMarker(mapView, it, markers, routeLine) }
-                        showRemoveConfirmation = false
-                        markerToRemove = null
-                    }
-                ) {
-                    Text("Remove")
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = {
-                        showRemoveConfirmation = false
-                        markerToRemove = null
-                    }
-                ) {
-                    Text("Cancel")
-                }
-            }
-        )
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // Map view in the background
+        // Map view
         AndroidView(
             factory = { ctx ->
                 MapView(ctx).apply {
                     mapView = this
                     setTileSource(TileSourceFactory.MAPNIK)
+                    setUseDataConnection(true)  // Enable downloading tiles
                     setMultiTouchControls(true)
-                    controller.setZoom(15.0)
+                    setBuiltInZoomControls(true)
+                    
+                    // Set initial position (Philippines)
+                    controller.setZoom(7.0)  // Zoom out to see more of the map
+                    controller.setCenter(GeoPoint(12.8797, 121.7740))
 
-                    // Set default location (Cebu City)
-                    val cebuCity = GeoPoint(10.3157, 123.8854)
-                    controller.setCenter(cebuCity)
-
-                    // Add the default marker for Cebu City
-                    val defaultMarker = Marker(this).apply {
-                        position = cebuCity
-                        title = "Your Location"
-                        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                        icon = ContextCompat.getDrawable(ctx, org.osmdroid.library.R.drawable.person)
-                    }
-                    overlays.add(defaultMarker)
-
-                    // Add map events overlay for handling taps and long presses
+                    // Add map events overlay for handling taps
                     val mapEventsOverlay = MapEventsOverlay(object : MapEventsReceiver {
                         override fun singleTapConfirmedHelper(p: GeoPoint?): Boolean {
-                            return true
-                        }
-
-                        override fun longPressHelper(p: GeoPoint?): Boolean {
-                            p?.let { point ->
-                                val newMarker = Marker(this@apply).apply {
-                                    position = point
-                                    title = "Selected Location"
-                                    setOnMarkerClickListener { marker, _ ->
-                                        markerToRemove = marker
-                                        showRemoveConfirmation = true
-                                        true
+                            if (isSelectingLocation) {
+                                p?.let { point ->
+                                    userLocationMarker?.let { overlays.remove(it) }
+                                    val newMarker = Marker(this@apply).apply {
+                                        position = point
+                                        title = "Your Location"
+                                        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                                        icon = ContextCompat.getDrawable(ctx, org.osmdroid.library.R.drawable.person)
                                     }
-                                    setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                                    // Set marker color to red
-                                    icon = ContextCompat.getDrawable(ctx, org.osmdroid.library.R.drawable.marker_default)
-                                    setInfoWindow(null)
+                                    userLocationMarker = newMarker
+                                    overlays.add(newMarker)
+                                    controller.animateTo(point)  // Center on the new marker
+                                    
+                                    destinationMarker?.let { destMarker ->
+                                        scope.launch {
+                                            routeLine = drawRoute(
+                                                context = context,
+                                                mapView = this@apply,
+                                                start = point,
+                                                end = destMarker.position,
+                                                existingLine = routeLine,
+                                                color = Color.Blue.hashCode(),
+                                                onDistanceUpdated = { distance ->
+                                                    distanceText = "Distance: %.2f km".format(distance)
+                                                }
+                                            )
+                                        }
+                                    }
+                                    invalidate()
                                 }
-                                
-                                // Calculate distance from Cebu City marker
-                                val distance = calculateDistance(cebuCity, point)
-                                distanceText = "Distance: %.2f km".format(distance)
-                                newMarker.snippet = distanceText
-                                routeLine = drawRoute(this@apply, cebuCity, point, routeLine, primaryColor)
-
-                                overlays.add(newMarker)
-                                markers.add(newMarker)
-                                invalidate()
+                                isSelectingLocation = false
+                                showInstructions = false
+                                return true
+                            }
+                            
+                            if (isSelectingDestination) {
+                                p?.let { point ->
+                                    destinationMarker?.let { overlays.remove(it) }
+                                    val newMarker = Marker(this@apply).apply {
+                                        position = point
+                                        title = "Destination"
+                                        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                                        icon = ContextCompat.getDrawable(ctx, org.osmdroid.library.R.drawable.marker_default)
+                                    }
+                                    destinationMarker = newMarker
+                                    overlays.add(newMarker)
+                                    controller.animateTo(point)  // Center on the new marker
+                                    
+                                    userLocationMarker?.let { locMarker ->
+                                        scope.launch {
+                                            routeLine = drawRoute(
+                                                context = context,
+                                                mapView = this@apply,
+                                                start = locMarker.position,
+                                                end = point,
+                                                existingLine = routeLine,
+                                                color = Color.Blue.hashCode(),
+                                                onDistanceUpdated = { distance ->
+                                                    distanceText = "Distance: %.2f km".format(distance)
+                                                }
+                                            )
+                                        }
+                                    }
+                                    invalidate()
+                                }
+                                isSelectingDestination = false
+                                showInstructions = false
+                                return true
                             }
                             return true
                         }
+
+                        override fun longPressHelper(p: GeoPoint?): Boolean = true
                     })
                     overlays.add(mapEventsOverlay)
                 }
@@ -247,146 +336,110 @@ fun MapScreen() {
             modifier = Modifier.fillMaxSize()
         )
 
-        // Overlay content on top of map
+        // Header at the top
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .zIndex(1f)
+                .padding(top = 16.dp)
         ) {
-            // Title with semi-transparent background
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
-                tonalElevation = 8.dp
-            ) {
-                Text(
-                    text = "Connect with your Community",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-
-            // Search bar with elevation and background
-            Surface(
+            Text(
+                text = "Connect with your Community",
                 modifier = Modifier
                     .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.9f))
                     .padding(16.dp),
-                shape = RoundedCornerShape(28.dp),
-                tonalElevation = 8.dp,
-                shadowElevation = 4.dp
-            ) {
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("Search places...") },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
-                    trailingIcon = if (searchQuery.isNotEmpty()) {
-                        {
-                            IconButton(onClick = { searchQuery = "" }) {
-                                Icon(Icons.Default.Clear, "Clear search")
-                            }
-                        }
-                    } else null,
-                    singleLine = true,
-                    shape = RoundedCornerShape(28.dp),
-                    colors = TextFieldDefaults.outlinedTextFieldColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
-                    )
-                )
-            }
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.primary
+            )
 
-            // Distance text if available
-            distanceText?.let { distance ->
-                Surface(
+            // Distance text
+            if (distanceText.isNotEmpty()) {
+                Text(
+                    text = distanceText,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Text(
-                        text = distance,
-                        modifier = Modifier.padding(8.dp),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
+                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.9f))
+                        .padding(8.dp),
+                    textAlign = TextAlign.Center
+                )
             }
         }
 
-        // Button column at bottom-end
+        // Instructions overlay when selecting
+        if (showInstructions) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.Black.copy(alpha = 0.7f))
+                    .padding(16.dp)
+            ) {
+                Text(
+                    text = if (isSelectingLocation) 
+                        "Tap on the map to mark your location" 
+                    else 
+                        "Tap on the map to mark your destination",
+                    color = Color.White,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
+
+        // Action buttons column
         Column(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(16.dp)
-                .zIndex(1f),
+                .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // Remove All Markers button (only show if there are markers)
-            if (markers.isNotEmpty()) {
-                FloatingActionButton(
-                    onClick = { removeAllMarkers(mapView, markers, routeLine) },
-                    containerColor = MaterialTheme.colorScheme.errorContainer,
-                    shape = CircleShape
-                ) {
-                    Icon(
-                        Icons.Default.Delete,
-                        contentDescription = "Remove All Markers",
-                        tint = MaterialTheme.colorScheme.onErrorContainer
-                    )
-                }
+            // Add Location button
+            FloatingActionButton(
+                onClick = { 
+                    isSelectingLocation = true
+                    showInstructions = true
+                },
+                containerColor = MaterialTheme.colorScheme.primary
+            ) {
+                Icon(Icons.Default.LocationOn, "Add Your Location")
+            }
+            
+            // Add Destination button
+            FloatingActionButton(
+                onClick = { 
+                    isSelectingDestination = true
+                    showInstructions = true
+                },
+                containerColor = MaterialTheme.colorScheme.secondary
+            ) {
+                Icon(Icons.Default.Place, "Add Destination")
             }
 
-            // My Location Button
-            if (hasLocationPermission) {
+            // Remove all markers button
+            if (userLocationMarker != null || destinationMarker != null) {
                 FloatingActionButton(
                     onClick = {
-                        myLocationOverlay?.let { overlay ->
-                            if (overlay.myLocation != null) {
-                                mapView?.controller?.animateTo(overlay.myLocation)
-                                mapView?.controller?.setZoom(18.0)
-                                isFollowingLocation = !isFollowingLocation
-                                if (isFollowingLocation) {
-                                    overlay.enableFollowLocation()
-                                } else {
-                                    overlay.disableFollowLocation()
-                                }
-                            } else {
-                                Toast.makeText(context, "Getting location...", Toast.LENGTH_SHORT).show()
-                            }
-                        }
+                        userLocationMarker?.let { mapView?.overlays?.remove(it) }
+                        destinationMarker?.let { mapView?.overlays?.remove(it) }
+                        routeLine?.let { mapView?.overlays?.remove(it) }
+                        userLocationMarker = null
+                        destinationMarker = null
+                        routeLine = null
+                        distanceText = ""
+                        mapView?.invalidate()
                     },
-                    shape = CircleShape,
-                    containerColor = if (isFollowingLocation) 
-                        MaterialTheme.colorScheme.primary 
-                    else 
-                        MaterialTheme.colorScheme.surface
+                    containerColor = MaterialTheme.colorScheme.error
                 ) {
-                    Icon(
-                        Icons.Default.MyLocation,
-                        contentDescription = "My Location",
-                        tint = if (isFollowingLocation)
-                            MaterialTheme.colorScheme.onPrimary
-                        else
-                            MaterialTheme.colorScheme.onSurface
-                    )
+                    Icon(Icons.Default.Delete, "Remove All Markers")
                 }
             }
         }
     }
 
-    // Handle map lifecycle
     DisposableEffect(Unit) {
         onDispose {
             mapView?.onDetach()
-            mapView = null
         }
     }
 } 
