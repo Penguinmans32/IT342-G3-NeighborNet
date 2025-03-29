@@ -1,4 +1,5 @@
 <resources>
     <string name="app_name">NeighborNet</string>
     <string name="default_web_client_id">786406259465-jotr04b19m9c3lpjpj3oqqjoa5qij01s.apps.googleusercontent.com</string>
+    <string name="google_maps_api_key">YOUR_API_KEY_HERE</string>
 </resources>
