@@ -8,39 +8,51 @@ class WebSocketService {
         this.connected = false;
     }
 
-    connect(userId, onMessageReceived) {
+    cconnect(userId, onMessageReceived) {
         const socket = new SockJS('http://localhost:8080/ws');
         this.stompClient = new Client({
             webSocketFactory: () => socket,
-            debug: () => {},
+            debug: (str) => console.log(str),
             reconnectDelay: 5000,
             heartbeatIncoming: 4000,
             heartbeatOutgoing: 4000,
             onConnect: () => {
                 console.log('Connected to WebSocket');
                 this.connected = true;
-                this.stompClient.subscribe(`/user/${userId}/queue/notifications`, 
-                    message => {
-                        try {
-                            const notification = JSON.parse(message.body);
-                            onMessageReceived(notification);
-                        } catch (error) {
-                            console.error('Error processing message:', error);
-                        }
-                    }
-                );
+                // Subscribe to messages
+                this.subscribeToMessages(userId, onMessageReceived);
             },
             onDisconnect: () => {
                 console.log('Disconnected from WebSocket');
                 this.connected = false;
             },
-            onError: (error) => {
-                console.error('WebSocket Error:', error);
-                this.connected = false;
+            onStompError: (frame) => {
+                console.error('STOMP error:', frame);
             }
         });
 
         this.stompClient.activate();
+    }
+
+    subscribeToMessages(userId, onMessageReceived) {
+        if (this.subscriptions.has(userId)) {
+            this.subscriptions.get(userId).unsubscribe();
+        }
+
+        const subscription = this.stompClient.subscribe(
+            `/user/${userId}/queue/messages`,
+            message => {
+                try {
+                    const parsedMessage = JSON.parse(message.body);
+                    console.log('Received message:', parsedMessage);
+                    onMessageReceived(parsedMessage);
+                } catch (error) {
+                    console.error('Error processing message:', error);
+                }
+            }
+        );
+
+        this.subscriptions.set(userId, subscription);
     }
 
     disconnect() {

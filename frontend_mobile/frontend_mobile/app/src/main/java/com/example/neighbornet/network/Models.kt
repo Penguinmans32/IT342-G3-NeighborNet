@@ -238,11 +238,12 @@ data class UpdateProgressRequest(
 )
 
 data class Message(
-    val id: String,
-    val senderId: String,
-    val receiverId: String,
+    val id: Long? = null,
+    val senderId: Long,
+    val receiverId: Long,
     val content: String,
     val messageType: MessageType,
+    @SerializedName("timestamp")
     val timestamp: String,
     val formData: String? = null,
     val imageUrl: String? = null,
@@ -306,7 +307,6 @@ data class AgreementResponse(
     val terms: String,
     val createdAt: String
 )
-
 
 
 

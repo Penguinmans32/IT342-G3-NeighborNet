@@ -24,7 +24,7 @@ public class ChatMessage {
     @Column(nullable = false)
     private String content;
 
-    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS", timezone = "UTC")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS")
     @Column(nullable = false)
     private LocalDateTime timestamp;
 
@@ -41,7 +41,7 @@ public class ChatMessage {
     private String formData;
 
     public ChatMessage() {
-        this.timestamp = LocalDateTime.now(ZoneOffset.UTC);
+        this.timestamp = LocalDateTime.now();
         this.is_read = false;
     }
 
@@ -87,9 +87,7 @@ public class ChatMessage {
     }
 
     public void setTimestamp(LocalDateTime timestamp) {
-        if (timestamp != null) {
-            this.timestamp = timestamp;
-        }
+        this.timestamp = timestamp != null ? timestamp : LocalDateTime.now();
     }
 
     public boolean isIs_read() {

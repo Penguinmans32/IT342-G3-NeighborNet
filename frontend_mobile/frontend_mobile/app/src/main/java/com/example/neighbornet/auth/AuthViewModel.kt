@@ -46,7 +46,7 @@ class AuthViewModel @Inject constructor(
     private val tokenManager: TokenManager,
     private val firebaseAuthService: FirebaseAuthService,
     private val authService: AuthService
-    ): AndroidViewModel(application) {
+): AndroidViewModel(application) {
     private val sessionManager = SessionManager(application)
     private val _authState = MutableStateFlow(AuthState())
     val authState: StateFlow<AuthState> = _authState
@@ -102,7 +102,7 @@ class AuthViewModel @Inject constructor(
                 Log.e("AuthViewModel", "Failed to extract user ID, using username hash", e)
                 authResponse.username?.hashCode()?.toLong() ?: throw e
             }
-
+            tokenManager.saveCurrentUserId(userId)
             Log.d("AuthViewModel", "Using user ID: $userId")
 
             sessionManager.saveAuthData(
@@ -164,41 +164,64 @@ class AuthViewModel @Inject constructor(
                 val userId = getCurrentUserId()
                 Log.d("AuthViewModel", "Logging out user with ID: $userId")
 
-                try {
-                    googleSignInClient.signOut().await()
-                    googleSignInClient.revokeAccess().await()
-                    Log.d("AuthViewModel", "Google Sign-out successful")
+                tokenManager.clearToken()
 
-                    getApplication<Application>().applicationContext?.let { context ->
-                        clearWebViewData(context)
+                try {
+                    sessionManager.clearAuthData()
+                } catch (e: Exception) {
+                    Log.e("AuthViewModel", "Error clearing session data", e)
+                }
+
+                try {
+                    if (::googleSignInClient.isInitialized) {
+                        googleSignInClient.signOut().await()
+                        googleSignInClient.revokeAccess().await()
                     }
+                    Log.d("AuthViewModel", "Google Sign-out successful")
                 } catch (e: Exception) {
                     Log.e("AuthViewModel", "Error signing out from Google", e)
                 }
 
-                FirebaseAuth.getInstance().signOut()
+                try {
+                    FirebaseAuth.getInstance().signOut()
+                } catch (e: Exception) {
+                    Log.e("AuthViewModel", "Error signing out from Firebase", e)
+                }
+
+                try {
+                    getApplication<Application>().applicationContext?.let { context ->
+                        clearWebViewData(context)
+                    }
+                } catch (e: Exception) {
+                    Log.e("AuthViewModel", "Error clearing WebView data", e)
+                }
 
                 try {
                     val response = authService.logout(LogOutRequest(userId))
                     if (response.isSuccessful) {
                         Log.d("AuthViewModel", "Server-side logout successful")
-                    } else {
-                        Log.w("AuthViewModel", "Server-side logout failed")
                     }
                 } catch (e: Exception) {
                     Log.e("AuthViewModel", "Error during server-side logout", e)
                 }
 
-                tokenManager.clearToken()
-                clearAuthData()
                 _authState.value = AuthState()
 
-                initGoogleSignIn(getApplication())
+                try {
+                    initGoogleSignIn(getApplication())
+                } catch (e: Exception) {
+                    Log.e("AuthViewModel", "Error reinitializing Google Sign-In", e)
+                }
 
             } catch (e: Exception) {
                 Log.e("AuthViewModel", "Error during logout", e)
-                clearAuthData()
-                _authState.value = AuthState()
+                try {
+                    tokenManager.clearToken()
+                    sessionManager.clearAuthData()
+                    _authState.value = AuthState()
+                } catch (e2: Exception) {
+                    Log.e("AuthViewModel", "Error in final cleanup", e2)
+                }
             }
         }
     }

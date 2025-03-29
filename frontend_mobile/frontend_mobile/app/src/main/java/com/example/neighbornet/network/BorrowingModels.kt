@@ -97,5 +97,19 @@ data class RatingUpdate(
     val timestamp: String
 )
 
+data class ConversationDTO(
+    val id: Long? = null,
+    val participant: ParticipantDTO,
+    val lastMessage: String? = null,
+    val lastMessageTimestamp: LocalDateTime? = null,
+    val unreadCount: Int = 0,
+    val lastMessageItem: BorrowingItem? = null
+) {
+    data class ParticipantDTO(
+        val id: Long,
+        val username: String,
+        val imageUrl: String? = null
+    )
+}
 
 

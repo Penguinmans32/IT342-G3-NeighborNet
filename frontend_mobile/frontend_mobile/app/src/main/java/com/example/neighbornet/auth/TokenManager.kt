@@ -30,6 +30,16 @@ class TokenManager @Inject constructor(@ApplicationContext context: Context) {
         prefs.edit().putString("current_user", username).apply()
     }
 
+    fun saveCurrentUserId(userId: Long) {
+        Log.d("TokenManager", "Saving current user ID: $userId")
+        prefs.edit().putLong("current_user_id", userId).apply()
+    }
+
+    fun getCurrentUserId(): Long? {
+        val userId = prefs.getLong("current_user_id", -1L)
+        return if (userId == -1L) null else userId
+    }
+
     fun getCurrentUser(): String? {
         return prefs.getString("current_user", null)
     }

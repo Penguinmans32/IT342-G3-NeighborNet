@@ -1,5 +1,6 @@
 package com.example.neighbornet.utils
 
+import android.graphics.drawable.ColorDrawable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -14,28 +15,36 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
+import com.example.neighbornet.auth.ChatListViewModel
 import com.example.neighbornet.network.AgreementResponse
 import com.example.neighbornet.network.ReturnRequest
 import com.example.neighbornet.network.ReturnRequestStatus
 import com.google.gson.Gson
+import java.time.LocalDateTime
 
 @Composable
 fun TextMessage(content: String) {
@@ -49,15 +58,16 @@ fun TextMessage(content: String) {
 @Composable
 fun ImageMessage(imageUrl: String?) {
     if (imageUrl != null) {
+        val transformedUrl = UrlUtils.getFullImageUrl(imageUrl)
         AsyncImage(
-            model = imageUrl,
+            model = transformedUrl,
             contentDescription = "Shared image",
             modifier = Modifier
                 .padding(4.dp)
                 .clip(RoundedCornerShape(8.dp))
                 .fillMaxWidth()
                 .height(200.dp),
-            contentScale = ContentScale.Crop
+            contentScale = ContentScale.Crop,
         )
     }
 }
@@ -178,8 +188,12 @@ fun Avatar(name: String) {
 
 @Composable
 fun ChatListScreen(
-    onChatSelected: (userId: String, userName: String) -> Unit
+    onChatSelected: (userId: Long, userName: String) -> Unit
 ) {
+    val viewModel: ChatListViewModel = hiltViewModel()
+    val conversations by viewModel.conversations.collectAsState()
+    val loading by viewModel.loading.collectAsState()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -206,21 +220,42 @@ fun ChatListScreen(
         }
 
         // Chat list
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(vertical = 8.dp)
-        ) {
-            items(sampleChatUsers) { user ->
-                ChatListItem(
-                    userName = user.name,
-                    lastMessage = user.lastMessage,
-                    timestamp = user.lastMessageTime,
-                    unreadCount = user.unreadCount,
-                    onClick = { onChatSelected(user.id, user.name) }
-                )
+        if (loading) {
+            CircularProgressIndicator(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .wrapContentSize()
+            )
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(vertical = 8.dp)
+            ) {
+                items(
+                    items = conversations,
+                    key = { it.id ?: it.participant.id }
+                ) { conversation ->
+                    ChatListItem(
+                        userName = conversation.participant.username,
+                        lastMessage = conversation.lastMessage ?: "",
+                        timestamp = formatTimestamp(conversation.lastMessageTimestamp),
+                        unreadCount = conversation.unreadCount,
+                        onClick = {
+                            onChatSelected(
+                                conversation.participant.id,
+                                conversation.participant.username
+                            )
+                        }
+                    )
+                }
             }
         }
     }
+}
+
+private fun formatTimestamp(timestamp: LocalDateTime?): String {
+    if (timestamp == null) return ""
+    return timestamp.toString()
 }
 
 @Composable
@@ -317,17 +352,3 @@ private fun ChatListItem(
         }
     }
 }
-
-private data class ChatUser(
-    val id: String,
-    val name: String,
-    val lastMessage: String,
-    val lastMessageTime: String,
-    val unreadCount: Int
-)
-
-private val sampleChatUsers = listOf(
-    ChatUser("1", "John Doe", "Hey, are you available?", "10:30 AM", 2),
-    ChatUser("2", "Jane Smith", "Thanks for the help!", "Yesterday", 0),
-    ChatUser("3", "Mike Johnson", "See you tomorrow", "2d ago", 0)
-)

@@ -45,6 +45,7 @@ import com.example.neighbornet.auth.ChatViewModel
 import com.example.neighbornet.utils.ChatListScreen
 import com.example.neighbornet.utils.ItemDetailsScreen
 import com.example.neighbornet.utils.PreferencesManager
+import com.example.neighbornet.utils.chatGraph
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -76,7 +77,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             NeighbornetTheme {
                 val snackbarHostState = remember { SnackbarHostState() }
-                var currentScreen by remember { 
+                var currentScreen by remember {
                     mutableStateOf(
                         if (preferencesManager.isFirstTimeLaunch()) "landing" else "login"
                     )
@@ -155,6 +156,10 @@ class MainActivity : ComponentActivity() {
                                             HomePage(navController = navController)
                                         }
                                     }
+                                    chatGraph(
+                                        navController = navController,
+                                        viewModelStoreOwner = this@MainActivity
+                                    )
                                     composable(
                                         route = Screen.ClassDetails.route,
                                         arguments = listOf(
@@ -195,7 +200,6 @@ class MainActivity : ComponentActivity() {
                                             )
                                         }
                                     }
-
                                     composable(
                                         route = Screen.ItemDetails.route,
                                         arguments = listOf(
@@ -215,15 +219,15 @@ class MainActivity : ComponentActivity() {
                                             )
                                         }
                                     }
-                                  /*  composable(Screen.AddItem.route) {
-                                        CompositionLocalProvider(
-                                            LocalViewModelStoreOwner provides this@MainActivity
-                                        ) {
-                                            AddItemScreen(
-                                                onBackClick = { navController.navigateUp() }
-                                            )
-                                        }
-                                    }*/
+                                    /*  composable(Screen.AddItem.route) {
+                                          CompositionLocalProvider(
+                                              LocalViewModelStoreOwner provides this@MainActivity
+                                          ) {
+                                              AddItemScreen(
+                                                  onBackClick = { navController.navigateUp() }
+                                              )
+                                          }
+                                      }*/
                                     composable(Screen.Categories.route) {
                                         CategoriesContent(
                                             onCategoryClick = { category ->
@@ -234,10 +238,11 @@ class MainActivity : ComponentActivity() {
                                     composable(Screen.Chat.route) {
                                         val chatViewModel = hiltViewModel<ChatViewModel>()
                                         val currentUser by chatViewModel.currentUser.collectAsState()
+                                        val currentUserId by chatViewModel.currentUserId.collectAsState()
                                         val messages by chatViewModel.messages.collectAsState()
                                         val isConnected by chatViewModel.isConnected.collectAsState()
 
-                                        var selectedChat by remember { mutableStateOf<Pair<String, String>?>(null) }
+                                        var selectedChat by remember { mutableStateOf<Pair<Long, String>?>(null) }
 
                                         when {
                                             currentUser == null -> {
@@ -268,18 +273,17 @@ class MainActivity : ComponentActivity() {
                                             selectedChat == null -> {
                                                 ChatListScreen(
                                                     onChatSelected = { userId, userName ->
-                                                        selectedChat = userId to userName
-                                                        currentUser?.let { user ->
-                                                            chatViewModel.connectWebSocket(user, userId)
+                                                        selectedChat = Pair(userId, userName)
+                                                        currentUserId?.let { senderId ->
+                                                            chatViewModel.connectWebSocket(senderId, userId)
                                                         }
                                                     }
                                                 )
                                             }
                                             else -> {
                                                 val (receiverId, receiverName) = selectedChat!!
-                                                currentUser?.let { user ->
+                                                currentUserId?.let { senderId ->
                                                     Column(modifier = Modifier.fillMaxSize()) {
-                                                        // Back button
                                                         IconButton(
                                                             onClick = { selectedChat = null }
                                                         ) {
@@ -289,23 +293,23 @@ class MainActivity : ComponentActivity() {
                                                             )
                                                         }
 
-                                                        // Chat content
                                                         ChatContent(
                                                             modifier = Modifier.weight(1f),
-                                                            senderId = user,
+                                                            senderId = senderId,
                                                             receiverId = receiverId,
                                                             receiverName = receiverName,
                                                             messages = messages,
+                                                            isConnected = isConnected,
                                                             onMessageSent = { message ->
                                                                 chatViewModel.sendMessage(
-                                                                    senderId = user,
+                                                                    senderId = senderId,
                                                                     receiverId = receiverId,
                                                                     content = message.content
                                                                 )
                                                             },
                                                             onImageSelected = { uri ->
                                                                 chatViewModel.sendImage(
-                                                                    senderId = user,
+                                                                    senderId = senderId,
                                                                     receiverId = receiverId,
                                                                     imageUri = uri
                                                                 )
@@ -319,12 +323,12 @@ class MainActivity : ComponentActivity() {
                                             }
                                         }
 
-                                        // Connect to WebSocket when chat is selected
                                         LaunchedEffect(selectedChat) {
                                             val chat = selectedChat
-                                            val user = currentUser
-                                            if (chat != null && user != null) {
-                                                chatViewModel.connectWebSocket(user, chat.first)
+                                            currentUserId?.let { senderId ->
+                                                if (chat != null) {
+                                                    chatViewModel.connectWebSocket(senderId, chat.first)
+                                                }
                                             }
                                         }
                                     }

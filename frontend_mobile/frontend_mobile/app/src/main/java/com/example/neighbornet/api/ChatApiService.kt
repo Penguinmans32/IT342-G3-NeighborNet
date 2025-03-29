@@ -2,6 +2,7 @@ package com.example.neighbornet.api
 
 import com.example.neighbornet.network.AgreementRequest
 import com.example.neighbornet.network.AgreementResponse
+import com.example.neighbornet.network.ConversationDTO
 import com.example.neighbornet.network.Message
 import com.example.neighbornet.network.ReturnRequest
 import okhttp3.MultipartBody
@@ -17,8 +18,8 @@ import retrofit2.http.Query
 interface ChatApiService {
     @GET("messages/{senderId}/{receiverId}")
     suspend fun getMessages(
-        @Path("senderId") senderId: String,
-        @Path("receiverId") receiverId: String
+        @Path("senderId") senderId: Long,
+        @Path("receiverId") receiverId: Long
     ): List<Message>
 
     @Multipart
@@ -42,4 +43,13 @@ interface ChatApiService {
     suspend fun sendAgreement(
         @Body agreementRequest: AgreementRequest
     ): AgreementResponse
+
+    @GET("/conversations/{userId}")
+    suspend fun getUserConversations(@Path("userId") userId: Long): List<ConversationDTO>
+
+    @POST("/conversations/create")
+    suspend fun createConversation(@Body request: Map<String, Long>): ConversationDTO
+
+    @POST("messages")
+    suspend fun sendMessage(@Body message: Message): Message
 }

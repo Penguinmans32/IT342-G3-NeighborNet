@@ -1,6 +1,8 @@
 package com.example.neighbornet
 
 import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
@@ -80,6 +82,7 @@ import com.example.neighbornet.utils.BorrowingAgreementDialog
 import com.example.neighbornet.utils.BorrowingScreen
 import com.example.neighbornet.utils.ChatInputArea
 import com.example.neighbornet.utils.ChatListScreen
+import com.example.neighbornet.utils.DateTimeUtils
 import com.example.neighbornet.utils.ImageMessage
 import com.example.neighbornet.utils.TextMessage
 import com.example.neighbornet.utils.ReturnRequestMessage
@@ -265,17 +268,18 @@ fun HomePage(
                                         navController.navigate(Screen.ItemDetails.createRoute(itemId))
                                     },
                                     onNavigateToChat = { userId, username ->
-                                        navController.navigate(Screen.Chat.createRoute(userId, username))
+                                        navController.navigate(Screen.ChatDetail.createRoute(userId, username))
                                     }
                                 )
                             }
                             3 -> {
                                 val chatViewModel = hiltViewModel<ChatViewModel>()
                                 val currentUser by chatViewModel.currentUser.collectAsState()
+                                val currentUserId by chatViewModel.currentUserId.collectAsState()
                                 val messages by chatViewModel.messages.collectAsState()
                                 val isConnected by chatViewModel.isConnected.collectAsState()
 
-                                var selectedChat by remember { mutableStateOf<Pair<String, String>?>(null) }
+                                var selectedChat by remember { mutableStateOf<Pair<Long, String>?>(null) }
 
                                 when {
                                     currentUser == null -> {
@@ -302,31 +306,32 @@ fun HomePage(
                                     selectedChat == null -> {
                                         ChatListScreen(
                                             onChatSelected = { userId, userName ->
-                                                selectedChat = userId to userName
-                                                currentUser?.let { user ->
-                                                    chatViewModel.connectWebSocket(user, userId)
+                                                selectedChat = Pair(userId, userName)
+                                                currentUserId?.let { senderId ->
+                                                    chatViewModel.connectWebSocket(senderId, userId)
                                                 }
                                             }
                                         )
                                     }
                                     else -> {
                                         val (receiverId, receiverName) = selectedChat!!
-                                        currentUser?.let { user ->
+                                        currentUserId?.let { senderId ->
                                             ChatContent(
-                                                senderId = user,
+                                                senderId = senderId,
                                                 receiverId = receiverId,
                                                 receiverName = receiverName,
                                                 messages = messages,
+                                                isConnected = isConnected,
                                                 onMessageSent = { message ->
                                                     chatViewModel.sendMessage(
-                                                        senderId = user,
+                                                        senderId = senderId,
                                                         receiverId = receiverId,
                                                         content = message.content
                                                     )
                                                 },
                                                 onImageSelected = { uri ->
                                                     chatViewModel.sendImage(
-                                                        senderId = user,
+                                                        senderId = senderId,
                                                         receiverId = receiverId,
                                                         imageUri = uri
                                                     )
@@ -341,9 +346,10 @@ fun HomePage(
 
                                 LaunchedEffect(selectedChat) {
                                     val chat = selectedChat
-                                    val user = currentUser
-                                    if (chat != null && user != null) {
-                                        chatViewModel.connectWebSocket(user, chat.first)
+                                    currentUserId?.let { senderId ->
+                                        if (chat != null) {
+                                            chatViewModel.connectWebSocket(senderId, chat.first)
+                                        }
                                     }
                                 }
                             }
@@ -1159,9 +1165,9 @@ fun CategoryItem(
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(24.dp)
             )
-            
+
             Spacer(modifier = Modifier.width(16.dp))
-            
+
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
@@ -1212,10 +1218,11 @@ fun CategoryDetailScreen(
 @Composable
 fun ChatContent(
     modifier: Modifier = Modifier,
-    senderId: String,
-    receiverId: String,
+    senderId: Long,
+    receiverId: Long,
     receiverName: String,
     messages: List<Message>,
+    isConnected: Boolean,
     onMessageSent: (Message) -> Unit,
     onImageSelected: (Uri) -> Unit,
     onAgreementSubmit: (Map<String, Any>) -> Unit
@@ -1225,6 +1232,16 @@ fun ChatContent(
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
+
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        uri?.let {
+            selectedImageUri = it
+            onImageSelected(it)
+        }
+    }
+
 
     Column(
         modifier = modifier
@@ -1276,21 +1293,21 @@ fun ChatContent(
             messageInput = messageInput,
             onMessageInputChange = { messageInput = it },
             onSendClick = {
-                if (messageInput.isNotBlank()) {
-                    onMessageSent(
-                        Message(
-                            id = UUID.randomUUID().toString(),
-                            senderId = senderId,
-                            receiverId = receiverId,
-                            content = messageInput,
-                            messageType = MessageType.TEXT,
-                            timestamp = LocalDateTime.now().toString()
-                        )
+                if (messageInput.isNotBlank() && isConnected) { // Check connection
+                    val message = Message(
+                        id = null,
+                        senderId = senderId,
+                        receiverId = receiverId,
+                        content = messageInput,
+                        messageType = MessageType.TEXT,
+                        timestamp = LocalDateTime.now().toString()
                     )
+                    onMessageSent(message)
                     messageInput = ""
                 }
             },
-            onImageClick = { /* Launch image picker */ },
+            isConnected = isConnected,
+            onImageClick = { imagePickerLauncher.launch("image/*") },
             onAgreementClick = { showAgreementForm = true },
             selectedImageUri = selectedImageUri,
             onClearImage = { selectedImageUri = null }
@@ -1423,7 +1440,7 @@ fun MessageBubble(
                 }
 
                 Text(
-                    text = message.timestamp.formatToTime(),
+                    text = DateTimeUtils.formatToTime(message.timestamp),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                     modifier = Modifier.padding(top = 4.dp)
