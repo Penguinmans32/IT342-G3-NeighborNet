@@ -8,6 +8,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.server.ServerHttpRequest;
+import org.springframework.http.server.ServerHttpResponse;
+import org.springframework.http.server.ServletServerHttpRequest;
 import org.springframework.orm.jpa.support.OpenEntityManagerInViewFilter;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -22,8 +25,11 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.socket.WebSocketHandler;
+import org.springframework.web.socket.server.HandshakeInterceptor;
 
 import java.util.Arrays;
+import java.util.Map;
 
 /**
  * Security Configuration for the NeighborNet Backend application.
@@ -174,8 +180,11 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/ws/**",
                                 "/topic/**",
+                                "/ws/info",
                                 "/queue/**",
                                 "/messages/**",
+                                "/ws/sockjs/**",
+                                "/ws/websocket/**",
                                 "/conversations/**",
                                 "/chat/**",
                                 "/user/**",
@@ -286,5 +295,28 @@ public class SecurityConfig {
         filterRegistrationBean.setFilter(new OpenEntityManagerInViewFilter());
         filterRegistrationBean.setOrder(5);
         return filterRegistrationBean;
+    }
+
+    @Bean
+    public HandshakeInterceptor webSocketHandshakeInterceptor() {
+        return new HandshakeInterceptor() {
+            @Override
+            public boolean beforeHandshake(ServerHttpRequest request, ServerHttpResponse response,
+                                           WebSocketHandler wsHandler, Map<String, Object> attributes) {
+                if (request instanceof ServletServerHttpRequest) {
+                    ServletServerHttpRequest servletRequest = (ServletServerHttpRequest) request;
+                    String token = servletRequest.getServletRequest().getHeader("Authorization");
+                    if (token != null && token.startsWith("Bearer ")) {
+                        attributes.put("token", token.substring(7));
+                    }
+                }
+                return true;
+            }
+
+            @Override
+            public void afterHandshake(ServerHttpRequest request, ServerHttpResponse response,
+                                       WebSocketHandler wsHandler, Exception exception) {
+            }
+        };
     }
 }

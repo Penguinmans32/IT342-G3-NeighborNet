@@ -58,11 +58,31 @@ class SessionManager(context: Context) {
 
     fun clearAuthData() {
         Log.d("SessionManager", "Clearing auth data for user: ${getUserId()}")
-        with(sharedPreferences.edit()) {
-            clear()
-            apply()
+        try {
+            with(sharedPreferences.edit()) {
+                remove(KEY_USER_ID)
+                remove(KEY_ACCESS_TOKEN)
+                remove(KEY_REFRESH_TOKEN)
+                remove(KEY_USERNAME)
+                remove(KEY_IS_LOGGED_IN)
+                apply()
+            }
+            Log.d("SessionManager", "Auth data cleared successfully")
+        } catch (e: Exception) {
+            Log.e("SessionManager", "Error clearing auth data", e)
+            // Fallback method if the above fails
+            try {
+                val editor = sharedPreferences.edit()
+                editor.putLong(KEY_USER_ID, -1L)
+                editor.putString(KEY_ACCESS_TOKEN, null)
+                editor.putString(KEY_REFRESH_TOKEN, null)
+                editor.putString(KEY_USERNAME, null)
+                editor.putBoolean(KEY_IS_LOGGED_IN, false)
+                editor.apply()
+            } catch (e: Exception) {
+                Log.e("SessionManager", "Error in fallback clear method", e)
+            }
         }
-        Log.d("SessionManager", "Auth data cleared successfully")
     }
 
     fun getUserId(): Long {

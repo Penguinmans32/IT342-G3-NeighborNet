@@ -7,6 +7,7 @@ import com.example.neighbornet.api.ChatApiService
 import com.example.neighbornet.auth.TokenManager
 import com.example.neighbornet.network.AgreementRequest
 import com.example.neighbornet.network.AgreementResponse
+import com.example.neighbornet.network.ConversationDTO
 import com.example.neighbornet.network.Message
 import com.example.neighbornet.network.ReturnRequest
 import com.example.neighbornet.network.ReturnRequestStatus
@@ -28,7 +29,7 @@ class ChatRepository @Inject constructor(
 ) {
     private val baseUrl = "http://10.0.191.212:8080"
 
-    suspend fun getMessages(senderId: String, receiverId: String): List<Message> {
+    suspend fun getMessages(senderId: Long, receiverId: Long): List<Message> {
         return withContext(Dispatchers.IO) {
             try {
                 api.getMessages(senderId, receiverId)
@@ -56,10 +57,54 @@ class ChatRepository @Inject constructor(
                 val file = createTempFileFromUri(imageUri)
                 val requestBody = file.asRequestBody("image/*".toMediaTypeOrNull())
                 val part = MultipartBody.Part.createFormData("image", file.name, requestBody)
-                api.uploadImage(part)
+
+                // Get the image URL from the server
+                val imageUrl = api.uploadImage(part)
+
+                // Delete the temp file
+                file.delete()
+
+                // Return the complete URL
+                if (!imageUrl.startsWith("http")) {
+                    "http://10.0.191.212:8080$imageUrl"  // Add your base URL
+                } else {
+                    imageUrl
+                }
             } catch (e: Exception) {
                 Log.e("ChatRepository", "Error uploading image", e)
                 throw e
+            }
+        }
+    }
+
+
+    suspend fun sendMessage(message: Message): Message {
+        return api.sendMessage(message)
+    }
+
+    suspend fun createConversation(userId1: Long, userId2: Long): ConversationDTO {
+        return withContext(Dispatchers.IO) {
+            try {
+                api.createConversation(
+                    mapOf(
+                        "userId1" to userId1,
+                        "userId2" to userId2
+                    )
+                )
+            } catch (e: Exception) {
+                Log.e("ChatRepository", "Error creating conversation", e)
+                throw e
+            }
+        }
+    }
+
+    suspend fun getUserConversations(userId: Long): List<ConversationDTO> {
+        return withContext(Dispatchers.IO) {
+            try {
+                api.getUserConversations(userId)
+            } catch (e: Exception) {
+                Log.e("ChatRepository", "Error fetching conversations", e)
+                emptyList()
             }
         }
     }
@@ -93,13 +138,21 @@ class ChatRepository @Inject constructor(
     }
 
     private fun createTempFileFromUri(uri: Uri): File {
-        val stream = context.contentResolver.openInputStream(uri)
-        val file = File.createTempFile("upload", ".jpg", context.cacheDir)
-        stream.use { input ->
-            file.outputStream().use { output ->
-                input?.copyTo(output)
+        return try {
+            val stream = context.contentResolver.openInputStream(uri)
+                ?: throw IllegalStateException("Couldn't open input stream")
+
+            val file = File.createTempFile("upload", ".jpg", context.cacheDir)
+
+            stream.use { input ->
+                file.outputStream().use { output ->
+                    input.copyTo(output)
+                }
             }
+            file
+        } catch (e: Exception) {
+            Log.e("ChatRepository", "Error creating temp file", e)
+            throw e
         }
-        return file
     }
 }

@@ -443,35 +443,45 @@ const Chat = ({ senderId, receiverId, receiverName = '?', onMessageSent, stompCl
             return;
           }
 
-          if (newMessage.messageType === "RETURN_REQUEST") {
-            setMessages(prev => {
-              const messageExists = prev.some(msg => 
-                msg.messageType === "RETURN_REQUEST" && 
-                JSON.parse(msg.formData).agreementId === JSON.parse(newMessage.formData).agreementId
-              );
-              
-              if (messageExists) {
-                return prev;
-              }
-              
-              return [...prev, newMessage];
-            });
-            scrollToBottom();
-            return;
-          }
-
-          // Handle Regular Messages
           if (newMessage.senderId === receiverId || newMessage.receiverId === receiverId) {
             const processedMessage = {
               ...newMessage,
               timestamp: newMessage.timestamp || new Date().toISOString(),
             };
-
+          
             setMessages((prev) => {
-              const filteredMessages = prev.filter(
-                (msg) => !msg.id?.startsWith("temp-") || msg.content !== processedMessage.content,
-              );
-
+              // Check if message already exists (either by ID or content for temp messages)
+              const messageExists = prev.some(msg => {
+                // If message has an ID and it matches
+                if (msg.id && processedMessage.id && msg.id.toString() === processedMessage.id.toString()) {
+                  return true;
+                }
+                
+                // For temp messages, check content and timestamp
+                if (msg.id?.toString().startsWith('temp-') && 
+                    msg.content === processedMessage.content &&
+                    Math.abs(new Date(msg.timestamp) - new Date(processedMessage.timestamp)) < 1000) {
+                  return true;
+                }
+                
+                return false;
+              });
+          
+              // If message already exists, don't add it again
+              if (messageExists) {
+                return prev;
+              }
+          
+              const filteredMessages = prev.filter((msg) => {
+                if (!msg.id) return true;
+                
+                const msgId = msg.id.toString();
+                
+                const isTempMessage = typeof msgId === 'string' && msgId.startsWith('temp-');
+          
+                return !(isTempMessage && msg.content === processedMessage.content);
+              });
+          
               const getMessageTypeWeight = (type) => {
                 switch (type) {
                   case "FORM":
@@ -484,20 +494,20 @@ const Chat = ({ senderId, receiverId, receiverName = '?', onMessageSent, stompCl
                     return 0;
                 }
               };
-
+          
               const updatedMessages = [...filteredMessages, processedMessage].sort((a, b) => {
                 const timestampA = new Date(a.timestamp).getTime();
                 const timestampB = new Date(b.timestamp).getTime();
-
+          
                 if (timestampA === timestampB) {
                   return getMessageTypeWeight(a.messageType) - getMessageTypeWeight(b.messageType);
                 }
                 return timestampA - timestampB;
               });
-
+          
               return updatedMessages;
-            });
-
+            });          
+          
             scrollToBottom();
           }
         });
@@ -542,17 +552,30 @@ const Chat = ({ senderId, receiverId, receiverName = '?', onMessageSent, stompCl
         return;
       }
   
-      const sortedData = data.sort((a, b) => {
-        const timestampA = new Date(a.timestamp).getTime();
-        const timestampB = new Date(b.timestamp).getTime();
+      setMessages((prev) => {
+        const allMessages = [...prev, ...data];
+        const uniqueMessages = allMessages.filter((message, index, self) => {
+          return index === self.findIndex((m) => {
+            if (m.id && message.id) {
+              return m.id.toString() === message.id.toString();
+            }
+            return m.content === message.content && 
+                   m.timestamp === message.timestamp &&
+                   m.senderId === message.senderId;
+          });
+        });
   
-        if (timestampA === timestampB) {
-          return getMessageTypeWeight(a.messageType) - getMessageTypeWeight(b.messageType);
-        }
-        return timestampA - timestampB;
+        return uniqueMessages.sort((a, b) => {
+          const timestampA = new Date(a.timestamp).getTime();
+          const timestampB = new Date(b.timestamp).getTime();
+  
+          if (timestampA === timestampB) {
+            return getMessageTypeWeight(a.messageType) - getMessageTypeWeight(b.messageType);
+          }
+          return timestampA - timestampB;
+        });
       });
   
-      setMessages(sortedData);
       scrollToBottom();
     } catch (error) {
       console.error("Error fetching messages:", error);
@@ -562,8 +585,8 @@ const Chat = ({ senderId, receiverId, receiverName = '?', onMessageSent, stompCl
   const sendMessage = () => {
     if (messageInput.trim() && stompClient && stompClient.connected) {
       const now = new Date()
-      const timestamp = now.toISOString().split("Z")[0]
-
+      const timestamp = now.toISOString().slice(0, 23) 
+  
       const chatMessage = {
         senderId: senderId,
         receiverId: receiverId,
@@ -571,14 +594,18 @@ const Chat = ({ senderId, receiverId, receiverName = '?', onMessageSent, stompCl
         messageType: "TEXT",
         timestamp: timestamp,
       }
-
+  
       try {
+        const tempMessage = { 
+          ...chatMessage, 
+          id: `temp-${Date.now().toString()}` 
+        }
+        
         stompClient.publish({
           destination: "/app/chat",
           body: JSON.stringify(chatMessage),
         })
-
-        const tempMessage = { ...chatMessage, id: `temp-${Date.now()}` }
+  
         setMessages((prev) => [...prev, tempMessage])
         setMessageInput("")
         scrollToBottom()
@@ -587,7 +614,7 @@ const Chat = ({ senderId, receiverId, receiverName = '?', onMessageSent, stompCl
         alert("Failed to send message. Please try again.")
       }
     }
-  }
+}
 
   const TypingIndicator = () => (
     <div className="flex items-center space-x-1 p-2">

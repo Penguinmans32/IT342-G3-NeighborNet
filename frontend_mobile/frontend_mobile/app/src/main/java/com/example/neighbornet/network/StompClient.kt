@@ -1,5 +1,9 @@
 package com.example.neighbornet.network
 
+import com.google.gson.JsonObject
+import com.google.gson.JsonParser
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -17,18 +21,28 @@ class StompClient(
     private var connectCallback: (() -> Unit)? = null
     private var errorCallback: ((Throwable) -> Unit)? = null
 
-    fun connect(
+    suspend fun connect(
         onConnect: () -> Unit,
         onError: (Throwable) -> Unit
     ) {
         connectCallback = onConnect
         errorCallback = onError
 
-        val request = Request.Builder()
-            .url(url)
-            .build()
+        try {
+            withContext(Dispatchers.IO) {
+                val wsUrl = url.replace("http://", "ws://").replace("https://", "wss://")
 
-        webSocket = okHttpClient.newWebSocket(request, createWebSocketListener())
+                val request = Request.Builder()
+                    .url(wsUrl)
+                    .header("Upgrade", "websocket")
+                    .header("Connection", "Upgrade")
+                    .build()
+
+                webSocket = okHttpClient.newWebSocket(request, createWebSocketListener())
+            }
+        } catch (e: Exception) {
+            errorCallback?.invoke(e)
+        }
     }
 
     private fun createWebSocketListener() = object : WebSocketListener() {
@@ -44,19 +58,22 @@ class StompClient(
         }
 
         override fun onMessage(webSocket: WebSocket, text: String) {
-            val frame = StompFrame.parse(text)
-            when (frame.command) {
-                "CONNECTED" -> {
-                    isConnected = true
-                    connectCallback?.invoke()
-                }
-                "MESSAGE" -> {
-                    val subscription = frame.headers["subscription"]
-                    subscription?.let { sub ->
-                        subscriptions[sub]?.onMessage?.invoke(frame.body)
+            try {
+                val frame = StompFrame.parse(text)
+                when (frame.command) {
+                    "CONNECTED" -> {
+                        isConnected = true
+                        connectCallback?.invoke()
+                    }
+                    "MESSAGE" -> {
+                        val subscription = frame.headers["subscription"]
+                        subscription?.let { sub ->
+                            subscriptions[sub]?.onMessage?.invoke(frame.body)
+                        }
                     }
                 }
-                // Handle other STOMP commands as needed
+            } catch (e: Exception) {
+                errorCallback?.invoke(e)
             }
         }
 
@@ -85,12 +102,16 @@ class StompClient(
         }
     }
 
+
     fun send(destination: String, message: String) {
         if (!isConnected) return
 
         val sendFrame = StompFrame(
             command = "SEND",
-            headers = mapOf("destination" to destination),
+            headers = mapOf(
+                "destination" to destination,
+                "content-type" to "application/json"
+            ),
             body = message
         )
         webSocket?.send(sendFrame.toString())

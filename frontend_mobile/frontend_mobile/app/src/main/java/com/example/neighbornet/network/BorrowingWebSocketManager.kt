@@ -31,7 +31,7 @@ class BorrowingWebSocketManager @Inject constructor(
     private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
     val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
 
-    fun connect(userId: String) {
+    suspend fun connect(userId: String) {
         stompClient.connect(
             onConnect = {
                 _connectionState.value = ConnectionState.Connected

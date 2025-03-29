@@ -47,6 +47,7 @@ fun ChatInputArea(
     onAgreementClick: () -> Unit,
     selectedImageUri: Uri?,
     onClearImage: () -> Unit,
+    isConnected: Boolean,
     modifier: Modifier = Modifier
 ) {
     val imagePickerLauncher = rememberLauncherForActivityResult(
@@ -58,7 +59,6 @@ fun ChatInputArea(
     }
 
     Column(modifier = modifier.fillMaxWidth()) {
-        // Image preview
         AnimatedVisibility(
             visible = selectedImageUri != null,
             enter = expandVertically() + fadeIn(),
@@ -101,16 +101,12 @@ fun ChatInputArea(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // Image button
-            IconButton(
-                onClick = { imagePickerLauncher.launch("image/*") }
-            ) {
+            IconButton(onClick = onImageClick) {
                 Icon(
                     imageVector = Icons.Default.Image,
                     contentDescription = "Send image"
                 )
             }
-
             // Agreement button
             IconButton(onClick = onAgreementClick) {
                 Icon(
@@ -132,15 +128,14 @@ fun ChatInputArea(
                 )
             )
 
-            // Send button
             IconButton(
                 onClick = onSendClick,
-                enabled = messageInput.isNotBlank() || selectedImageUri != null
+                enabled = messageInput.isNotBlank() && isConnected
             ) {
                 Icon(
                     imageVector = Icons.Default.Send,
-                    contentDescription = "Send",
-                    tint = if (messageInput.isNotBlank() || selectedImageUri != null)
+                    contentDescription = "Send message",
+                    tint = if (messageInput.isNotBlank() && isConnected)
                         MaterialTheme.colorScheme.primary
                     else
                         MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)

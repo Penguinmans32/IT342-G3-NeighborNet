@@ -1,6 +1,7 @@
 package com.example.neighbornet.utils
 
 import android.annotation.SuppressLint
+import android.util.Log
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalAnimationApi
@@ -66,7 +67,6 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.outlined.Collections
 import androidx.compose.material.icons.outlined.Inventory2
-import androidx.compose.material.icons.outlined.SearchOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -115,6 +115,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.neighbornet.AuthenticatedThumbnailImage
 import com.example.neighbornet.auth.BorrowingViewModel
+import com.example.neighbornet.auth.ChatViewModel
 import com.example.neighbornet.network.BorrowingCategory
 import com.example.neighbornet.network.BorrowingItem
 
@@ -216,13 +217,8 @@ fun BorrowingScreen(
                 onDismiss = { showMessageDialog = null },
                 onSendMessage = { message ->
                     viewModel.sendMessage(item.id, message)
-                    item.owner?.let { owner ->
-                        onNavigateToChat(
-                            owner.id.toLong(),
-                            owner.username
-                        )
-                    }
-                }
+                },
+                onNavigateToChat = onNavigateToChat
             )
         }
     }
@@ -232,9 +228,35 @@ fun BorrowingScreen(
 fun MessageDialog(
     item: BorrowingItem,
     onDismiss: () -> Unit,
-    onSendMessage: (String) -> Unit
+    onSendMessage: (String) -> Unit,
+    onNavigateToChat: (userId: Long, userName: String) -> Unit
 ) {
+
+
+    val chatViewModel: ChatViewModel = hiltViewModel()
     var messageText by remember { mutableStateOf("") }
+    val currentUser by chatViewModel.currentUser.collectAsState()
+    val currentUserId by chatViewModel.currentUserId.collectAsState()
+    val isConnected by chatViewModel.isConnected.collectAsState()
+
+
+
+    LaunchedEffect(currentUserId, item.owner?.id) {
+        Log.d("MessageDialog", "CurrentUserId: $currentUserId")
+        Log.d("MessageDialog", "Owner ID: ${item.owner?.id}")
+
+        currentUserId?.let { sender ->
+            item.owner?.id?.let { receiver ->
+                Log.d("MessageDialog", "Attempting to connect WebSocket")
+                chatViewModel.connectWebSocket(sender, receiver)
+            }
+        }
+    }
+
+    LaunchedEffect(isConnected) {
+        Log.d("MessageDialog", "WebSocket connected: $isConnected")
+    }
+
     val predefinedMessages = remember {
         listOf(
             "Hi! I'm interested in borrowing your ${item.name}.",
@@ -421,18 +443,26 @@ fun MessageDialog(
                     Button(
                         onClick = {
                             if (messageText.isNotBlank()) {
-                                onSendMessage(messageText)
-                                onDismiss()
+                                currentUserId?.let { sender ->
+                                    item.owner?.id?.let { receiver ->
+                                        chatViewModel.sendMessageAndCreateConversation(
+                                            senderId = sender,
+                                            receiverId = receiver,
+                                            message = messageText,
+                                            ownerUsername = item.owner.username
+                                        ) { receiverId, username ->
+                                            onDismiss()
+                                            onNavigateToChat(receiverId, username)
+                                        }
+                                    }
+                                }
                             }
                         },
-                        enabled = messageText.isNotBlank(),
+                        enabled = messageText.isNotBlank() && currentUserId != null && isConnected,
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primary
-                        ),
-                        elevation = ButtonDefaults.buttonElevation(
-                            defaultElevation = 4.dp
                         )
                     ) {
                         Row(
@@ -1389,4 +1419,3 @@ private fun StatItem(
         )
     }
 }
-

@@ -71,7 +71,7 @@ class BorrowingViewModel @Inject constructor(
         fetchBorrowedItems()
     }
 
-    fun connectWebSocket(userId: String) {
+    suspend fun connectWebSocket(userId: String) {
         webSocketManager.connect(userId)
     }
 

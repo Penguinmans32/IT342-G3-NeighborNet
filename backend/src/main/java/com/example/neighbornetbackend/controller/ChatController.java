@@ -107,7 +107,7 @@ public class ChatController {
     public ResponseEntity<ChatMessage> createMessage(@RequestBody ChatMessage message) {
         try {
             if (message.getTimestamp() == null) {
-                message.setTimestamp(LocalDateTime.now(ZoneOffset.UTC));
+                message.setTimestamp(LocalDateTime.now());
             }
 
             ChatMessage savedMessage = chatService.save(message);

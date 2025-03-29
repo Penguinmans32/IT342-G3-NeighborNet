@@ -19,6 +19,7 @@ import com.google.gson.GsonBuilder
 import com.google.gson.JsonDeserializationContext
 import com.google.gson.JsonDeserializer
 import com.google.gson.JsonElement
+import com.google.gson.JsonParseException
 import com.google.gson.reflect.TypeToken
 import dagger.Module
 import dagger.Provides
@@ -107,36 +108,61 @@ object NetworkModule {
     @Singleton
     fun provideGson(): Gson {
         return GsonBuilder()
-            .registerTypeAdapter(LocalDate::class.java, object : JsonDeserializer<LocalDate> {
-                override fun deserialize(
-                    json: JsonElement,
-                    typeOfT: Type,
-                    context: JsonDeserializationContext
-                ): LocalDate {
-                    val array = json.asJsonArray
-                    return LocalDate.of(
-                        array[0].asInt,
-                        array[1].asInt,
-                        array[2].asInt
-                    )
-                }
-            })
             .registerTypeAdapter(LocalDateTime::class.java, object : JsonDeserializer<LocalDateTime> {
                 override fun deserialize(
                     json: JsonElement,
                     typeOfT: Type,
                     context: JsonDeserializationContext
                 ): LocalDateTime {
-                    val array = json.asJsonArray
-                    return LocalDateTime.of(
-                        array[0].asInt,
-                        array[1].asInt,
-                        array[2].asInt,
-                        array[3].asInt,
-                        array[4].asInt,
-                        array[5].asInt,
-                        array[6].asLong.toInt()
-                    )
+                    return when {
+                        json.isJsonArray -> {
+                            val array = json.asJsonArray
+                            LocalDateTime.of(
+                                array[0].asInt,
+                                array[1].asInt,
+                                array[2].asInt,
+                                array[3].asInt,
+                                array[4].asInt,
+                                array[5].asInt,
+                                if (array.size() > 6) array[6].asLong.toInt() else 0
+                            )
+                        }
+                        json.isJsonPrimitive -> {
+                            try {
+                                LocalDateTime.parse(json.asString)
+                            } catch (e: Exception) {
+                                // If standard parsing fails, try with custom format
+                                java.time.format.DateTimeFormatter
+                                    .ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS")
+                                    .let { formatter ->
+                                        LocalDateTime.parse(json.asString, formatter)
+                                    }
+                            }
+                        }
+                        else -> throw JsonParseException("Unexpected date format")
+                    }
+                }
+            })
+            .registerTypeAdapter(LocalDate::class.java, object : JsonDeserializer<LocalDate> {
+                override fun deserialize(
+                    json: JsonElement,
+                    typeOfT: Type,
+                    context: JsonDeserializationContext
+                ): LocalDate {
+                    return when {
+                        json.isJsonArray -> {
+                            val array = json.asJsonArray
+                            LocalDate.of(
+                                array[0].asInt,
+                                array[1].asInt,
+                                array[2].asInt
+                            )
+                        }
+                        json.isJsonPrimitive -> {
+                            LocalDate.parse(json.asString)
+                        }
+                        else -> throw JsonParseException("Unexpected date format")
+                    }
                 }
             })
             .registerTypeAdapter(ArrayDate::class.java, ArrayDateAdapter())
