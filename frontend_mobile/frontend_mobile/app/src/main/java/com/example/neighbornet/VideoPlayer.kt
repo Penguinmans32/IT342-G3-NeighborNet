@@ -26,7 +26,7 @@ fun VideoPlayer(
 
     // Add logging
     val filename = videoUrl.substringAfterLast("/")
-    val fullVideoUrl = "http://10.0.191.212:8080/api/classes/$classId/lessons/video/$filename"
+    val fullVideoUrl = "http://192.168.1.4:8080/api/classes/$classId/lessons/video/$filename"
 
     Log.d("VideoPlayer", "Original videoUrl: $videoUrl")
     Log.d("VideoPlayer", "Constructed fullVideoUrl: $fullVideoUrl")

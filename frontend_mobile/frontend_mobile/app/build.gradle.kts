@@ -104,4 +104,7 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended:1.5.0")
 
     implementation("com.valentinilk.shimmer:compose-shimmer:1.0.4")
+
+    // OpenStreetMap
+    implementation("org.osmdroid:osmdroid-android:6.1.16")
 }
