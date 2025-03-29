@@ -35,7 +35,9 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.*
@@ -405,6 +407,43 @@ private fun BackgroundPatterns() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+fun SearchField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = modifier,
+        placeholder = { Text("Search classes...") },
+        leadingIcon = {
+            Icon(
+                imageVector = Icons.Default.Search,
+                contentDescription = "Search"
+            )
+        },
+        trailingIcon = {
+            if (value.isNotEmpty()) {
+                IconButton(onClick = { onValueChange("") }) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Clear search"
+                    )
+                }
+            }
+        },
+        singleLine = true,
+        shape = RoundedCornerShape(24.dp),
+        colors = TextFieldDefaults.outlinedTextFieldColors(
+            focusedBorderColor = MaterialTheme.colorScheme.primary,
+            unfocusedBorderColor = MaterialTheme.colorScheme.outline
+        )
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
 fun HomeScreenContent(
     viewModel: ClassListViewModel,
     onClassClick: (Long) -> Unit
@@ -413,51 +452,19 @@ fun HomeScreenContent(
     val selectedCategory by viewModel.selectedCategory.collectAsStateWithLifecycle()
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
     val error by viewModel.error.collectAsStateWithLifecycle()
+    val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
-        ) {
-            // Top App Bar
-            SmallTopAppBar(
-                title = { Text("Classes") },
-                colors = TopAppBarDefaults.smallTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary
-                )
-            )
-
-            // Categories
-            CategoryRow(
-                selectedCategory = selectedCategory,
-                onCategorySelected = { viewModel.setCategory(it) }
-            )
-
-            // Classes List
-            if (isLoading) {
-                LoadingView()
-            } else if (error != null) {
-                ErrorView(error = error!!, onRetry = { viewModel.fetchClasses() })
-            } else {
-                ClassesList(
-                    classes = classes.filter {
-                        selectedCategory == "all" || it.category.lowercase() == selectedCategory
-                    },
-                    onClassClick = onClassClick
-                )
-            }
-        }
+    val filteredClasses = classes.filter {
+        (selectedCategory == "all" || it.category.lowercase() == selectedCategory) &&
+                (searchQuery.isEmpty() || it.title.contains(searchQuery, ignoreCase = true))
     }
-}
 
-@Composable
-fun CategoryRow(
-    selectedCategory: String,
-    onCategorySelected: (String) -> Unit
-) {
-    val categories = listOf(
+    val popularClasses = classes.shuffled().take(minOf(classes.size, 5))
+
+    // Sort classes by number of sections in descending order
+    val classesByMostSections = classes.sortedByDescending { it.sectionsCount }.take(minOf(classes.size, 5))
+
+    val allCategories = listOf(
         CategoryData("all", R.drawable.ic_category),
         CategoryData("programming", R.drawable.ic_code),
         CategoryData("design", R.drawable.ic_design),
@@ -468,6 +475,146 @@ fun CategoryRow(
         CategoryData("writing", R.drawable.ic_edit)
     )
 
+    Box(modifier = Modifier.fillMaxSize()) {
+        if (isLoading) {
+            LoadingView()
+        } else if (error != null) {
+            ErrorView(error = error!!, onRetry = { viewModel.fetchClasses() })
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background),
+                contentPadding = PaddingValues(bottom = 16.dp)
+            ) {
+                // Top App Bar
+                item {
+                    SmallTopAppBar(
+                        title = { Text("Classes") },
+                        colors = TopAppBarDefaults.smallTopAppBarColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            titleContentColor = MaterialTheme.colorScheme.onPrimary
+                        )
+                    )
+                }
+
+                // Search field
+                item {
+                    SearchField(
+                        value = searchQuery,
+                        onValueChange = { viewModel.setSearchQuery(it) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    )
+                }
+
+                // Categories
+                item {
+                    CategoryRow(
+                        selectedCategory = selectedCategory,
+                        onCategorySelected = { viewModel.setCategory(it) }
+                    )
+                }
+
+                // Recent Classes Section
+                item {
+                    SectionTitle("Recent Classes")
+                }
+                item {
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        items(
+                            items = filteredClasses,
+                            key = { it.id }
+                        ) { classItem ->
+                            ClassCard(
+                                classItem = classItem,
+                                onClick = { onClassClick(classItem.id) },
+                                isHorizontal = true
+                            )
+                        }
+                    }
+                }
+
+                // Popular Classes Section
+                item {
+                    SectionTitle("Popular Classes")
+                }
+                item {
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        items(
+                            items = popularClasses,
+                            key = { it.id }
+                        ) { classItem ->
+                            ClassCard(
+                                classItem = classItem,
+                                onClick = { onClassClick(classItem.id) },
+                                isHorizontal = true
+                            )
+                        }
+                    }
+                }
+
+                // Most Sections Section (replaced Popular Categories)
+                item {
+                    SectionTitle("Most Sections")
+                }
+                item {
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        items(
+                            items = classesByMostSections,
+                            key = { it.id }
+                        ) { classItem ->
+                            ClassCard(
+                                classItem = classItem,
+                                onClick = { onClassClick(classItem.id) },
+                                isHorizontal = true,
+                                highlightSections = true
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun SectionTitle(title: String) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    )
+}
+
+@Composable
+fun CategoryRow(
+    selectedCategory: String,
+    onCategorySelected: (String) -> Unit,
+    categories: List<CategoryData> = listOf(
+        CategoryData("all", R.drawable.ic_category),
+        CategoryData("programming", R.drawable.ic_code),
+        CategoryData("design", R.drawable.ic_design),
+        CategoryData("business", R.drawable.ic_business),
+        CategoryData("marketing", R.drawable.ic_marketing),
+        CategoryData("photography", R.drawable.ic_camera),
+        CategoryData("music", R.drawable.ic_music),
+        CategoryData("writing", R.drawable.ic_edit)
+    )
+) {
     LazyRow(
         modifier = Modifier
             .fillMaxWidth()
@@ -487,37 +634,29 @@ fun CategoryRow(
 }
 
 @Composable
-fun ClassesList(
-    classes: List<Class>,
-    onClassClick: (Long) -> Unit
-) {
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        items(
-            items = classes,
-            key = { it.id }
-        ) { classItem ->
-            ClassCard(
-                classItem = classItem,
-                onClick = { onClassClick(classItem.id) }
-            )
-        }
-    }
-}
-
-@Composable
 fun ClassCard(
     classItem: Class,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    isHorizontal: Boolean = false,
+    highlightSections: Boolean = false // New parameter to highlight sections
 ) {
     Card(
         modifier = Modifier
-            .fillMaxWidth()
+            .then(
+                if (isHorizontal) {
+                    Modifier.width(280.dp)
+                } else {
+                    Modifier.fillMaxWidth()
+                }
+            )
             .clickable(onClick = onClick)
-            .padding(horizontal = 8.dp, vertical = 4.dp),
+            .padding(
+                if (isHorizontal) {
+                    PaddingValues(vertical = 8.dp)
+                } else {
+                    PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                }
+            ),
         elevation = CardDefaults.cardElevation(
             defaultElevation = 2.dp,
             pressedElevation = 8.dp,
@@ -535,14 +674,14 @@ fun ClassCard(
                     url = classItem.thumbnailUrl,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(180.dp),
+                        .height(if (isHorizontal) 140.dp else 180.dp),
                     contentScale = ContentScale.Crop
                 )
                 // Gradient overlay
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(180.dp)
+                        .height(if (isHorizontal) 140.dp else 180.dp)
                         .background(
                             brush = Brush.verticalGradient(
                                 colors = listOf(
@@ -558,15 +697,21 @@ fun ClassCard(
                 // Category chip
                 Surface(
                     modifier = Modifier
-                        .padding(12.dp)
+                        .padding(if (isHorizontal) 8.dp else 12.dp)
                         .align(Alignment.TopStart),
                     shape = RoundedCornerShape(20.dp),
                     color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f)
                 ) {
                     Text(
                         text = classItem.category,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                        style = MaterialTheme.typography.labelMedium,
+                        modifier = Modifier.padding(
+                            horizontal = if (isHorizontal) 8.dp else 12.dp,
+                            vertical = if (isHorizontal) 4.dp else 6.dp
+                        ),
+                        style = if (isHorizontal)
+                            MaterialTheme.typography.labelSmall
+                        else
+                            MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 }
@@ -574,25 +719,31 @@ fun ClassCard(
                 // Duration chip
                 Surface(
                     modifier = Modifier
-                        .padding(12.dp)
+                        .padding(if (isHorizontal) 8.dp else 12.dp)
                         .align(Alignment.TopEnd),
                     shape = RoundedCornerShape(20.dp),
                     color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.9f)
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        modifier = Modifier.padding(
+                            horizontal = if (isHorizontal) 8.dp else 12.dp,
+                            vertical = if (isHorizontal) 4.dp else 6.dp
+                        ),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Icon(
                             painter = painterResource(id = R.drawable.ic_time),
                             contentDescription = null,
-                            modifier = Modifier.size(14.dp),
+                            modifier = Modifier.size(if (isHorizontal) 12.dp else 14.dp),
                             tint = MaterialTheme.colorScheme.onTertiaryContainer
                         )
                         Text(
                             text = classItem.duration,
-                            style = MaterialTheme.typography.labelMedium,
+                            style = if (isHorizontal)
+                                MaterialTheme.typography.labelSmall
+                            else
+                                MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onTertiaryContainer
                         )
                     }
@@ -602,46 +753,54 @@ fun ClassCard(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp)
+                    .padding(if (isHorizontal) 12.dp else 16.dp)
             ) {
                 // Title with animation
                 Text(
                     text = classItem.title,
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        fontWeight = FontWeight.Bold
-                    ),
-                    color = MaterialTheme.colorScheme.onSurface
+                    style = if (isHorizontal)
+                        MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                    else
+                        MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = if (isHorizontal) 1 else 2,
+                    overflow = TextOverflow.Ellipsis
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(if (isHorizontal) 4.dp else 8.dp))
 
                 // Description with custom styling
                 Text(
                     text = classItem.description,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = if (isHorizontal)
+                        MaterialTheme.typography.bodySmall
+                    else
+                        MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2,
+                    maxLines = if (isHorizontal) 1 else 2,
                     overflow = TextOverflow.Ellipsis
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(if (isHorizontal) 8.dp else 16.dp))
 
-                // Divider with gradient
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(1.dp)
-                        .background(
-                            brush = Brush.horizontalGradient(
-                                colors = listOf(
-                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-                                    MaterialTheme.colorScheme.tertiary.copy(alpha = 0.5f)
+                // Divider with gradient (only for vertical cards)
+                if (!isHorizontal) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(1.dp)
+                            .background(
+                                brush = Brush.horizontalGradient(
+                                    colors = listOf(
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                                        MaterialTheme.colorScheme.tertiary.copy(alpha = 0.5f)
+                                    )
                                 )
                             )
-                        )
-                )
+                    )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
 
                 // Enhanced Creator Info
                 Row(
@@ -654,10 +813,10 @@ fun ClassCard(
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(40.dp)
+                                .size(if (isHorizontal) 24.dp else 40.dp)
                                 .clip(CircleShape)
                                 .border(
-                                    width = 2.dp,
+                                    width = if (isHorizontal) 1.dp else 2.dp,
                                     brush = Brush.sweepGradient(
                                         listOf(
                                             MaterialTheme.colorScheme.primary,
@@ -673,41 +832,64 @@ fun ClassCard(
                                 contentScale = ContentScale.Crop
                             )
                         }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
+                        Spacer(modifier = Modifier.width(if (isHorizontal) 8.dp else 12.dp))
+                        if (isHorizontal) {
                             Text(
                                 text = classItem.creatorName,
-                                style = MaterialTheme.typography.titleSmall,
+                                style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
-                            Text(
-                                text = "Instructor",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                        } else {
+                            Column {
+                                Text(
+                                    text = classItem.creatorName,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Instructor",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
                     }
 
-                    // Sections indicator
+                    // Sections indicator with highlight option
                     Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.secondaryContainer
+                        shape = RoundedCornerShape(if (isHorizontal) 8.dp else 12.dp),
+                        color = if (highlightSections)
+                            MaterialTheme.colorScheme.tertiary
+                        else
+                            MaterialTheme.colorScheme.secondaryContainer
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            modifier = Modifier.padding(
+                                horizontal = if (isHorizontal) 8.dp else 12.dp,
+                                vertical = if (isHorizontal) 4.dp else 6.dp
+                            ),
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            horizontalArrangement = Arrangement.spacedBy(if (isHorizontal) 2.dp else 4.dp)
                         ) {
                             Icon(
                                 painter = painterResource(id = R.drawable.ic_sections),
                                 contentDescription = null,
-                                modifier = Modifier.size(16.dp),
-                                tint = MaterialTheme.colorScheme.onSecondaryContainer
+                                modifier = Modifier.size(if (isHorizontal) 12.dp else 16.dp),
+                                tint = if (highlightSections)
+                                    MaterialTheme.colorScheme.onTertiary
+                                else
+                                    MaterialTheme.colorScheme.onSecondaryContainer
                             )
                             Text(
-                                text = "${classItem.sectionsCount} sections",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                                text = if (isHorizontal) "${classItem.sectionsCount}" else "${classItem.sectionsCount} sections",
+                                style = if (isHorizontal)
+                                    MaterialTheme.typography.labelSmall
+                                else
+                                    MaterialTheme.typography.labelMedium,
+                                color = if (highlightSections)
+                                    MaterialTheme.colorScheme.onTertiary
+                                else
+                                    MaterialTheme.colorScheme.onSecondaryContainer
                             )
                         }
                     }
@@ -1610,113 +1792,5 @@ fun ProfileContent(
                 Text("Logout")
             }
         }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun HomePagePreview() {
-    MaterialTheme {
-        HomePage(navController = rememberNavController())
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun ClassCardPreview() {
-    MaterialTheme {
-        ClassCard(
-            classItem = Class(
-                id = 1L,
-                title = "Introduction to Kotlin Programming",
-                description = "Learn the basics of Kotlin programming language with hands-on examples and projects.",
-                category = "Programming",
-                duration = "8 hours",
-                thumbnailUrl = "",
-                creatorName = "John Doe",
-                creatorImageUrl = "",
-                sectionsCount = 12
-            ),
-            onClick = {}
-        )
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun CategoryChipPreview() {
-    MaterialTheme {
-        Row(
-            modifier = Modifier.padding(8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            CategoryChip(
-                category = "programming",
-                iconResId = R.drawable.ic_code,
-                isSelected = true,
-                onSelected = {}
-            )
-            CategoryChip(
-                category = "design",
-                iconResId = R.drawable.ic_design,
-                isSelected = false,
-                onSelected = {}
-            )
-        }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun CategoryItemPreview() {
-    MaterialTheme {
-        CategoryItem(
-            title = "Programming",
-            icon = R.drawable.ic_code,
-            backgroundColor = Color(0xFFE3F2FD),
-            onClick = {}
-        )
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun ErrorViewPreview() {
-    MaterialTheme {
-        ErrorView(
-            error = "Something went wrong!",
-            onRetry = {}
-        )
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun ProfileContentPreview() {
-    MaterialTheme {
-        ProfileContent(
-            onLogoutSuccess = {}
-        )
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun CategoryRowPreview() {
-    MaterialTheme {
-        CategoryRow(
-            selectedCategory = "programming",
-            onCategorySelected = {}
-        )
-    }
-}
-
-@Preview(showBackground = true, showSystemUi = true)
-@Composable
-fun CategoriesContentPreview() {
-    MaterialTheme {
-        CategoriesContent(
-            onCategoryClick = {}
-        )
     }
 }

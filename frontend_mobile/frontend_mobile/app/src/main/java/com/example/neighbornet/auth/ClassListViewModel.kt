@@ -29,6 +29,9 @@ class ClassListViewModel @Inject constructor(
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery
+
     init {
         fetchClasses()
     }
@@ -36,12 +39,11 @@ class ClassListViewModel @Inject constructor(
     fun fetchClasses() {
         viewModelScope.launch {
             _isLoading.value = true
+            _error.value = null
             try {
-                val response = classRepository.getAllClasses()
-                _classes.value = response
-                _error.value = null
+                _classes.value = classRepository.getAllClasses()
             } catch (e: Exception) {
-                _error.value = "Failed to load classes: ${e.message}"
+                _error.value = e.message ?: "An unknown error occurred"
             } finally {
                 _isLoading.value = false
             }
@@ -50,5 +52,9 @@ class ClassListViewModel @Inject constructor(
 
     fun setCategory(category: String) {
         _selectedCategory.value = category
+    }
+
+    fun setSearchQuery(query: String) {
+        _searchQuery.value = query
     }
 }
