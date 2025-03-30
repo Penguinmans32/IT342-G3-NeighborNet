@@ -20,6 +20,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -73,7 +75,12 @@ fun ImageMessage(imageUrl: String?) {
 }
 
 @Composable
-fun AgreementMessage(formData: String?) {
+fun AgreementMessage(
+    formData: String?,
+    currentUserId: Long? = null,
+    onAccept: (Long) -> Unit = {},
+    onReject: (Long) -> Unit = {}
+) {
     if (formData == null) return
 
     val agreement = remember(formData) {
@@ -91,7 +98,7 @@ fun AgreementMessage(formData: String?) {
                 text = "📋 Borrowing Agreement",
                 style = MaterialTheme.typography.titleMedium
             )
-            Text("Item: ${agreement.itemId}")
+            Text("Item ID: ${agreement.itemId}")
             Text("Period: ${agreement.borrowingStart} - ${agreement.borrowingEnd}")
             Text("Terms: ${agreement.terms}")
             Text(
@@ -108,6 +115,41 @@ fun AgreementMessage(formData: String?) {
                     else -> MaterialTheme.colorScheme.onSurface
                 }
             )
+
+            // Show accept/reject buttons only if:
+            // 1. Agreement is pending
+            // 2. Current user is the lender
+            // 3. Current user ID is not null
+            if (agreement.status == "PENDING" &&
+                currentUserId != null &&
+                currentUserId.toString() == agreement.lenderId  // Compare with String
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(
+                        onClick = { onAccept(agreement.id.toLong()) },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary
+                        ),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Accept")
+                    }
+                    Button(
+                        onClick = { onReject(agreement.id.toLong()) },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error
+                        ),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Reject")
+                    }
+                }
+            }
         }
     } else {
         Text(
