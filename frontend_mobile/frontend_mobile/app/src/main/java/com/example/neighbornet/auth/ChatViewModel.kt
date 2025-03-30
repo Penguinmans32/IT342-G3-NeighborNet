@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.neighbornet.network.AgreementRequest
 import com.example.neighbornet.network.ConversationDTO
+import com.example.neighbornet.network.Item
 import com.example.neighbornet.network.Message
 import com.example.neighbornet.network.MessageType
 import com.example.neighbornet.network.StompClient
@@ -16,6 +17,7 @@ import com.example.neighbornet.network.update
 import com.example.neighbornet.repository.ChatRepository
 import com.example.neighbornet.utils.DateTimeUtils
 import com.google.gson.Gson
+import com.google.gson.JsonObject
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -26,6 +28,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -52,6 +55,33 @@ class ChatViewModel @Inject constructor(
 
     private val _conversations = MutableStateFlow<List<ConversationDTO>>(emptyList())
     val conversations: StateFlow<List<ConversationDTO>> = _conversations.asStateFlow()
+
+    private val _userItems = MutableStateFlow<List<Item>>(emptyList())
+    val userItems: StateFlow<List<Item>> = _userItems.asStateFlow()
+
+    private val _isLoadingItems = MutableStateFlow(false)
+    val isLoadingItems: StateFlow<Boolean> = _isLoadingItems.asStateFlow()
+
+    private val _itemsError = MutableStateFlow<String?>(null)
+    val itemsError: StateFlow<String?> = _itemsError.asStateFlow()
+
+
+    fun fetchUserItems(userId: Long) {
+        viewModelScope.launch {
+            try {
+                _isLoadingItems.value = true
+                _itemsError.value = null
+                val items = chatRepository.getUserItems(userId)
+                _userItems.value = items
+            } catch (e: Exception) {
+                Log.e("ChatViewModel", "Error fetching user items", e)
+                _itemsError.value = "Failed to load items: ${e.message}"
+                _userItems.value = emptyList()
+            } finally {
+                _isLoadingItems.value = false
+            }
+        }
+    }
 
     init {
         viewModelScope.launch {
@@ -137,22 +167,61 @@ class ChatViewModel @Inject constructor(
             destination = "/user/$userId/queue/messages",
             onMessage = { message ->
                 Log.d("ChatViewModel", "Received message: $message")
-                val newMessage = message.toMessage()
-                viewModelScope.launch {
-                    _messages.update { current ->
-                        (current + newMessage)
-                            .distinctBy { it.id } // Prevent duplicates
-                            .sortedBy { it.timestamp }
+                try {
+                    val newMessage = message.toMessage()
+                    viewModelScope.launch {
+                        _messages.update { current ->
+                            when (newMessage.messageType) {
+                                MessageType.AGREEMENT_UPDATE, MessageType.BORROWING_UPDATE -> {
+                                    // Update existing agreement message with new status
+                                    val updatedMessages = current.map { msg ->
+                                        if (msg.messageType == MessageType.FORM &&
+                                            msg.formData?.contains(getAgreementId(newMessage.formData)) == true) {
+                                            msg.copy(formData = newMessage.formData)
+                                        } else {
+                                            msg
+                                        }
+                                    }
+                                    updatedMessages.sortedBy { it.timestamp }
+                                }
+                                MessageType.FORM -> {
+                                    val filteredMessages = current.filterNot { msg ->
+                                        msg.messageType == MessageType.FORM &&
+                                                msg.id == null &&
+                                                msg.senderId == newMessage.senderId &&
+                                                msg.receiverId == newMessage.receiverId
+                                    }
+                                    (filteredMessages + newMessage)
+                                        .distinctBy { it.id }
+                                        .sortedBy { it.timestamp }
+                                }
+                                else -> {
+                                    (current + newMessage)
+                                        .distinctBy { it.id }
+                                        .sortedBy { it.timestamp }
+                                }
+                            }
+                        }
                     }
+                } catch (e: Exception) {
+                    Log.e("ChatViewModel", "Error processing message", e)
                 }
             }
         )
     }
 
+    private fun getAgreementId(formData: String?): String {
+        return try {
+            val jsonObject = Gson().fromJson(formData, JsonObject::class.java)
+            jsonObject["id"]?.asString ?: ""
+        } catch (e: Exception) {
+            ""
+        }
+    }
+
     fun sendAgreement(agreementData: Map<String, Any>) {
         viewModelScope.launch {
             try {
-                // Convert IDs to String for API request
                 val agreement = AgreementRequest(
                     lenderId = (agreementData["lenderId"] as Long).toString(),
                     borrowerId = (agreementData["borrowerId"] as Long).toString(),
@@ -162,22 +231,26 @@ class ChatViewModel @Inject constructor(
                     terms = agreementData["terms"] as String
                 )
 
+                Log.d("ChatViewModel", "Sending agreement with dates: ${agreement.borrowingStart}, ${agreement.borrowingEnd}")
+
                 val response = chatRepository.sendAgreement(agreement)
-                val message = Message(
+
+                val tempMessage = Message(
                     id = null,
                     senderId = agreement.borrowerId.toLong(),
                     receiverId = agreement.lenderId.toLong(),
                     content = "Sent a borrowing agreement",
                     messageType = MessageType.FORM,
-                    formData = Gson().toJson(response),
-                    timestamp = LocalDateTime.now().toString()
+                    timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS")),
+                    formData = Gson().toJson(response)
                 )
 
-                stompClient?.send("/app/chat", message.toJson())
-
                 _messages.update { current ->
-                    (current + message).sortedBy { it.timestamp }
+                    (current + tempMessage)
+                        .distinctBy { it.id }
+                        .sortedBy { it.timestamp }
                 }
+
             } catch (e: Exception) {
                 Log.e("ChatViewModel", "Error sending agreement", e)
             }

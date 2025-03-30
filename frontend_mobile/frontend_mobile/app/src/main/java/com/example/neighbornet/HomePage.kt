@@ -341,7 +341,8 @@ fun HomePage(
                                                 },
                                                 onAgreementSubmit = { agreementData ->
                                                     chatViewModel.sendAgreement(agreementData)
-                                                }
+                                                },
+                                                viewModel = chatViewModel
                                             )
                                         }
                                     }
@@ -1340,7 +1341,6 @@ fun CategoryDetailScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatContent(
     modifier: Modifier = Modifier,
@@ -1351,7 +1351,8 @@ fun ChatContent(
     isConnected: Boolean,
     onMessageSent: (Message) -> Unit,
     onImageSelected: (Uri) -> Unit,
-    onAgreementSubmit: (Map<String, Any>) -> Unit
+    onAgreementSubmit: (Map<String, Any>) -> Unit,
+    viewModel: ChatViewModel
 ) {
     var messageInput by remember { mutableStateOf("") }
     var showAgreementForm by remember { mutableStateOf(false) }
@@ -1364,7 +1365,6 @@ fun ChatContent(
     ) { uri ->
         uri?.let {
             selectedImageUri = it
-            onImageSelected(it)
         }
     }
 
@@ -1419,17 +1419,22 @@ fun ChatContent(
             messageInput = messageInput,
             onMessageInputChange = { messageInput = it },
             onSendClick = {
-                if (messageInput.isNotBlank() && isConnected) { // Check connection
-                    val message = Message(
-                        id = null,
-                        senderId = senderId,
-                        receiverId = receiverId,
-                        content = messageInput,
-                        messageType = MessageType.TEXT,
-                        timestamp = LocalDateTime.now().toString()
-                    )
-                    onMessageSent(message)
-                    messageInput = ""
+                if (isConnected) {
+                    if (selectedImageUri != null) {
+                        onImageSelected(selectedImageUri!!)
+                        selectedImageUri = null
+                    } else if (messageInput.isNotBlank()) {
+                        val message = Message(
+                            id = null,
+                            senderId = senderId,
+                            receiverId = receiverId,
+                            content = messageInput,
+                            messageType = MessageType.TEXT,
+                            timestamp = LocalDateTime.now().toString()
+                        )
+                        onMessageSent(message)
+                        messageInput = ""
+                    }
                 }
             },
             isConnected = isConnected,
@@ -1440,14 +1445,16 @@ fun ChatContent(
         )
     }
 
-    // Show agreement form dialog if needed
     if (showAgreementForm) {
         BorrowingAgreementDialog(
+            receiverId = receiverId,
+            senderId = senderId,
             onDismiss = { showAgreementForm = false },
             onSubmit = { agreementData ->
                 onAgreementSubmit(agreementData)
                 showAgreementForm = false
-            }
+            },
+            viewModel = viewModel
         )
     }
 }
@@ -1559,9 +1566,11 @@ fun MessageBubble(
                         MessageType.IMAGE -> ImageMessage(message.imageUrl)
                         MessageType.FORM -> AgreementMessage(message.formData)
                         MessageType.RETURN_REQUEST -> ReturnRequestMessage(message.formData)
-                        MessageType.BORROWING_UPDATE -> TODO()
-                        MessageType.RATING_UPDATE -> TODO()
-                        MessageType.CHAT_MESSAGE -> TODO()
+                        MessageType.BORROWING_UPDATE,
+                        MessageType.AGREEMENT_UPDATE -> AgreementMessage(message.formData)
+                        MessageType.RATING_UPDATE -> TextMessage("Rating updated")
+                        MessageType.CHAT_MESSAGE -> TextMessage(message.content)
+                        null -> TextMessage(message.content)
                     }
                 }
 

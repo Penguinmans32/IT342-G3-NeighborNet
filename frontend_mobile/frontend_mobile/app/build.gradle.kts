@@ -105,6 +105,9 @@ dependencies {
 
     implementation("com.valentinilk.shimmer:compose-shimmer:1.0.4")
 
+    implementation("androidx.compose.material3:material3:1.2.0")
+    implementation("androidx.compose.material3:material3-window-size-class:1.2.0")
+
     // OpenStreetMap
     implementation("org.osmdroid:osmdroid-android:6.1.16")
 }

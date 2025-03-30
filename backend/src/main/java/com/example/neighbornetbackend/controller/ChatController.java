@@ -70,11 +70,11 @@ public class ChatController {
     @MessageMapping("/chat")
     public void processMessage(@Payload ChatMessage chatMessage) {
         try {
+            // Skip saving if it's a borrowing agreement message since it's already saved
             if (chatMessage.getMessageType() != null &&
                     "FORM".equals(chatMessage.getMessageType()) &&
                     "Sent a borrowing agreement".equals(chatMessage.getContent())) {
-
-                // Parse the form data
+                // Just update item name if needed
                 ObjectMapper mapper = new ObjectMapper();
                 JsonNode formDataNode = mapper.readTree(chatMessage.getFormData());
                 Long itemId = formDataNode.get("itemId").asLong();
@@ -87,16 +87,24 @@ public class ChatController {
                 ObjectNode formDataObj = (ObjectNode) formDataNode;
                 formDataObj.put("itemName", item.getName());
 
-                // Update the formData in the message
+                // Update the formData in the message without saving
                 chatMessage.setFormData(mapper.writeValueAsString(formDataObj));
-            }
 
-            ChatMessage saved = chatService.save(chatMessage);
-            messagingTemplate.convertAndSendToUser(
-                    String.valueOf(chatMessage.getReceiverId()),
-                    "/queue/messages",
-                    saved
-            );
+                // Just send the WebSocket message without saving
+                messagingTemplate.convertAndSendToUser(
+                        String.valueOf(chatMessage.getReceiverId()),
+                        "/queue/messages",
+                        chatMessage
+                );
+            } else {
+                // For non-agreement messages, proceed with normal save and send
+                ChatMessage saved = chatService.save(chatMessage);
+                messagingTemplate.convertAndSendToUser(
+                        String.valueOf(chatMessage.getReceiverId()),
+                        "/queue/messages",
+                        saved
+                );
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }

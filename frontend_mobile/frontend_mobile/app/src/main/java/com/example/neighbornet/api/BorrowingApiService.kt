@@ -2,6 +2,7 @@ package com.example.neighbornet.api
 
 import com.example.neighbornet.network.BorrowRequest
 import com.example.neighbornet.network.BorrowingItem
+import com.example.neighbornet.network.Item
 import com.example.neighbornet.network.ItemRating
 import com.example.neighbornet.network.RateRequestItem
 import com.example.neighbornet.network.RatingRequest

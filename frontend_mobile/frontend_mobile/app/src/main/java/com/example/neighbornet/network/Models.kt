@@ -252,7 +252,12 @@ data class Message(
 
 @Serializable
 enum class MessageType {
-    TEXT, IMAGE, FORM, RETURN_REQUEST, BORROWING_UPDATE,
+    TEXT,
+    IMAGE,
+    FORM,
+    RETURN_REQUEST,
+    BORROWING_UPDATE,
+    AGREEMENT_UPDATE,
     RATING_UPDATE,
     CHAT_MESSAGE
 }

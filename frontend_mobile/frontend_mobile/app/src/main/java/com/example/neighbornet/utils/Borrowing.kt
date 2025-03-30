@@ -719,6 +719,8 @@ fun SearchAndFilterSection(
                             selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
                         ),
                         border = FilterChipDefaults.filterChipBorder(
+                            enabled = true,
+                            selected = currentCategory == category.id,
                             borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f),
                             selectedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
                             borderWidth = 1.dp

@@ -38,7 +38,7 @@ const LessonView = () => {
   });
   const [isLessonAccessible, setIsLessonAccessible] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [showTranscript, setShowTranscript] = useState(true);
+  const [showTranscript, setShowTranscript] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [hasWatchedEnough, setHasWatchedEnough] = useState(false);
@@ -453,21 +453,23 @@ const LessonView = () => {
       {/* Main Content */}
       <main className="pt-20 pb-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="space-y-6">
             {/* Left Column - Video and Content */}
             <div className="lg:col-span-2 space-y-6">
               {/* Video Player Container */}
               <div className="relative rounded-2xl overflow-hidden shadow-2xl bg-gray-900">
+              <div className="aspect-video">
                 <LessonPlayer
                   videoUrl={lesson?.videoUrl}
                   classId={classId}
                   onProgress={(progress) => setVideoProgress(progress)}
                   onComplete={handleVideoComplete}
                   isCompleted={isLessonCompleted}
-                  showTranscript={showTranscript}
-                  onTranscriptToggle={() => setShowTranscript(!showTranscript)}
+                  showTranscript={false}
+                  onTranscriptToggle={() => {}}
                 />
               </div>
+            </div>
   
               {/* Lesson Description */}
               <div className="bg-white rounded-xl shadow-lg p-6">
@@ -596,45 +598,6 @@ const LessonView = () => {
                 </motion.button>
               </div>
             </div>
-  
-            {/* Right Column - Transcript */}
-            {showTranscript && (
-              <div className="lg:col-span-1">
-                <div className="sticky top-24">
-                  <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-                    <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-                      <h2 className="text-lg font-semibold text-gray-900">
-                        Lesson Transcript
-                      </h2>
-                      <button
-                        onClick={() => setShowTranscript(false)}
-                        className="text-gray-400 hover:text-gray-500"
-                      >
-                        <MdClose className="text-xl" />
-                      </button>
-                    </div>
-                    
-                    <div className="p-6 max-h-[calc(100vh-200px)] overflow-y-auto">
-                      <div className="prose prose-sm max-w-none">
-                        {lesson?.transcript ? (
-                          <div className="space-y-4">
-                            {lesson.transcript.split('\n\n').map((paragraph, index) => (
-                              <p key={index} className="text-gray-700">
-                                {paragraph}
-                              </p>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-gray-500 italic">
-                            No transcript available for this lesson.
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </main>

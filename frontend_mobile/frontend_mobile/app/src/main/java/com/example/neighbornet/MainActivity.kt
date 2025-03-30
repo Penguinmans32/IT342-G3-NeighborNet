@@ -316,7 +316,8 @@ class MainActivity : ComponentActivity() {
                                                             },
                                                             onAgreementSubmit = { agreementData ->
                                                                 chatViewModel.sendAgreement(agreementData)
-                                                            }
+                                                            },
+                                                            viewModel = chatViewModel
                                                         )
                                                     }
                                                 }
