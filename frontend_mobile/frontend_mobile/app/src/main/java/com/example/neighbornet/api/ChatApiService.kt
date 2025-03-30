@@ -56,4 +56,10 @@ interface ChatApiService {
 
     @GET("api/borrowing/items/user/{userId}")
     suspend fun getUserItems(@Path("userId") userId: Long): List<Item>
+
+    @PUT("/chat/agreement/{id}/respond")
+    suspend fun respondToAgreement(
+        @Path("id") agreementId: Long,
+        @Body request: Map<String, String>
+    ): AgreementResponse
 }

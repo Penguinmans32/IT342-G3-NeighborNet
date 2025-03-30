@@ -167,4 +167,15 @@ class ChatRepository @Inject constructor(
             }
         }
     }
+
+    suspend fun respondToAgreement(agreementId: Long, status: String): AgreementResponse {
+        return withContext(Dispatchers.IO) {
+            try {
+                api.respondToAgreement(agreementId, mapOf("status" to status))
+            } catch (e: Exception) {
+                Log.e("ChatRepository", "Error responding to agreement", e)
+                throw e
+            }
+        }
+    }
 }

@@ -219,6 +219,17 @@ class ChatViewModel @Inject constructor(
         }
     }
 
+    fun respondToAgreement(agreementId: Long, status: String) {
+        viewModelScope.launch {
+            try {
+                val response = chatRepository.respondToAgreement(agreementId, status)
+                Log.d("ChatViewModel", "Agreement response sent: $response")
+            } catch (e: Exception) {
+                Log.e("ChatViewModel", "Error responding to agreement", e)
+            }
+        }
+    }
+
     fun sendAgreement(agreementData: Map<String, Any>) {
         viewModelScope.launch {
             try {

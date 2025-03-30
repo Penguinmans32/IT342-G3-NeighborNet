@@ -1368,7 +1368,6 @@ fun ChatContent(
         }
     }
 
-
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -1409,7 +1408,14 @@ fun ChatContent(
                     MessageBubble(
                         message = message,
                         isFromCurrentUser = message.senderId == senderId,
-                        receiverName = receiverName
+                        receiverName = receiverName,
+                        currentUserId = senderId,
+                        onAcceptAgreement = { agreementId ->
+                            viewModel.respondToAgreement(agreementId, "ACCEPTED")
+                        },
+                        onRejectAgreement = { agreementId ->
+                            viewModel.respondToAgreement(agreementId, "REJECTED")
+                        }
                     )
                 }
             }
@@ -1532,7 +1538,10 @@ private fun ChatHeader(
 fun MessageBubble(
     message: Message,
     isFromCurrentUser: Boolean,
-    receiverName: String
+    receiverName: String,
+    currentUserId: Long? = null,
+    onAcceptAgreement: (Long) -> Unit = {},
+    onRejectAgreement: (Long) -> Unit = {}
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -1564,7 +1573,12 @@ fun MessageBubble(
                     when (message.messageType) {
                         MessageType.TEXT -> TextMessage(message.content)
                         MessageType.IMAGE -> ImageMessage(message.imageUrl)
-                        MessageType.FORM -> AgreementMessage(message.formData)
+                        MessageType.FORM -> AgreementMessage(
+                            formData = message.formData,
+                            currentUserId = currentUserId,
+                            onAccept = onAcceptAgreement,
+                            onReject = onRejectAgreement
+                        )
                         MessageType.RETURN_REQUEST -> ReturnRequestMessage(message.formData)
                         MessageType.BORROWING_UPDATE,
                         MessageType.AGREEMENT_UPDATE -> AgreementMessage(message.formData)
