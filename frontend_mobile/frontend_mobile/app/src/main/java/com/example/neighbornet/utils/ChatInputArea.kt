@@ -50,14 +50,6 @@ fun ChatInputArea(
     isConnected: Boolean,
     modifier: Modifier = Modifier
 ) {
-    val imagePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri ->
-        uri?.let {
-            onImageClick()
-        }
-    }
-
     Column(modifier = modifier.fillMaxWidth()) {
         AnimatedVisibility(
             visible = selectedImageUri != null,
@@ -93,7 +85,6 @@ fun ChatInputArea(
             }
         }
 
-        // Input row
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -104,10 +95,10 @@ fun ChatInputArea(
             IconButton(onClick = onImageClick) {
                 Icon(
                     imageVector = Icons.Default.Image,
-                    contentDescription = "Send image"
+                    contentDescription = "Select image"
                 )
             }
-            // Agreement button
+
             IconButton(onClick = onAgreementClick) {
                 Icon(
                     imageVector = Icons.Default.Description,
@@ -115,7 +106,6 @@ fun ChatInputArea(
                 )
             }
 
-            // Text input
             TextField(
                 value = messageInput,
                 onValueChange = onMessageInputChange,
@@ -130,12 +120,12 @@ fun ChatInputArea(
 
             IconButton(
                 onClick = onSendClick,
-                enabled = messageInput.isNotBlank() && isConnected
+                enabled = (messageInput.isNotBlank() || selectedImageUri != null) && isConnected
             ) {
                 Icon(
                     imageVector = Icons.Default.Send,
                     contentDescription = "Send message",
-                    tint = if (messageInput.isNotBlank() && isConnected)
+                    tint = if ((messageInput.isNotBlank() || selectedImageUri != null) && isConnected)
                         MaterialTheme.colorScheme.primary
                     else
                         MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)

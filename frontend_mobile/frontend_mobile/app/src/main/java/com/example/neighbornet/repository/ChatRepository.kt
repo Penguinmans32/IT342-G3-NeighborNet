@@ -8,6 +8,7 @@ import com.example.neighbornet.auth.TokenManager
 import com.example.neighbornet.network.AgreementRequest
 import com.example.neighbornet.network.AgreementResponse
 import com.example.neighbornet.network.ConversationDTO
+import com.example.neighbornet.network.Item
 import com.example.neighbornet.network.Message
 import com.example.neighbornet.network.ReturnRequest
 import com.example.neighbornet.network.ReturnRequestStatus
@@ -153,6 +154,17 @@ class ChatRepository @Inject constructor(
         } catch (e: Exception) {
             Log.e("ChatRepository", "Error creating temp file", e)
             throw e
+        }
+    }
+
+    suspend fun getUserItems(userId: Long): List<Item> {
+        return withContext(Dispatchers.IO) {
+            try {
+                api.getUserItems(userId)
+            } catch (e: Exception) {
+                Log.e("ChatRepository", "Error fetching user items", e)
+                emptyList()
+            }
         }
     }
 }

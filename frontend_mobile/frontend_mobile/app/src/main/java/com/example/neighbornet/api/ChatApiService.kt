@@ -3,6 +3,7 @@ package com.example.neighbornet.api
 import com.example.neighbornet.network.AgreementRequest
 import com.example.neighbornet.network.AgreementResponse
 import com.example.neighbornet.network.ConversationDTO
+import com.example.neighbornet.network.Item
 import com.example.neighbornet.network.Message
 import com.example.neighbornet.network.ReturnRequest
 import okhttp3.MultipartBody
@@ -52,4 +53,7 @@ interface ChatApiService {
 
     @POST("messages")
     suspend fun sendMessage(@Body message: Message): Message
+
+    @GET("api/borrowing/items/user/{userId}")
+    suspend fun getUserItems(@Path("userId") userId: Long): List<Item>
 }

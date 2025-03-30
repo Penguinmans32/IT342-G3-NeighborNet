@@ -1259,7 +1259,6 @@ const Homepage = () => {
               </div>
               {[
                 { icon: <MdChat />, label: "Messages", path: "/messages" },
-                { icon: <MdSwapHoriz />, label: "Borrowing", path: "/borrowing" },
               ].map((item, index) => (
                 <motion.button
                   key={index}
