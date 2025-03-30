@@ -78,6 +78,7 @@ import com.example.neighbornet.network.CategoryData
 import com.example.neighbornet.network.CategoryInfo
 import com.example.neighbornet.network.Message
 import com.example.neighbornet.network.MessageType
+import com.example.neighbornet.ui.screens.MapScreen
 import com.example.neighbornet.utils.AgreementMessage
 import com.example.neighbornet.utils.Avatar
 import com.example.neighbornet.utils.BorrowingAgreementDialog
@@ -949,64 +950,7 @@ fun AuthenticatedThumbnailImage(
 fun CategoriesContent(
     onCategoryClick: (String) -> Unit
 ) {
-    val categories = listOf(
-        CategoryInfo(
-            title = "All Classes",
-            iconResId = R.drawable.ic_category,
-            backgroundColor = Color(0xFFF3E5F5)
-        ),
-        CategoryInfo(
-            title = "Programming",
-            iconResId = R.drawable.ic_code,
-            backgroundColor = Color(0xFFE3F2FD)
-        ),
-        CategoryInfo(
-            title = "Design",
-            iconResId = R.drawable.ic_design,
-            backgroundColor = Color(0xFFE8F5E9)
-        ),
-        CategoryInfo(
-            title = "Business",
-            iconResId = R.drawable.ic_business,
-            backgroundColor = Color(0xFFFFF3E0)
-        ),
-        CategoryInfo(
-            title = "Marketing",
-            iconResId = R.drawable.ic_marketing,
-            backgroundColor = Color(0xFFFFEBEE)
-        ),
-        CategoryInfo(
-            title = "Photography",
-            iconResId = R.drawable.ic_camera,
-            backgroundColor = Color(0xFFE0F7FA)
-        ),
-        CategoryInfo(
-            title = "Music",
-            iconResId = R.drawable.ic_music,
-            backgroundColor = Color(0xFFF3E5F5)
-        ),
-        CategoryInfo(
-            title = "Writing",
-            iconResId = R.drawable.ic_edit,
-            backgroundColor = Color(0xFFFCE4EC)
-        )
-    )
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        categories.forEach { category ->
-            CategoryItem(
-                title = category.title,
-                icon = category.iconResId,
-                backgroundColor = category.backgroundColor,
-                onClick = { onCategoryClick(category.title) }
-            )
-        }
-    }
+    MapScreen()
 }
 
 @Composable
@@ -1658,8 +1602,6 @@ private fun DateDivider(date: String) {
         }
     }
 }
-
-
 
 @Composable
 fun ProfileContent(
