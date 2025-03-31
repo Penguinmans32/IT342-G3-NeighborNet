@@ -36,3 +36,6 @@ src/main/resources/firebase-service-account.json
 
 # Environment variables
 .env
+
+src/main/resources/data.sql
+

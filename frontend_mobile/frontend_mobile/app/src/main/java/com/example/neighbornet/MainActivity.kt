@@ -231,7 +231,9 @@ class MainActivity : ComponentActivity() {
                                     composable(Screen.Categories.route) {
                                         CategoriesContent(
                                             onCategoryClick = { category ->
-                                                // Handle category navigation
+                                            },
+                                            onNavigateToChat = { userId, userName ->
+                                                navController.navigate("chat/$userId/$userName")
                                             }
                                         )
                                     }
