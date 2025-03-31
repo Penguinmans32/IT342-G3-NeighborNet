@@ -127,6 +127,46 @@ const SkillsMap = () => {
 
     return (
         <div className="min-h-screen bg-gradient-to-b from-indigo-50 to-white p-8">
+           {/* Homepage Button - Update these styles */}
+            <motion.button
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                whileHover={{ 
+                    scale: 1.05,
+                    boxShadow: "0 10px 20px rgba(79, 70, 229, 0.15)"
+                }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => navigate('/homepage')}
+                className="absolute top-4 left-4 md:fixed md:top-8 md:left-8 z-[100] flex items-center gap-2 px-4 py-2 
+                        bg-white/90 backdrop-blur-sm rounded-full shadow-lg 
+                        text-indigo-600 font-medium transition-all duration-300
+                        hover:bg-white hover:text-indigo-700 border border-indigo-100
+                        group"
+                style={{
+                    position: 'fixed',
+                    zIndex: 1000,
+                }}
+            >
+                <motion.div
+                    initial={{ x: 0 }}
+                    animate={{ x: 0 }}
+                    whileHover={{ x: -4 }}
+                    transition={{ type: "spring", stiffness: 400 }}
+                >
+                    ←
+                </motion.div>
+                <span className="relative">
+                    Home
+                    <motion.div
+                        className="absolute bottom-0 left-0 w-full h-0.5 bg-indigo-600 origin-left"
+                        initial={{ scaleX: 0 }}
+                        whileHover={{ scaleX: 1 }}
+                        transition={{ duration: 0.3 }}
+                    />
+                </span>
+            </motion.button>
+
+
             <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}

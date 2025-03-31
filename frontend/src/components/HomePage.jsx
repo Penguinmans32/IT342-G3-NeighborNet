@@ -575,9 +575,42 @@ const Homepage = () => {
                       <div className="relative">
                         <MdNotifications className="text-2xl text-white" />
                         {unreadCount > 0 && (
-                          <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
-                            <span className="text-xs text-white">{unreadCount}</span>
-                          </div>
+                          <motion.div
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            transition={{
+                              type: "spring",
+                              stiffness: 500,
+                              damping: 25
+                            }}
+                            className={`
+                              absolute -top-1 -right-1 
+                              ${unreadCount > 9 ? 'min-w-[20px] px-1' : 'w-4'} 
+                              h-4 bg-red-500 rounded-full 
+                              flex items-center justify-center
+                              shadow-lg shadow-red-500/50
+                            `}
+                          >
+                            <motion.span 
+                              initial={{ scale: 0 }}
+                              animate={{ scale: 1 }}
+                              transition={{ delay: 0.1 }}
+                              className="text-xs text-white font-medium"
+                            >
+                              {unreadCount > 9 ? '9+' : unreadCount}
+                            </motion.span>
+                            {/* Pulse ring effect */}
+                            <motion.div
+                              className="absolute inset-0 rounded-full bg-red-500"
+                              initial={{ opacity: 0.5, scale: 1 }}
+                              animate={{ opacity: 0, scale: 1.5 }}
+                              transition={{
+                                duration: 1,
+                                repeat: Infinity,
+                                repeatType: "loop"
+                              }}
+                            />
+                          </motion.div>
                         )}
                       </div>
                     </motion.button>
@@ -1063,85 +1096,89 @@ const Homepage = () => {
             </div>
 
               {/* Notifications List */}
-              <div className="overflow-y-auto h-[calc(100vh-64px)]">
-                {console.log("Current notifications:", notifications)}
-                {notifications && notifications.length > 0 ? (
-                  notifications.map((notification, index) => {
-                    console.log("Rendering notification:", notification)
-                    return (
-                      <motion.div
-                        key={notification.id}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.1 }}
-                        onClick={() => handleNotificationClick(notification)}
-                        className={`p-4 ${isDarkMode ? "border-gray-700" : "border-gray-100"} border-b 
-                                  ${
-                                    isDarkMode
-                                      ? !notification.is_read
-                                        ? "bg-indigo-900/20"
-                                        : "hover:bg-gray-700"
-                                      : !notification.is_read
-                                        ? "bg-blue-50/50"
-                                        : "hover:bg-gray-50"
-                                  } 
-                                  cursor-pointer`}
-                      >
-                        <div className="flex gap-3">
-                          <div className="flex-shrink-0">
-                            <span
-                              className={`w-8 h-8 rounded-full flex items-center justify-center
+                <div className="overflow-y-auto h-[calc(100vh-64px)]">
+                  {console.log("Current notifications:", notifications)}
+                  {notifications && notifications.length > 0 ? (
+                    notifications.map((notification, index) => {
+                      console.log("Rendering notification:", notification);
+                      return (
+                        <motion.div
+                          key={notification.id}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: index * 0.1 }}
+                          onClick={() => handleNotificationClick(notification)}
+                          className={`p-4 ${isDarkMode ? "border-gray-700" : "border-gray-100"} border-b 
+                                    ${
+                                      isDarkMode
+                                        ? !notification.is_read
+                                          ? "bg-indigo-900/20"
+                                          : "hover:bg-gray-700"
+                                        : !notification.is_read
+                                          ? "bg-blue-50/50"
+                                          : "hover:bg-gray-50"
+                                    } 
+                                    cursor-pointer`}
+                        >
+                          <div className="flex gap-3">
+                            <div className="flex-shrink-0">
+                              <motion.div
+                                whileHover={{ scale: 1.1 }}
+                                className={`w-8 h-8 rounded-full flex items-center justify-center
                                           ${
-                                            notification.type === "REQUEST"
-                                              ? isDarkMode
-                                                ? "bg-indigo-900 text-indigo-300"
-                                                : "bg-blue-100 text-blue-500"
-                                              : notification.type === "ALERT"
-                                                ? isDarkMode
-                                                  ? "bg-red-900 text-red-300"
-                                                  : "bg-red-100 text-red-500"
-                                                : isDarkMode
-                                                  ? "bg-green-900 text-green-300"
-                                                  : "bg-green-100 text-green-500"
-                                          }`}
-                            >
-                              {notification.type === "REQUEST" && <MdNotificationsActive />}
-                              {notification.type === "ALERT" && <MdNotificationsActive />}
-                              {notification.type === "UPDATE" && <MdInfo />}
-                            </span>
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex justify-between items-start">
-                              <p className={`text-sm font-medium ${isDarkMode ? "text-white" : "text-gray-900"}`}>
-                                {notification.title}
-                              </p>
-                              <span className={`text-xs ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}>
-                                {getRelativeTime(notification.formattedCreatedAt)}
-                              </span>
+                                            isDarkMode
+                                              ? "bg-indigo-900 text-indigo-300"
+                                              : "bg-blue-100 text-blue-500"
+                                          }
+                                          transition-all duration-200 ease-in-out
+                                          ${!notification.is_read && "animate-pulse"}`}
+                              >
+                                <motion.div
+                                  initial={{ rotate: -30 }}
+                                  animate={{ rotate: 0 }}
+                                  transition={{ duration: 0.3 }}
+                                >
+                                  <MdNotifications className="text-xl" />
+                                </motion.div>
+                              </motion.div>
                             </div>
-                            <p className={`text-sm ${isDarkMode ? "text-gray-300" : "text-gray-500"} mt-1`}>
-                              {notification.message}
-                            </p>
+                            <div className="flex-1">
+                              <div className="flex justify-between items-start">
+                                <p className={`text-sm font-medium ${isDarkMode ? "text-white" : "text-gray-900"}`}>
+                                  {notification.title}
+                                </p>
+                                <span className={`text-xs ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}>
+                                  {getRelativeTime(notification.formattedCreatedAt)}
+                                </span>
+                              </div>
+                              <p className={`text-sm ${isDarkMode ? "text-gray-300" : "text-gray-500"} mt-1`}>
+                                {notification.message}
+                              </p>
+                            </div>
+                            {!notification.is_read && (
+                              <motion.div
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                className={`w-2 h-2 rounded-full 
+                                          ${isDarkMode ? "bg-indigo-400" : "bg-blue-500"} 
+                                          self-center`}
+                              />
+                            )}
                           </div>
-                          {!notification.is_read && (
-                            <div
-                              className={`w-2 h-2 rounded-full ${isDarkMode ? "bg-indigo-400" : "bg-blue-500"} self-center`}
-                            />
-                          )}
-                        </div>
-                      </motion.div>
-                    )
-                  })
-                ) : (
-                  <div
-                    className={`flex flex-col items-center justify-center h-full p-8 text-center ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}
-                  >
-                    {console.log("No notifications to display")}
-                    <MdNotificationsOff className="text-4xl mb-2" />
-                    <p>No notifications yet</p>
-                  </div>
-                )}
-              </div>
+                        </motion.div>
+                      );
+                    })
+                  ) : (
+                    <div
+                      className={`flex flex-col items-center justify-center h-full p-8 text-center 
+                                ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}
+                    >
+                      {console.log("No notifications to display")}
+                      <MdNotificationsOff className="text-4xl mb-2" />
+                      <p>No notifications yet</p>
+                    </div>
+                  )}
+                </div>
             </motion.div>
           </>
         )}
@@ -1152,7 +1189,14 @@ const Homepage = () => {
           ref={profileMenuRef}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className={`absolute right-4 top-16 ${isDarkMode ? "bg-gray-800" : "bg-white"} shadow-xl rounded-xl w-[300px] overflow-hidden ${isDarkMode ? "border-gray-700" : "border-gray-100"} border z-50`}
+          className={`fixed right-4 mt-2 ${isDarkMode ? "bg-gray-800" : "bg-white"} 
+          shadow-xl rounded-xl w-[300px] overflow-hidden 
+          ${isDarkMode ? "border-gray-700" : "border-gray-100"} border z-50`}
+          style={{
+            top: "64px",
+            maxHeight: "calc(100vh - 80px)", 
+            overflowY: "auto"
+          }}
         >
           <div className={`p-6 text-center ${isDarkMode ? "border-gray-700" : "border-gray-100"} border-b`}>
             <motion.div whileHover={{ scale: 1.05 }} className="w-20 h-20 mx-auto mb-3 relative group">
