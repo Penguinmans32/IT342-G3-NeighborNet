@@ -259,6 +259,9 @@ fun HomePage(
                             1 -> CategoriesContent(
                                 onCategoryClick = { category ->
                                     selectedCategory = category
+                                },
+                                onNavigateToChat = { userId, userName ->
+                                    navController.navigate("chat/$userId/$userName")
                                 }
                             )
                             2 -> {
@@ -949,9 +952,10 @@ fun AuthenticatedThumbnailImage(
 
 @Composable
 fun CategoriesContent(
-    onCategoryClick: (String) -> Unit
+    onCategoryClick: (String) -> Unit,
+    onNavigateToChat: (userId: Long, userName: String) -> Unit
 ) {
-    MapScreen()
+    MapScreen(onNavigateToChat = onNavigateToChat)
 }
 
 @Composable

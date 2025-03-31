@@ -1,16 +1,20 @@
 package com.example.neighbornet.ui.screens
 
+
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.location.Location
-import android.location.LocationManager
-import android.widget.Toast
+import android.view.View
+import android.widget.FrameLayout
+import android.widget.TextView
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -19,324 +23,228 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.compose.ui.zIndex
 import androidx.core.content.ContextCompat
-import org.osmdroid.config.Configuration
-import org.osmdroid.events.MapEventsReceiver
-import org.osmdroid.tileprovider.tilesource.TileSourceFactory
-import org.osmdroid.util.GeoPoint
-import org.osmdroid.views.MapView
-import org.osmdroid.views.overlay.Marker
-import org.osmdroid.views.overlay.MapEventsOverlay
-import org.osmdroid.views.overlay.Polyline
-import org.osmdroid.views.overlay.compass.CompassOverlay
-import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
-import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 import kotlin.math.*
 import kotlinx.coroutines.launch
-import java.net.URL
-import org.json.JSONObject
-import org.osmdroid.util.BoundingBox
-import org.osmdroid.util.Distance
-import kotlinx.coroutines.Dispatchers
-import android.util.Log
-import kotlinx.coroutines.withContext
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.neighbornet.auth.MapViewModel
+import com.example.neighbornet.network.BorrowingItem
+import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
+import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.compose.GoogleMap
+import com.google.maps.android.compose.MapProperties
+import com.google.maps.android.compose.MapType
+import com.google.maps.android.compose.Marker
+import com.google.maps.android.compose.MarkerState
+import com.google.maps.android.compose.Polyline
+import com.google.maps.android.compose.rememberCameraPositionState
+import com.example.neighbornet.AuthenticatedThumbnailImage
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
+import com.example.neighbornet.R
+import com.example.neighbornet.utils.MessageDialog
+import com.google.maps.android.compose.CameraPositionState
+import com.google.maps.android.compose.MapUiSettings
+import kotlinx.coroutines.CoroutineScope
 
-// Helper functions moved outside the composable
-private fun calculateDistance(point1: GeoPoint, point2: GeoPoint): Double {
-    val R = 6371 // Earth's radius in kilometers
-    val lat1 = point1.latitude * Math.PI / 180
-    val lat2 = point2.latitude * Math.PI / 180
-    val dLat = (point2.latitude - point1.latitude) * Math.PI / 180
-    val dLon = (point2.longitude - point1.longitude) * Math.PI / 180
-
-    val a = sin(dLat / 2) * sin(dLat / 2) +
-            cos(lat1) * cos(lat2) *
-            sin(dLon / 2) * sin(dLon / 2)
-    val c = 2 * atan2(sqrt(a), sqrt(1 - a))
-    return R * c
-}
-
-private suspend fun getRoutePoints(
-    context: Context,
-    start: GeoPoint,
-    end: GeoPoint,
-    onDistanceUpdated: (Double) -> Unit
-): List<GeoPoint> {
-    return try {
-        val url = "https://router.project-osrm.org/route/v1/driving/${start.longitude},${start.latitude};${end.longitude},${end.latitude}?overview=full&geometries=polyline6"
-        val response = withContext(Dispatchers.IO) {
-            URL(url).openConnection().apply {
-                connectTimeout = 5000
-                readTimeout = 5000
-                setRequestProperty("User-Agent", "NeighborNet-App")
-            }.getInputStream().bufferedReader().readText()
-        }
-        
-        Log.d("MapScreen", "Route response: $response")
-        
-        val json = JSONObject(response)
-        val routes = json.getJSONArray("routes")
-        if (routes.length() > 0) {
-            val route = routes.getJSONObject(0)
-            val geometry = route.getString("geometry")
-            val distance = route.getDouble("distance") / 1000 // Convert to km
-            
-            // Update distance using callback
-            onDistanceUpdated(distance)
-            
-            decodePolyline(geometry)
-        } else {
-            Log.e("MapScreen", "No routes found in response")
-            listOf(start, end)
-        }
-    } catch (e: Exception) {
-        Log.e("MapScreen", "Error getting route: ${e.message}", e)
-        withContext(Dispatchers.Main) {
-            Toast.makeText(context, "Could not get route, showing direct line", Toast.LENGTH_SHORT).show()
-        }
-        listOf(start, end)
-    }
-}
-
-private fun decodePolyline(encoded: String): List<GeoPoint> {
-    val points = mutableListOf<GeoPoint>()
-    var index = 0
-    var lat = 0
-    var lng = 0
-
-    try {
-        while (index < encoded.length) {
-            var b: Int
-            var shift = 0
-            var result = 0
-            do {
-                b = encoded[index++].toInt() - 63
-                result = result or (b and 0x1f shl shift)
-                shift += 5
-            } while (b >= 0x20)
-            val dlat = if (result and 1 != 0) -(result shr 1) else result shr 1
-            lat += dlat
-
-            shift = 0
-            result = 0
-            do {
-                b = encoded[index++].toInt() - 63
-                result = result or (b and 0x1f shl shift)
-                shift += 5
-            } while (b >= 0x20)
-            val dlng = if (result and 1 != 0) -(result shr 1) else result shr 1
-            lng += dlng
-
-            val finalLat = lat * 1e-6
-            val finalLng = lng * 1e-6
-            points.add(GeoPoint(finalLat, finalLng))
-        }
-    } catch (e: Exception) {
-        Log.e("MapScreen", "Error decoding polyline: ${e.message}", e)
-    }
-
-    return if (points.isEmpty()) {
-        Log.e("MapScreen", "No points decoded from polyline")
-        emptyList()
-    } else {
-        points
-    }
-}
-
-private suspend fun drawRoute(
-    context: Context,
-    mapView: MapView?,
-    start: GeoPoint,
-    end: GeoPoint,
-    existingLine: Polyline?,
-    color: Int,
-    onDistanceUpdated: (Double) -> Unit
-): Polyline {
-    existingLine?.let { mapView?.overlays?.remove(it) }
-    
-    val routePoints = getRoutePoints(context, start, end, onDistanceUpdated)
-    
-    return Polyline(mapView).apply {
-        outlinePaint.color = color
-        outlinePaint.strokeWidth = 5f
-        
-        if (routePoints.size > 1) {
-            setPoints(routePoints)
-        } else {
-            // Fallback to straight line if no route points
-            setPoints(arrayListOf(start, end))
-        }
-        
-        mapView?.overlays?.add(this)
-        
-        // Only zoom to bounding box if we have actual route points
-        if (routePoints.size > 2) {
-            val boundingBox = BoundingBox.fromGeoPoints(routePoints)
-            mapView?.zoomToBoundingBox(boundingBox, true, 100)
-        }
-        
-        mapView?.invalidate()
-    }
-}
-
-private fun removeMarker(
-    mapView: MapView?,
-    marker: Marker,
-    markers: MutableList<Marker>,
-    routeLine: Polyline?
-) {
-    mapView?.overlays?.remove(marker)
-    markers.remove(marker)
-    routeLine?.let { mapView?.overlays?.remove(it) }
-    mapView?.invalidate()
-}
-
-private fun removeAllMarkers(
-    mapView: MapView?,
-    markers: MutableList<Marker>,
-    routeLine: Polyline?
-) {
-    markers.forEach { marker ->
-        mapView?.overlays?.remove(marker)
-    }
-    markers.clear()
-    routeLine?.let { mapView?.overlays?.remove(it) }
-    mapView?.invalidate()
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MapScreen() {
+fun MapScreen(
+    viewModel: MapViewModel = hiltViewModel(),
+    onNavigateToChat: (userId: Long, userName: String) -> Unit
+) {
     val context = LocalContext.current
+    val items by viewModel.items.collectAsState()
     val scope = rememberCoroutineScope()
-    var mapView: MapView? by remember { mutableStateOf(null) }
-    var markers = remember { mutableStateListOf<Marker>() }
-    var routeLine by remember { mutableStateOf<Polyline?>(null) }
+    var selectedItem by remember { mutableStateOf<BorrowingItem?>(null) }
+    var userLocation by remember { mutableStateOf<LatLng?>(null) }
+    var destination by remember { mutableStateOf<LatLng?>(null) }
     var distanceText by remember { mutableStateOf("") }
-    var showRemoveConfirmation by remember { mutableStateOf(false) }
-    var markerToRemove by remember { mutableStateOf<Marker?>(null) }
-    var userLocationMarker by remember { mutableStateOf<Marker?>(null) }
-    var destinationMarker by remember { mutableStateOf<Marker?>(null) }
     var isSelectingLocation by remember { mutableStateOf(false) }
     var isSelectingDestination by remember { mutableStateOf(false) }
     var showInstructions by remember { mutableStateOf(false) }
+    var hasLocationPermission by remember { mutableStateOf(false) }
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        hasLocationPermission = permissions.values.reduce { acc, isGranted -> acc && isGranted }
+    }
+    var selectedItemLocation by remember { mutableStateOf<LatLng?>(null) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val groupedItems = remember(items) { groupItemsByLocation(items) }
+    var showItemsBottomSheet by remember { mutableStateOf(false) }
+    var itemsToShow by remember { mutableStateOf<List<BorrowingItem>>(emptyList()) }
+    val sheetState = rememberModalBottomSheetState()
+    var showMessageDialog by remember { mutableStateOf(false) }
 
-    // Initialize OpenStreetMap configuration
+    // Cebu City coordinates
+    val cebuCity = LatLng(10.3157, 123.8854)
+    val cameraPositionState = rememberCameraPositionState {
+        position = CameraPosition.fromLatLngZoom(cebuCity, 12f)
+    }
+
+    val mapUiSettings by remember {
+        mutableStateOf(
+            MapUiSettings(
+                zoomControlsEnabled = false,
+                myLocationButtonEnabled = false
+            )
+        )
+    }
+
     LaunchedEffect(Unit) {
-        Configuration.getInstance().apply {
-            load(context, context.getSharedPreferences("osm_prefs", Context.MODE_PRIVATE))
-            userAgentValue = context.packageName
-            osmdroidTileCache = context.cacheDir
+        val fineLocation = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        )
+        val coarseLocation = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.ACCESS_COARSE_LOCATION
+        )
+        hasLocationPermission = fineLocation == PackageManager.PERMISSION_GRANTED &&
+                coarseLocation == PackageManager.PERMISSION_GRANTED
+
+        if (!hasLocationPermission) {
+            permissionLauncher.launch(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                )
+            )
         }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // Map view
-        AndroidView(
-            factory = { ctx ->
-                MapView(ctx).apply {
-                    mapView = this
-                    setTileSource(TileSourceFactory.MAPNIK)
-                    setUseDataConnection(true)  // Enable downloading tiles
-                    setMultiTouchControls(true)
-                    setBuiltInZoomControls(true)
-                    
-                    // Set initial position (Philippines)
-                    controller.setZoom(7.0)  // Zoom out to see more of the map
-                    controller.setCenter(GeoPoint(12.8797, 121.7740))
-
-                    // Add map events overlay for handling taps
-                    val mapEventsOverlay = MapEventsOverlay(object : MapEventsReceiver {
-                        override fun singleTapConfirmedHelper(p: GeoPoint?): Boolean {
-                            if (isSelectingLocation) {
-                                p?.let { point ->
-                                    userLocationMarker?.let { overlays.remove(it) }
-                                    val newMarker = Marker(this@apply).apply {
-                                        position = point
-                                        title = "Your Location"
-                                        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                                        icon = ContextCompat.getDrawable(ctx, org.osmdroid.library.R.drawable.person)
-                                    }
-                                    userLocationMarker = newMarker
-                                    overlays.add(newMarker)
-                                    controller.animateTo(point)  // Center on the new marker
-                                    
-                                    destinationMarker?.let { destMarker ->
-                                        scope.launch {
-                                            routeLine = drawRoute(
-                                                context = context,
-                                                mapView = this@apply,
-                                                start = point,
-                                                end = destMarker.position,
-                                                existingLine = routeLine,
-                                                color = Color.Blue.hashCode(),
-                                                onDistanceUpdated = { distance ->
-                                                    distanceText = "Distance: %.2f km".format(distance)
-                                                }
-                                            )
-                                        }
-                                    }
-                                    invalidate()
-                                }
-                                isSelectingLocation = false
-                                showInstructions = false
-                                return true
-                            }
-                            
-                            if (isSelectingDestination) {
-                                p?.let { point ->
-                                    destinationMarker?.let { overlays.remove(it) }
-                                    val newMarker = Marker(this@apply).apply {
-                                        position = point
-                                        title = "Destination"
-                                        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                                        icon = ContextCompat.getDrawable(ctx, org.osmdroid.library.R.drawable.marker_default)
-                                    }
-                                    destinationMarker = newMarker
-                                    overlays.add(newMarker)
-                                    controller.animateTo(point)  // Center on the new marker
-                                    
-                                    userLocationMarker?.let { locMarker ->
-                                        scope.launch {
-                                            routeLine = drawRoute(
-                                                context = context,
-                                                mapView = this@apply,
-                                                start = locMarker.position,
-                                                end = point,
-                                                existingLine = routeLine,
-                                                color = Color.Blue.hashCode(),
-                                                onDistanceUpdated = { distance ->
-                                                    distanceText = "Distance: %.2f km".format(distance)
-                                                }
-                                            )
-                                        }
-                                    }
-                                    invalidate()
-                                }
-                                isSelectingDestination = false
-                                showInstructions = false
-                                return true
-                            }
-                            return true
-                        }
-
-                        override fun longPressHelper(p: GeoPoint?): Boolean = true
-                    })
-                    overlays.add(mapEventsOverlay)
+        GoogleMap(
+            modifier = Modifier.fillMaxSize(),
+            cameraPositionState = cameraPositionState,
+            properties = MapProperties(
+                isMyLocationEnabled = hasLocationPermission,
+                mapType = MapType.NORMAL
+            ),
+            uiSettings = mapUiSettings,
+            onMapClick = { latLng ->
+                when {
+                    isSelectingLocation -> {
+                        userLocation = latLng
+                        isSelectingLocation = false
+                        showInstructions = false
+                    }
+                    isSelectingDestination -> {
+                        destination = latLng
+                        isSelectingDestination = false
+                        showInstructions = false
+                    }
                 }
-            },
-            modifier = Modifier.fillMaxSize()
+
+                // Calculate distance if both points exist
+                if (userLocation != null && destination != null) {
+                    val results = FloatArray(1)
+                    Location.distanceBetween(
+                        userLocation!!.latitude, userLocation!!.longitude,
+                        destination!!.latitude, destination!!.longitude,
+                        results
+                    )
+                    distanceText = "Distance: %.2f km".format(results[0] / 1000)
+                }
+            }
+        ) {
+            groupedItems.forEach { (location, itemsAtLocation) ->
+                val itemLocation = LatLng(location.first, location.second)
+
+                Marker(
+                    state = MarkerState(itemLocation),
+                    title = if (itemsAtLocation.size > 1) {
+                        "${itemsAtLocation.size} items available"
+                    } else {
+                        itemsAtLocation.first().name
+                    },
+                    snippet = if (itemsAtLocation.size > 1) {
+                        itemsAtLocation.joinToString("\n") { it.name }
+                    } else {
+                        "${itemsAtLocation.first().owner?.username ?: "Unknown"}\n${itemsAtLocation.first().description}"
+                    },
+                    onClick = {
+                        if (itemsAtLocation.size > 1) {
+                            scope.launch {
+                                itemsToShow = itemsAtLocation
+                                showItemsBottomSheet = true
+                            }
+                        } else {
+                            selectedItem = itemsAtLocation.first()
+                            handleItemSelection(
+                                item = itemsAtLocation.first(),
+                                userLocation = userLocation,
+                                scope = scope,
+                                snackbarHostState = snackbarHostState,
+                                cameraPositionState = cameraPositionState,
+                                onDistanceUpdate = { distanceText = it },
+                                onDestinationUpdate = { destination = it },
+                                onLocationSelect = {
+                                    isSelectingLocation = true
+                                    showInstructions = true
+                                }
+                            )
+                        }
+                        true
+                    },
+                    icon = if (itemsAtLocation.size > 1) {
+                        BitmapDescriptorFactory.fromBitmap(
+                            createClusterMarker(context, itemsAtLocation.size)
+                        )
+                    } else {
+                        BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)
+                    }
+                )
+            }
+
+            // Show user location marker
+            userLocation?.let {
+                Marker(
+                    state = MarkerState(it),
+                    title = "Your Location",
+                    icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE)
+                )
+            }
+
+            // Show destination marker
+            destination?.let {
+                Marker(
+                    state = MarkerState(it),
+                    title = "Destination",
+                    icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)
+                )
+            }
+
+            // Show route line if both points exist
+            if (userLocation != null && destination != null) {
+                Polyline(
+                    points = listOf(userLocation!!, destination!!),
+                    color = Color.Blue,
+                    width = 5f
+                )
+            }
+        }
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 100.dp)
         )
 
-        // Header at the top
+        // Header
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -354,7 +262,6 @@ fun MapScreen() {
                 color = MaterialTheme.colorScheme.primary
             )
 
-            // Distance text
             if (distanceText.isNotEmpty()) {
                 Text(
                     text = distanceText,
@@ -367,7 +274,7 @@ fun MapScreen() {
             }
         }
 
-        // Instructions overlay when selecting
+        // Instructions overlay
         if (showInstructions) {
             Box(
                 modifier = Modifier
@@ -376,9 +283,9 @@ fun MapScreen() {
                     .padding(16.dp)
             ) {
                 Text(
-                    text = if (isSelectingLocation) 
-                        "Tap on the map to mark your location" 
-                    else 
+                    text = if (isSelectingLocation)
+                        "Tap on the map to mark your location"
+                    else
                         "Tap on the map to mark your destination",
                     color = Color.White,
                     textAlign = TextAlign.Center,
@@ -387,16 +294,139 @@ fun MapScreen() {
             }
         }
 
-        // Action buttons column
+        // Selected item details
+        selectedItem?.let { item ->
+            Card(
+                modifier = Modifier
+                    .padding(16.dp)
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth(0.9f),
+                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(120.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(end = 8.dp)
+                        ) {
+                            Text(
+                                text = item.name,
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "Owner: ${item.owner?.username ?: "Unknown"}",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .size(120.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                        ) {
+                            AuthenticatedThumbnailImage(
+                                url = item.imageUrls.firstOrNull(),
+                                modifier = Modifier.fillMaxSize(),
+                                contentDescription = item.name,
+                                contentScale = ContentScale.Crop
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text(
+                            text = item.description,
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(12.dp)
+                        )
+                    }
+
+                    if (item.availabilityPeriod != null) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.Schedule,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "Available: ${item.availabilityPeriod}",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)
+                    ) {
+                        OutlinedButton(
+                            onClick = { selectedItem = null }
+                        ) {
+                            Icon(Icons.Default.Close, contentDescription = null)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Close")
+                        }
+
+                        Button(
+                            onClick = { showMessageDialog = true },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary
+                            )
+                        ) {
+                            Icon(Icons.Default.Chat, contentDescription = null)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Chat with Owner")
+                        }
+                    }
+                }
+            }
+        }
+
+        // Action buttons
         Column(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // Add Location button
             FloatingActionButton(
-                onClick = { 
+                onClick = {
+                    scope.launch {
+                        cameraPositionState.animate(
+                            update = CameraUpdateFactory.newLatLngZoom(cebuCity, 12f),
+                            durationMs = 1000
+                        )
+                    }
+                },
+                containerColor = MaterialTheme.colorScheme.tertiary
+            ) {
+                Icon(Icons.Default.Home, "Return to Cebu")
+            }
+
+            FloatingActionButton(
+                onClick = {
                     isSelectingLocation = true
                     showInstructions = true
                 },
@@ -404,10 +434,9 @@ fun MapScreen() {
             ) {
                 Icon(Icons.Default.LocationOn, "Add Your Location")
             }
-            
-            // Add Destination button
+
             FloatingActionButton(
-                onClick = { 
+                onClick = {
                     isSelectingDestination = true
                     showInstructions = true
                 },
@@ -416,30 +445,198 @@ fun MapScreen() {
                 Icon(Icons.Default.Place, "Add Destination")
             }
 
-            // Remove all markers button
-            if (userLocationMarker != null || destinationMarker != null) {
+            if (userLocation != null || destination != null) {
                 FloatingActionButton(
                     onClick = {
-                        userLocationMarker?.let { mapView?.overlays?.remove(it) }
-                        destinationMarker?.let { mapView?.overlays?.remove(it) }
-                        routeLine?.let { mapView?.overlays?.remove(it) }
-                        userLocationMarker = null
-                        destinationMarker = null
-                        routeLine = null
+                        userLocation = null
+                        destination = null
                         distanceText = ""
-                        mapView?.invalidate()
                     },
                     containerColor = MaterialTheme.colorScheme.error
                 ) {
-                    Icon(Icons.Default.Delete, "Remove All Markers")
+                    Icon(Icons.Default.Delete, "Clear Markers")
                 }
             }
         }
-    }
 
-    DisposableEffect(Unit) {
-        onDispose {
-            mapView?.onDetach()
+        if (showItemsBottomSheet) {
+            ModalBottomSheet(
+                onDismissRequest = { showItemsBottomSheet = false },
+                sheetState = sheetState
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    Text(
+                        text = "Items at this location",
+                        style = MaterialTheme.typography.titleLarge,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+
+                    itemsToShow.forEach { item ->
+                        ListItem(
+                            headlineContent = { Text(item.name) },
+                            supportingContent = { Text(item.description) },
+                            leadingContent = {
+                                Icon(
+                                    when (item.category) {
+                                        "tools" -> Icons.Default.Build
+                                        "books" -> Icons.Default.Book
+                                        else -> Icons.Default.Category
+                                    },
+                                    contentDescription = null
+                                )
+                            },
+                            modifier = Modifier.clickable {
+                                selectedItem = item
+                                showItemsBottomSheet = false
+                                handleItemSelection(
+                                    item = item,
+                                    userLocation = userLocation,
+                                    scope = scope,
+                                    snackbarHostState = snackbarHostState,
+                                    cameraPositionState = cameraPositionState,
+                                    onDistanceUpdate = { distanceText = it },
+                                    onDestinationUpdate = { destination = it },
+                                    onLocationSelect = {
+                                        isSelectingLocation = true
+                                        showInstructions = true
+                                    }
+                                )
+                            }
+                        )
+                        Divider()
+                    }
+                }
+            }
+        }
+        selectedItem?.let { item ->
+            if (showMessageDialog) {
+                MessageDialog(
+                    item = item,
+                    onDismiss = { showMessageDialog = false },
+                    onSendMessage = { message ->
+                        showMessageDialog = false
+                    },
+                    onNavigateToChat = { userId, userName ->
+                        onNavigateToChat(userId, userName)
+                    }
+                )
+            }
         }
     }
-} 
+}
+
+private fun calculateDistance(start: LatLng, end: LatLng): String {
+    val results = FloatArray(1)
+    Location.distanceBetween(
+        start.latitude, start.longitude,
+        end.latitude, end.longitude,
+        results
+    )
+    val distance = results[0]
+    return when {
+        distance < 1000 -> "%.0f meters".format(distance)
+        else -> "%.2f km".format(distance / 1000)
+    }
+}
+
+private fun groupItemsByLocation(items: List<BorrowingItem>): Map<Pair<Double, Double>, List<BorrowingItem>> {
+    return items.groupBy { item ->
+        Pair(item.latitude, item.longitude)
+    }
+}
+
+private fun createClusterMarker(context: Context, count: Int): Bitmap {
+    val view = FrameLayout(context)
+    view.background = ContextCompat.getDrawable(context, R.drawable.circle_background)
+
+    val text = TextView(context).apply {
+        text = count.toString()
+        setTextColor(Color(0xFFE91E63).toArgb())
+        textSize = 12f
+        gravity = android.view.Gravity.CENTER
+
+        setPadding(0, 0, 0, dpToPx(context, 12f).toInt())
+    }
+
+    view.addView(text)
+    view.measure(
+        View.MeasureSpec.makeMeasureSpec(dpToPx(context, 36f).toInt(), View.MeasureSpec.EXACTLY),
+        View.MeasureSpec.makeMeasureSpec(dpToPx(context, 48f).toInt(), View.MeasureSpec.EXACTLY)
+    )
+    view.layout(0, 0, view.measuredWidth, view.measuredHeight)
+
+    // Create bitmap from view
+    val bitmap = Bitmap.createBitmap(
+        view.measuredWidth,
+        view.measuredHeight,
+        Bitmap.Config.ARGB_8888
+    )
+    val canvas = Canvas(bitmap)
+    view.draw(canvas)
+
+    return bitmap
+}
+
+private fun dpToPx(context: Context, dp: Float): Float {
+    return dp * context.resources.displayMetrics.density
+}
+
+private fun handleItemSelection(
+    item: BorrowingItem,
+    userLocation: LatLng?,
+    scope: CoroutineScope,
+    snackbarHostState: SnackbarHostState,
+    cameraPositionState: CameraPositionState,
+    onDistanceUpdate: (String) -> Unit,
+    onDestinationUpdate: (LatLng) -> Unit,
+    onLocationSelect: () -> Unit
+) {
+    val itemLocation = LatLng(item.latitude, item.longitude)
+
+    userLocation?.let { userLoc ->
+        onDestinationUpdate(itemLocation)
+        onDistanceUpdate("Distance to ${item.name}: ${calculateDistance(userLoc, itemLocation)}")
+        scope.launch {
+            animateCameraToShowPoints(cameraPositionState, userLoc, itemLocation)
+        }
+    } ?: run {
+        scope.launch {
+            val snackbarResult = snackbarHostState.showSnackbar(
+                message = "Please set your location first",
+                actionLabel = "Set Location"
+            )
+            if (snackbarResult == SnackbarResult.ActionPerformed) {
+                onLocationSelect()
+            } else {
+                animateCameraToShowPoints(cameraPositionState, itemLocation)
+            }
+        }
+    }
+}
+
+private suspend fun animateCameraToShowPoints(
+    cameraPositionState: CameraPositionState,
+    point1: LatLng,
+    point2: LatLng? = null
+) {
+    if (point2 != null) {
+        val bounds = com.google.android.gms.maps.model.LatLngBounds.Builder()
+            .include(point1)
+            .include(point2)
+            .build()
+        cameraPositionState.animate(
+            update = CameraUpdateFactory.newLatLngBounds(bounds, 100),
+            durationMs = 1000
+        )
+    } else {
+        cameraPositionState.animate(
+            update = CameraUpdateFactory.newLatLngZoom(point1, 15f),
+            durationMs = 1000
+        )
+    }
+}
+

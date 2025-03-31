@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="36dp"
+    android:height="48dp"
+    android:viewportWidth="36"
+    android:viewportHeight="48">
+
+    <!-- Shadow -->
+    <path
+        android:fillColor="#40000000"
+        android:pathData="M18,2C8.1,2 0,10.1 0,20C0,33.5 18,50 18,50S36,33.5 36,20C36,10.1 27.9,2 18,2zM18,26c-3.3,0 -6,-2.7 -6,-6s2.7,-6 6,-6s6,2.7 6,6S21.3,26 18,26z"
+        android:translateY="2"/>
+
+    <!-- Pin shape -->
+    <path
+        android:fillColor="#E91E63"
+        android:pathData="M18,0C8.1,0 0,8.1 0,18C0,31.5 18,48 18,48S36,31.5 36,18C36,8.1 27.9,0 18,0zM18,24c-3.3,0 -6,-2.7 -6,-6s2.7,-6 6,-6s6,2.7 6,6S21.3,24 18,24z"/>
+
+    <!-- Inner circle for the number -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M18,12c3.3,0 6,2.7 6,6s-2.7,6 -6,6s-6,-2.7 -6,-6S14.7,12 18,12"/>
+</vector>
