@@ -12,10 +12,29 @@ export const AuthProvider = ({ children }) => {
     const navigate = useNavigate();
 
 
+    const publicRoutes = [
+        '/',
+        '/about',
+        '/verify-email',
+        '/admin/login',
+        '/support',
+        '/teaching-center',
+        '/roadmap',
+        '/careers',
+        '/privacy',
+        '/docs',
+        '/blog',
+        '/search',
+        '/forgot-password',
+        '/oauth2/redirect'
+    ];
+
+
     const checkAuthStatus = async () => {
         try {
             const token = localStorage.getItem('token');
             if (!token) {
+                setUser(null);
                 return false;
             }
     
@@ -23,10 +42,8 @@ export const AuthProvider = ({ children }) => {
                 axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
             }
             
-            if (!user) {
-                const response = await axios.get('http://localhost:8080/api/auth/user');
-                setUser(response.data);
-            }
+            const response = await axios.get('http://localhost:8080/api/auth/user');
+            setUser(response.data);
             return true;
         } catch (error) {
             if (error.response?.status !== 401 && error.response?.status !== 403) {
@@ -50,10 +67,8 @@ export const AuthProvider = ({ children }) => {
             try {
                 const isAuthenticated = await checkAuthStatus();
                 if (!isAuthenticated && 
-                    window.location.pathname !== '/' && 
-                    window.location.pathname !== '/about' && 
-                    !window.location.pathname.startsWith('/verify-email')) {
-                    window.location.replace('/');
+                    !publicRoutes.includes(window.location.pathname)) {
+                    navigate('/', { replace: true });
                 }
             } catch (error) {
                 // silent error

@@ -1,6 +1,6 @@
   import { motion } from 'framer-motion';
   import { FaGoogle, FaGithub, FaMicrosoft, FaBookReader, FaUsers, FaChalkboardTeacher, FaHandshake } from 'react-icons/fa';
-  import { MdEmail, MdLock, MdPerson } from 'react-icons/md';
+  import { MdEmail, MdLock, MdPerson, MdVisibility, MdVisibilityOff } from 'react-icons/md';
   import Modal from './Modal';
   import FormInput from './FormInput';
   import { useNavigate } from 'react-router-dom';
@@ -69,6 +69,9 @@
     const [error, setError] = useState(null);
 
     const [loginForm, setLoginForm] = useState({ username: '', password: '' });
+    const [showPassword, setShowPassword] = useState(false);
+    const [showRegisterPassword, setShowRegisterPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [registerForm, setRegisterForm] = useState({
       username: '',
       email: '',
@@ -525,23 +528,37 @@
               </motion.div>
 
               <motion.div
-              animate={{
-                scale: loginForm.password !== '' ? 1 : 0.98,
-                opacity: loginForm.password !== '' ? 1 : 0.9
-              }}
-              transition={{ duration: 0.2 }}
+                animate={{
+                  scale: loginForm.password !== '' ? 1 : 0.98,
+                  opacity: loginForm.password !== '' ? 1 : 0.9
+                }}
+                transition={{ duration: 0.2 }}
               >
-                <FormInput
-                  icon={MdLock}
-                  placeholder="Password"
-                  type="password"
-                  name="password"
-                  value={loginForm.password}
-                  onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
-                  className={`
-                    ${loginForm.password === '' ? 'border-gray-200' : 'border-green-500'}
-                  `}
-                />
+                <div className="relative">
+                  <FormInput
+                    icon={MdLock}
+                    placeholder="Password"
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    value={loginForm.password}
+                    onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
+                    className={`
+                      ${loginForm.password === '' ? 'border-gray-200' : 'border-green-500'}
+                      pr-10 
+                    `}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
+                  >
+                    {showPassword ? (
+                      <MdVisibilityOff className="w-5 h-5" />
+                    ) : (
+                      <MdVisibility className="w-5 h-5" />
+                    )}
+                  </button>
+                </div>
               </motion.div>
               </div>
 
@@ -752,18 +769,32 @@
                       )}
                     </div>
 
-                    <div className="space-y-2">
+                    {/* Password Input */}
+                    <div className="relative">
                       <FormInput
                         icon={MdLock}
                         placeholder="Password"
-                        type="password"
+                        type={showRegisterPassword ? "text" : "password"}
                         name="password"
                         value={registerForm.password}
                         onChange={handlePasswordChange}
+                        className="pr-10"
                       />
-                      
-                      {/* Password Strength Indicator */}
-                      {registerForm.password && (
+                      <button
+                        type="button"
+                        onClick={() => setShowRegisterPassword(!showRegisterPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
+                      >
+                        {showRegisterPassword ? (
+                          <MdVisibilityOff className="w-5 h-5" />
+                        ) : (
+                          <MdVisibility className="w-5 h-5" />
+                        )}
+                      </button>
+                    </div>
+
+                    {/* Password Strength Indicator */}
+                    {registerForm.password && (
                         <div className="space-y-2">
                           <div className="flex gap-1">
                             {[1, 2, 3, 4, 5].map((level) => (
@@ -795,17 +826,30 @@
                           </ul>
                         </div>
                       )}
-                    </div>
 
                     {/* Confirm Password Input */}
-                    <FormInput
-                      icon={MdLock}
-                      placeholder="Confirm password"
-                      type="password"
-                      name="confirmPassword"
-                      value={registerForm.confirmPassword}
-                      onChange={(e) => setRegisterForm({ ...registerForm, confirmPassword: e.target.value })}
-                    />
+                    <div className="relative">
+                      <FormInput
+                        icon={MdLock}
+                        placeholder="Confirm password"
+                        type={showConfirmPassword ? "text" : "password"}
+                        name="confirmPassword"
+                        value={registerForm.confirmPassword}
+                        onChange={(e) => setRegisterForm({ ...registerForm, confirmPassword: e.target.value })}
+                        className="pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
+                      >
+                        {showConfirmPassword ? (
+                          <MdVisibilityOff className="w-5 h-5" />
+                        ) : (
+                          <MdVisibility className="w-5 h-5" />
+                        )}
+                      </button>
+                    </div>
                   </div>
 
                   {/* Submit Button */}

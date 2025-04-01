@@ -40,6 +40,8 @@ public interface ClassRepository extends JpaRepository<CourseClass, Long> {
     );
 
     int countByCreatorId(Long creatorId);
+
+    List<CourseClass> findTop3ByOrderByEnrolledCountDesc();
 }
 
 

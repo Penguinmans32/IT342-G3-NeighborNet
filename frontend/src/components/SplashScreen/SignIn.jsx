@@ -13,6 +13,7 @@ import ScrollProgressBar from "./ScrollProgressBar"
 import { useAuth } from "../../backendApi/AuthContext"
 import { useNavigate } from "react-router-dom"
 import axios from "axios"
+import { BookOpen } from 'lucide-react';
 
 function SignIn() {
   // Initialize particles effect
@@ -57,6 +58,7 @@ function SignIn() {
   const [isSignInOpen, setIsSignInOpen] = useState(false)
   const [showSignUpAfterSearch, setShowSignUpAfterSearch] = useState(false)
   const [redirectPath, setRedirectPath] = useState(null)
+  const [popularClasses, setPopularClasses] = useState([]);
 
   const openSignInModal = () => setIsSignInOpen(true)
   const closeSignInModal = () => setIsSignInOpen(false)
@@ -69,6 +71,19 @@ function SignIn() {
     itemsBorrowed: 0,
     activeUsers: 0,
   })
+
+  const fetchPopularClasses = async () => {
+    try {
+      const response = await axios.get('http://localhost:8080/api/classes/popular');
+      setPopularClasses(response.data);
+    } catch (error) {
+      console.error('Error fetching popular classes:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchPopularClasses();
+  }, []);
 
   // Fetch dashboard stats
   const fetchDashboardStats = async () => {
@@ -451,66 +466,118 @@ function SignIn() {
               ))}
             </div>
 
-            {/* Interactive Demo Card */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 1 }}
-              className="mt-8 bg-white/90 backdrop-blur-lg rounded-2xl p-6 shadow-lg overflow-hidden relative"
-            >
-              <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-bl-3xl"></div>
-
-              <h3 className="text-lg font-semibold mb-4 text-gray-800">Popular Right Now</h3>
-
-              <div className="space-y-3">
-                {[
-                  { title: "Introduction to Watercolor Painting", students: 128, rating: 4.8 },
-                  { title: "Urban Gardening Basics", students: 95, rating: 4.7 },
-                  { title: "Home Bread Baking", students: 156, rating: 4.9 },
-                ].map((course, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-blue-50 transition-colors"
-                  >
-                    <div className="w-10 h-10 bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg flex items-center justify-center text-blue-500 font-bold">
-                      {index + 1}
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="text-sm font-medium text-gray-800">{course.title}</h4>
-                      <div className="flex items-center gap-2 text-xs text-gray-500">
-                        <span>{course.students} students</span>
-                        <span>•</span>
-                        <span className="flex items-center">
-                          <svg className="w-3 h-3 text-yellow-400 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
-                          </svg>
-                          {course.rating}
-                        </span>
-                      </div>
-                    </div>
-                    <button className="text-blue-500 hover:text-blue-700">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </button>
-                  </div>
-                ))}
-              </div>
-
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={scrollToExplore}
-                className="mt-4 w-full py-3 bg-gradient-to-r from-blue-500 to-purple-500
-                         text-white rounded-xl font-medium shadow-md
-                         hover:shadow-lg transition-all duration-300
-                         flex items-center justify-center space-x-2"
+           {/* Interactive Demo Card */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 1 }}
+                className="mt-8 bg-white/90 backdrop-blur-lg rounded-2xl p-6 shadow-lg overflow-hidden relative"
               >
-                <span>View All Classes</span>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                </svg>
-              </motion.button>
+                <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-bl-3xl"></div>
+
+                <h3 className="text-lg font-semibold mb-4 text-gray-800">Popular Right Now</h3>
+
+                {popularClasses.length === 0 ? (
+                  // No classes case
+                  <div className="flex flex-col items-center justify-center py-8 text-gray-500">
+                    <BookOpen className="w-12 h-12 mb-3 text-blue-200" />
+                    <p className="text-center">No classes available yet.</p>
+                    <p className="text-sm text-center mt-1">Be the first to create a class!</p>
+                  </div>
+                ) : popularClasses.length < 3 ? (
+                  // 1 or 2 classes case
+                  <div className="space-y-3">
+                    {/* Real classes */}
+                    {popularClasses.map((course, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center gap-3 p-2 rounded-lg hover:bg-blue-50 transition-colors"
+                      >
+                        <div className="w-10 h-10 bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg flex items-center justify-center text-blue-500 font-bold">
+                          {index + 1}
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="text-sm font-medium text-gray-800">{course.title}</h4>
+                          <div className="flex items-center gap-2 text-xs text-gray-500">
+                            <span>{course.enrolledCount} students</span>
+                            <span>•</span>
+                            <span className="flex items-center">
+                              <svg className="w-3 h-3 text-yellow-400 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                              </svg>
+                              {course.averageRating.toFixed(1)}
+                            </span>
+                          </div>
+                        </div>
+                        <button 
+                          onClick={() => navigate(`/class/${course.id}`)}
+                          className="text-blue-500 hover:text-blue-700"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
+                    
+                    {/* Placeholder cards */}
+                    {[...Array(3 - popularClasses.length)].map((_, index) => (
+                      <div
+                        key={`placeholder-${index}`}
+                        className="flex items-center gap-3 p-2 rounded-lg bg-gray-50"
+                      >
+                        <div className="w-10 h-10 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center text-gray-400 font-bold">
+                          {popularClasses.length + index + 1}
+                        </div>
+                        <div className="flex-1">
+                          <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                          <div className="flex items-center gap-2">
+                            <div className="h-3 bg-gray-200 rounded w-20"></div>
+                            <span className="text-gray-300">•</span>
+                            <div className="h-3 bg-gray-200 rounded w-12"></div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  // 3 or more classes case (show top 3)
+                  <div className="space-y-3">
+                    {popularClasses.slice(0, 3).map((course, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center gap-3 p-2 rounded-lg hover:bg-blue-50 transition-colors"
+                      >
+                        <div className="w-10 h-10 bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg flex items-center justify-center text-blue-500 font-bold">
+                          {index + 1}
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="text-sm font-medium text-gray-800">{course.title}</h4>
+                          <div className="flex items-center gap-2 text-xs text-gray-500">
+                            <span>{course.enrolledCount} students</span>
+                            <span>•</span>
+                            <span className="flex items-center">
+                              <svg className="w-3 h-3 text-yellow-400 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                              </svg>
+                              {course.averageRating.toFixed(1)}
+                            </span>
+                          </div>
+                        </div>
+                        <button 
+                          onClick={() => navigate(`/class/${course.id}`)}
+                          className="text-blue-500 hover:text-blue-700"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </motion.div>
+              <motion.div>
             </motion.div>
           </motion.div>
         </div>

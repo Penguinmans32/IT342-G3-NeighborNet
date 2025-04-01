@@ -543,5 +543,17 @@ public class ClassController {
         }
     }
 
-
+    @GetMapping("/popular")
+    public ResponseEntity<List<ClassResponse>> getPopularClasses() {
+        try {
+            List<ClassResponse> popularClasses = classRepository.findTop3ByOrderByEnrolledCountDesc()
+                    .stream()
+                    .map(ClassResponse::fromEntity)
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(popularClasses);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.badRequest().build();
+        }
+    }
 }

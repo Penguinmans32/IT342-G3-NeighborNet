@@ -141,6 +141,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // Static Resources & Media Files
                         // These are public for performance but protected operations still require authentication
+                        .requestMatchers("/api/admin/login").permitAll()
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+
                         .requestMatchers(
                                 "/images/**",
                                 "/default-class-image.jpg"
