@@ -19,6 +19,7 @@ public class UserDTO {
     private int followersCount;
     private int followingCount;
     private boolean isFollowing;
+    private String provider;
 
 
     public UserDTO(Long id, String username, String imageUrl) {
@@ -61,6 +62,7 @@ public class UserDTO {
         dto.setFollowersCount(user.getFollowers().size());
         dto.setFollowingCount(user.getFollowing().size());
         dto.setFollowing(currentUser != null && user.getFollowers().contains(currentUser));
+        dto.setProvider(user.getProvider());
 
         return dto;
     }
@@ -157,5 +159,13 @@ public class UserDTO {
 
     public void setFollowersCount(int followersCount) {
         this.followersCount = followersCount;
+    }
+
+    public String getProvider() {
+        return provider;
+    }
+
+    public void setProvider(String provider) {
+        this.provider = provider;
     }
 }

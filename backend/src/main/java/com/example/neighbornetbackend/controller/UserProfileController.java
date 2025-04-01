@@ -1,9 +1,6 @@
 package com.example.neighbornetbackend.controller;
 
-import com.example.neighbornetbackend.dto.ErrorResponse;
-import com.example.neighbornetbackend.dto.UpdateProfileRequest;
-import com.example.neighbornetbackend.dto.UserDTO;
-import com.example.neighbornetbackend.dto.UserSkillDTO;
+import com.example.neighbornetbackend.dto.*;
 import com.example.neighbornetbackend.model.User;
 import com.example.neighbornetbackend.repository.UserRepository;
 import com.example.neighbornetbackend.security.CurrentUser;
@@ -283,6 +280,49 @@ public class UserProfileController {
         } catch (Exception e) {
             return ResponseEntity.badRequest()
                     .body(new ErrorResponse(e.getMessage()));
+        }
+    }
+
+    @PutMapping(value = "/change-password",
+            produces = MediaType.APPLICATION_JSON_VALUE,
+            consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> changePassword(
+            @RequestBody PasswordChangeRequest request,
+            Authentication authentication) {
+        if (authentication == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new ErrorResponse("User not authenticated"));
+        }
+
+        try {
+            userService.changePassword(
+                    authentication.getName(),
+                    request.getCurrentPassword(),
+                    request.getNewPassword()
+            );
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(new MessageResponse("Password successfully updated"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(new ErrorResponse(e.getMessage()));
+        }
+    }
+
+    @DeleteMapping("/account")
+    public ResponseEntity<?> deleteAccount(
+            @RequestBody DeleteAccountRequest request,
+            Authentication authentication) {
+        if (authentication == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not authenticated");
+        }
+
+        try {
+            userService.deleteAccount(authentication.getName(), request.getPassword());
+            return ResponseEntity.ok().body(new MessageResponse("Account successfully deleted"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
         }
     }
 }

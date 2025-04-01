@@ -173,6 +173,7 @@ public class SecurityConfig {
                                 "/api/classes/**",
                                 "/api/users/profile/**",
                                 "/api/dashboard/stats"
+
                         ).permitAll()
 
                         // WebSocket & Communication
@@ -214,7 +215,7 @@ public class SecurityConfig {
 
                         // Notifications
                         .requestMatchers("/api/notifications/**").permitAll()
-
+                        .requestMatchers("/api/users/change-password").authenticated()
                         // Any other request requires authentication
                         .anyRequest().authenticated()
                 )

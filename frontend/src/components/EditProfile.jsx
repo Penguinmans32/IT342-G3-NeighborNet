@@ -20,6 +20,9 @@ import {
   Briefcase,
   Heart,
   Link,
+  Lock,
+  Key,
+  ArrowRight,
 } from "lucide-react"
 
 const EditProfile = () => {
@@ -48,7 +51,75 @@ const EditProfile = () => {
   const [dragActive, setDragActive] = useState(false)
   const fileInputRef = useRef(null)
   const bioRef = useRef(null)
+  const [passwords, setPasswords] = useState({ current: "", new: "", confirm: "" });
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleting, setDeleting] = useState(false);
   const router = useNavigate()
+
+  const canChangePassword = passwords.current && 
+                         passwords.new && 
+                         passwords.confirm && 
+                         passwords.new === passwords.confirm && 
+                         passwords.new.length >= 8;
+
+const handlePasswordChange = async () => {
+  if (!canChangePassword) return;
+  
+  setChangingPassword(true);
+  try {
+    const response = await axios.put(
+      "http://localhost:8080/api/users/change-password",
+      {
+        currentPassword: passwords.current,
+        newPassword: passwords.new
+      },
+      {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem("token")}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      }
+    );
+    
+    if (response.data && response.data.message) {
+      showNotification(response.data.message, "success");
+      setPasswords({ current: "", new: "", confirm: "" });
+    }
+  } catch (error) {
+    const errorMessage = error.response?.data?.message || "Failed to change password";
+    showNotification(errorMessage, "error");
+    console.error('Password change error:', error.response?.data);
+  } finally {
+    setChangingPassword(false);
+  }
+};
+
+const handleDeleteAccount = async () => {
+  setDeleting(true);
+  try {
+    await axios.delete(
+      "http://localhost:8080/api/users/account",
+      {
+        data: { password: deletePassword },
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`
+        }
+      }
+    );
+    
+    localStorage.removeItem("token");
+    router("/homepage");
+  } catch (error) {
+    showNotification(
+      error.response?.data?.message || "Failed to delete account", 
+      "error"
+    );
+    setDeleting(false);
+  }
+};
 
   // Sections for the sidebar navigation
   const sections = [
@@ -56,6 +127,7 @@ const EditProfile = () => {
     { id: "skills", label: "Skills", icon: <Briefcase className="h-4 w-4" /> },
     { id: "interests", label: "Interests", icon: <Heart className="h-4 w-4" /> },
     { id: "social", label: "Social Links", icon: <Link className="h-4 w-4" /> },
+    { id: "security", label: "Security", icon: <Lock className="h-4 w-4" /> },
   ]
 
   useEffect(() => {
@@ -779,6 +851,167 @@ const EditProfile = () => {
                       </div>
                     </motion.div>
                   )}
+                  
+                  {activeSection === "security" && (
+                  <motion.div
+                    key="security"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.3 }}
+                    className="space-y-8"
+                  >
+                    {/* Password Change Section */}
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-center">
+                        <h3 className="text-lg font-semibold text-slate-800">Change Password</h3>
+                      </div>
+
+                      {profileData.provider ? (
+                        // Social Login User Message
+                        <div className="p-4 bg-blue-50 border border-blue-100 rounded-lg">
+                          <div className="flex items-start gap-3">
+                            {profileData.provider === "google" ? (
+                              <img src="/images/google.png" alt="Google" className="w-6 h-6" />
+                            ) : profileData.provider === "github" ? (
+                              <Github className="w-6 h-6 text-slate-700" />
+                            ) : (
+                              <img src="/images/microsoft.png" alt="Microsoft" className="w-6 h-6" />
+                            )}
+                            <div>
+                              <h4 className="font-medium text-slate-800">Social Login Account</h4>
+                              <p className="text-sm text-slate-600 mt-1">
+                                Your account is managed through {profileData.provider}. 
+                                To change your password, please visit your {profileData.provider} account settings.
+                              </p>
+                              <a 
+                                href={
+                                  profileData.provider === "google" 
+                                    ? "https://myaccount.google.com/security" 
+                                    : profileData.provider === "github"
+                                    ? "https://github.com/settings/security"
+                                    : "https://account.microsoft.com/security"
+                                }
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-2 mt-3 text-sm text-blue-600 hover:text-blue-700"
+                              >
+                                Manage {profileData.provider} Account
+                                <ArrowRight className="w-4 h-4" />
+                              </a>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        // Regular User Password Change Form
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">
+                              Current Password
+                            </label>
+                            <input
+                              type="password"
+                              value={passwords.current}
+                              onChange={(e) => setPasswords(prev => ({ ...prev, current: e.target.value }))}
+                              className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                              placeholder="Enter your current password"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">
+                              New Password
+                            </label>
+                            <input
+                              type="password"
+                              value={passwords.new}
+                              onChange={(e) => setPasswords(prev => ({ ...prev, new: e.target.value }))}
+                              className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                              placeholder="Enter your new password"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">
+                              Confirm New Password
+                            </label>
+                            <input
+                              type="password"
+                              value={passwords.confirm}
+                              onChange={(e) => setPasswords(prev => ({ ...prev, confirm: e.target.value }))}
+                              className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                              placeholder="Confirm your new password"
+                            />
+                          </div>
+
+                          <div className="pt-2">
+                            <motion.button
+                              type="button"
+                              onClick={handlePasswordChange}
+                              disabled={!canChangePassword}
+                              whileHover={{ scale: 1.02 }}
+                              whileTap={{ scale: 0.98 }}
+                              className={`w-full py-3 px-4 rounded-lg flex items-center justify-center gap-2 ${
+                                canChangePassword
+                                  ? "bg-blue-500 hover:bg-blue-600 text-white"
+                                  : "bg-slate-200 text-slate-500 cursor-not-allowed"
+                              } transition-colors`}
+                            >
+                              {changingPassword ? (
+                                <>
+                                  <div className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                                  <span>Changing Password...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Key className="h-4 w-4" />
+                                  <span>Change Password</span>
+                                </>
+                              )}
+                            </motion.button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Account Deletion Section */}
+                    <div className="space-y-4 pt-6 border-t border-slate-200">
+                      <div>
+                        <h3 className="text-lg font-semibold text-red-600">Delete Account</h3>
+                        <p className="text-sm text-slate-500 mt-1">
+                          {profileData.provider 
+                            ? `This will permanently delete your NeighborNet account. Your ${profileData.provider} account will not be affected.`
+                            : "Once you delete your account, there is no going back. Please be certain."}
+                        </p>
+                      </div>
+
+                      <motion.button
+                        type="button"
+                        onClick={() => setShowDeleteModal(true)}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="w-full py-3 px-4 rounded-lg flex items-center justify-center gap-2 bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 transition-colors"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        <span>Delete Account</span>
+                      </motion.button>
+                    </div>
+
+                    {/* Back Navigation */}
+                    <div className="flex justify-between items-center pt-4">
+                      <motion.button
+                        type="button"
+                        onClick={() => setActiveSection("social")}
+                        whileHover={{ scale: 1.02, x: -5 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="flex items-center gap-2 text-blue-600 font-medium"
+                      >
+                        <ArrowLeft className="h-4 w-4" />
+                        <span>Back: Social Links</span>
+                      </motion.button>
+                    </div>
+                  </motion.div>
+                )}
                 </AnimatePresence>
               </div>
 
@@ -841,6 +1074,84 @@ const EditProfile = () => {
           animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
       `}</style>
+
+
+      {/* Delete Account Confirmation Modal */}
+        <AnimatePresence>
+          {showDeleteModal && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.2 }}
+                className="bg-white rounded-xl shadow-xl p-6 m-4 max-w-md w-full"
+              >
+                <h3 className="text-xl font-bold text-red-600 mb-4">Delete Account</h3>
+                {profileData.provider ? (
+                  <p className="text-slate-600 mb-6">
+                    This will permanently delete your NeighborNet account. Your {profileData.provider} account will not be affected.
+                    Click delete to confirm.
+                  </p>
+                ) : (
+                  <p className="text-slate-600 mb-6">
+                    This action cannot be undone. Please enter your password to confirm deletion.
+                  </p>
+                )}
+                
+                {!profileData.provider && (
+                  <input
+                    type="password"
+                    value={deletePassword}
+                    onChange={(e) => setDeletePassword(e.target.value)}
+                    placeholder="Enter your password"
+                    className="w-full p-3 mb-4 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
+                  />
+                )}
+                
+                <div className="flex gap-3">
+                  <motion.button
+                    type="button"
+                    onClick={() => {
+                      setShowDeleteModal(false);
+                      setDeletePassword("");
+                    }}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="flex-1 py-2.5 px-4 rounded-lg bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
+                  >
+                    Cancel
+                  </motion.button>
+                  
+                  <motion.button
+                    type="button"
+                    onClick={handleDeleteAccount}
+                    disabled={(!profileData.provider && !deletePassword) || deleting}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className={`flex-1 py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 ${
+                      (!profileData.provider && !deletePassword) || deleting
+                        ? "bg-red-200 text-red-400 cursor-not-allowed"
+                        : "bg-red-500 text-white hover:bg-red-600"
+                    } transition-colors`}
+                  >
+                    {deleting ? (
+                      <>
+                        <div className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                        <span>Deleting...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 className="h-4 w-4" />
+                        <span>Delete Account</span>
+                      </>
+                    )}
+                  </motion.button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
     </div>
   )
 }
