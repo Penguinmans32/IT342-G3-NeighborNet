@@ -1,6 +1,5 @@
 package com.example.neighbornetbackend.security;
 
-
 import com.example.neighbornetbackend.model.User;
 import com.example.neighbornetbackend.repository.UserRepository;
 import com.example.neighbornetbackend.service.CustomOAuth2UserService;
@@ -12,8 +11,7 @@ import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.oauth2.core.oidc.user.OidcUser;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Component;
 import org.slf4j.Logger;
@@ -47,12 +45,18 @@ public class JwtTokenProvider {
     public String generateToken(Authentication authentication) {
         String username;
         Long userId = null;
+        String role = null;
 
         if (authentication.getPrincipal() instanceof UserPrincipal) {
             UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
             username = userPrincipal.getEmail();
             userId = userPrincipal.getId();
-            log.info("Generating token for UserPrincipal with email: {} and ID: {}", username, userId);
+            role = userPrincipal.getAuthorities().stream()
+                    .findFirst()
+                    .map(GrantedAuthority::getAuthority)
+                    .orElse("ROLE_USER");
+            log.info("Generating token for UserPrincipal with email: {}, ID: {}, and role: {}",
+                    username, userId, role);
         } else if (authentication.getPrincipal() instanceof OAuth2User) {
             OAuth2User oauth2User = (OAuth2User) authentication.getPrincipal();
             Map<String, Object> attributes = oauth2User.getAttributes();
@@ -70,12 +74,13 @@ public class JwtTokenProvider {
                 throw new IllegalStateException("Could not find email in OAuth2 user attributes");
             }
 
-            // Get user ID from database
             User user = userRepository.findByEmail(username)
                     .orElseThrow(() -> new IllegalStateException("User not found"));
             userId = user.getId();
+            role = user.getRole();
 
-            log.info("Generating token for OAuth2User with email: {} and ID: {}", username, userId);
+            log.info("Generating token for OAuth2User with email: {}, ID: {}, and role: {}",
+                    username, userId, role);
         } else {
             throw new IllegalArgumentException("Unsupported principal type: " +
                     authentication.getPrincipal().getClass());
@@ -87,6 +92,7 @@ public class JwtTokenProvider {
         return Jwts.builder()
                 .setSubject(username)
                 .claim("user_id", userId)
+                .claim("role", role)
                 .setIssuedAt(now)
                 .setExpiration(expiryDate)
                 .signWith(key)
@@ -116,7 +122,6 @@ public class JwtTokenProvider {
     }
 
     public String generateTokenFromUsername(String username) {
-        // Find user to get the correct ID
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -126,6 +131,7 @@ public class JwtTokenProvider {
         return Jwts.builder()
                 .setSubject(username)
                 .claim("user_id", user.getId())
+                .claim("role", user.getRole())
                 .setIssuedAt(now)
                 .setExpiration(expiryDate)
                 .signWith(key)

@@ -33,6 +33,9 @@ import Documentation from "./components/Documentation";
 import Blog from "./components/Blog";
 import SearchResults from "./components/SearchResults";
 import ForgotPassword from "./components/ForgotPassword";
+import AdminDashboard from "./components/AdminDashboard";
+import AdminLogin from "./components/AdminLogin";
+import AdminRoute from "./components/AdminRoute";
 
 
 function App() {
@@ -54,6 +57,7 @@ function App() {
             <Route path="/" element={<SignIn />} />
             <Route path="/verify-email" element={<VerifyEmail />} />
             <Route path="/about" element={<AboutUs />} />
+            <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/support" element={<Support />} />
             <Route path="/teaching-center" element={<TeachingCenter />} /> 
             <Route path="/roadmap" element={<LearningRoadmap />} />
@@ -65,6 +69,14 @@ function App() {
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/oauth2/redirect" element={<OAuth2RedirectHandler />} />
             <Route path="/profile/:userId" element={<Profile />} />
+            <Route 
+                path="/admin/dashboard" 
+                element={
+                    <AdminRoute>
+                        <AdminDashboard />
+                    </AdminRoute>
+                } 
+            />
             <Route 
               path="/homepage" 
               element={
