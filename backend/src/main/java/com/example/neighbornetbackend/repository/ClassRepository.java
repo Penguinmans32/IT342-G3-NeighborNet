@@ -2,8 +2,10 @@ package com.example.neighbornetbackend.repository;
 
 import com.example.neighbornetbackend.model.CourseClass;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -42,6 +44,11 @@ public interface ClassRepository extends JpaRepository<CourseClass, Long> {
     int countByCreatorId(Long creatorId);
 
     List<CourseClass> findTop3ByOrderByEnrolledCountDesc();
+
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM ClassEnrollment ce WHERE ce.courseClass.creator.id = :userId OR ce.user.id = :userId")
+    void deleteByCreatorOrEnrolledUserId(@Param("userId") Long userId);
 }
 
 

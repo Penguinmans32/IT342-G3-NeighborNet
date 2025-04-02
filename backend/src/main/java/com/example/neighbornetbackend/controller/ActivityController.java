@@ -48,8 +48,7 @@ public class ActivityController {
 
             List<ClassEnrollment> recentEnrollments = classService.getRecentEnrollments();
             for (ClassEnrollment enrollment : recentEnrollments) {
-                User enrolledUser = userRepository.findById(enrollment.getUserId())
-                        .orElseThrow(() -> new RuntimeException("User not found"));
+                User enrolledUser = enrollment.getUser();
 
                 ActivityResponse activity = new ActivityResponse();
                 activity.setType("class");

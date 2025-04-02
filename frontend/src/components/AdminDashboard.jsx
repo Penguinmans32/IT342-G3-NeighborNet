@@ -14,12 +14,15 @@ import {
   User,
   LogOut,
   Activity,
-  BookOpen,
-  Calendar,
-  DollarSign,
 } from "lucide-react"
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from "../backendApi/AuthContext";
+import DashboardView from "./DashboardView"
+import UsersView from "./UsersView"
+import ClassesView from "./ClassesView"
+import ItemsView from "./ItemsView"
+import PostsView from "./PostsView"
+import SettingsView from "./SettingsView"
 
 export default function AdminDashboard() {
   const [isSidebarCollapsed, setSidebarCollapsed] = useState(false)
@@ -72,6 +75,25 @@ export default function AdminDashboard() {
       bgColor: "bg-red-100",
     },
   ]
+
+  const renderMenuContent = () => {
+    switch (activeMenu) {
+      case "dashboard":
+        return <DashboardView activityItems={activityItems} />;
+      case "users":
+        return <UsersView />;
+      case "classes":
+        return <ClassesView />;
+      case "items":
+        return <ItemsView />;
+      case "posts":
+        return <PostsView />;
+      case "settings":
+        return <SettingsView />;
+      default:
+        return <DashboardView activityItems={activityItems} />;
+    }
+  };
 
   return (
     <div className="flex h-screen bg-gray-100">
@@ -182,24 +204,8 @@ export default function AdminDashboard() {
         <header className="bg-white border-b border-gray-200 shadow-sm">
           <div className="flex items-center justify-between px-6 py-4">
             <div className="flex items-center gap-4 flex-1">
-              <div className="relative flex-1 max-w-md">
-                <input
-                  type="text"
-                  placeholder="Search..."
-                  className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  aria-label="Search"
-                />
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              </div>
             </div>
             <div className="flex items-center gap-4">
-              <button
-                className="relative p-2 text-gray-500 hover:text-blue-600 transition-colors"
-                aria-label="Notifications"
-              >
-                <Bell className="w-6 h-6" />
-                <div className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></div>
-              </button>
               <button 
                 className="p-2 text-gray-500 hover:text-blue-600 transition-colors" 
                 aria-label="User profile"
@@ -217,7 +223,7 @@ export default function AdminDashboard() {
           </div>
         </header>
 
-        {/* Dashboard Content */}
+       {/* Dashboard Content */}
         <main className="p-6 overflow-auto h-[calc(100vh-4.5rem)]">
           <AnimatePresence mode="wait">
             <motion.div
@@ -244,201 +250,7 @@ export default function AdminDashboard() {
                   </span>
                 </div>
               </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {/* Stats Cards */}
-                <motion.div
-                  className="bg-white p-6 rounded-xl shadow-sm border border-gray-200"
-                  whileHover={{ y: -5, boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)" }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-800">Total Users</h3>
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                      <Users className="w-5 h-5 text-blue-600" />
-                    </div>
-                  </div>
-                  <div className="flex items-end gap-2">
-                    <span className="text-3xl font-bold text-blue-600">1,234</span>
-                    <span className="text-sm text-green-500 mb-1 flex items-center">
-                      <ChevronRight className="w-4 h-4 rotate-90" /> 12% this week
-                    </span>
-                  </div>
-                </motion.div>
-
-                <motion.div
-                  className="bg-white p-6 rounded-xl shadow-sm border border-gray-200"
-                  whileHover={{ y: -5, boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)" }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-800">Active Classes</h3>
-                    <div className="p-2 bg-purple-100 rounded-lg">
-                      <BookOpen className="w-5 h-5 text-purple-600" />
-                    </div>
-                  </div>
-                  <div className="flex items-end gap-2">
-                    <span className="text-3xl font-bold text-purple-600">56</span>
-                    <span className="text-sm text-green-500 mb-1 flex items-center">
-                      <ChevronRight className="w-4 h-4 rotate-90" /> 3 new today
-                    </span>
-                  </div>
-                </motion.div>
-
-                <motion.div
-                  className="bg-white p-6 rounded-xl shadow-sm border border-gray-200"
-                  whileHover={{ y: -5, boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)" }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-800">Total Posts</h3>
-                    <div className="p-2 bg-green-100 rounded-lg">
-                      <MessageSquare className="w-5 h-5 text-green-600" />
-                    </div>
-                  </div>
-                  <div className="flex items-end gap-2">
-                    <span className="text-3xl font-bold text-green-600">892</span>
-                    <span className="text-sm text-green-500 mb-1 flex items-center">
-                      <ChevronRight className="w-4 h-4 rotate-90" /> 45 this week
-                    </span>
-                  </div>
-                </motion.div>
-
-                <motion.div
-                  className="bg-white p-6 rounded-xl shadow-sm border border-gray-200"
-                  whileHover={{ y: -5, boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)" }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-800">Revenue</h3>
-                    <div className="p-2 bg-amber-100 rounded-lg">
-                      <DollarSign className="w-5 h-5 text-amber-600" />
-                    </div>
-                  </div>
-                  <div className="flex items-end gap-2">
-                    <span className="text-3xl font-bold text-amber-600">$24.5k</span>
-                    <span className="text-sm text-green-500 mb-1 flex items-center">
-                      <ChevronRight className="w-4 h-4 rotate-90" /> 18% this month
-                    </span>
-                  </div>
-                </motion.div>
-              </div>
-
-              {/* Charts and Activity Section */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Chart Section */}
-                <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                  <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-xl font-semibold text-gray-800">User Growth</h2>
-                    <div className="flex items-center gap-2">
-                      <button className="px-3 py-1 text-sm bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 transition-colors">
-                        Weekly
-                      </button>
-                      <button className="px-3 py-1 text-sm text-gray-500 hover:bg-gray-50 rounded-md transition-colors">
-                        Monthly
-                      </button>
-                      <button className="px-3 py-1 text-sm text-gray-500 hover:bg-gray-50 rounded-md transition-colors">
-                        Yearly
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Chart Placeholder */}
-                  <div className="h-64 bg-gray-50 rounded-lg flex items-center justify-center">
-                    <div className="text-center">
-                      <BarChart3 className="w-12 h-12 text-gray-300 mx-auto mb-2" />
-                      <p className="text-gray-500">Chart visualization would appear here</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Recent Activity */}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-                  <div className="p-6">
-                    <div className="flex items-center justify-between mb-6">
-                      <h2 className="text-xl font-semibold text-gray-800">Recent Activity</h2>
-                      <button className="text-sm text-blue-600 hover:underline">View all</button>
-                    </div>
-                    <div className="space-y-4">
-                      {activityItems.map((item, index) => (
-                        <motion.div
-                          key={index}
-                          className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg"
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: index * 0.1 }}
-                          whileHover={{ x: 5 }}
-                        >
-                          <div className={`w-10 h-10 ${item.bgColor} rounded-full flex items-center justify-center`}>
-                            {item.icon}
-                          </div>
-                          <div>
-                            <p className="font-medium text-gray-800">{item.title}</p>
-                            <p className="text-sm text-gray-500">{item.time}</p>
-                          </div>
-                        </motion.div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Calendar and Tasks Section */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Calendar Section */}
-                <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                  <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-xl font-semibold text-gray-800">Calendar</h2>
-                    <div className="flex items-center gap-2">
-                      <button className="p-1 text-gray-500 hover:text-blue-600 transition-colors">
-                        <ChevronLeft className="w-5 h-5" />
-                      </button>
-                      <span className="text-sm font-medium">April 2025</span>
-                      <button className="p-1 text-gray-500 hover:text-blue-600 transition-colors">
-                        <ChevronRight className="w-5 h-5" />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Calendar Placeholder */}
-                  <div className="h-64 bg-gray-50 rounded-lg flex items-center justify-center">
-                    <div className="text-center">
-                      <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-2" />
-                      <p className="text-gray-500">Calendar would appear here</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Tasks Section */}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-                  <div className="p-6">
-                    <div className="flex items-center justify-between mb-6">
-                      <h2 className="text-xl font-semibold text-gray-800">Tasks</h2>
-                      <button className="text-sm text-blue-600 hover:underline">Add New</button>
-                    </div>
-                    <div className="space-y-3">
-                      {[
-                        { title: "Review new user applications", completed: true },
-                        { title: "Prepare monthly report", completed: false },
-                        { title: "Update user documentation", completed: false },
-                        { title: "Schedule team meeting", completed: false },
-                      ].map((task, index) => (
-                        <div key={index} className="flex items-center gap-3 p-3 border border-gray-100 rounded-lg">
-                          <input
-                            type="checkbox"
-                            checked={task.completed}
-                            className="w-5 h-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                            readOnly
-                          />
-                          <span className={`${task.completed ? "line-through text-gray-400" : "text-gray-700"}`}>
-                            {task.title}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
+              {renderMenuContent()}
             </motion.div>
           </AnimatePresence>
         </main>

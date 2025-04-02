@@ -296,10 +296,10 @@ public class ClassService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        if (!enrollmentRepository.existsByCourseClassIdAndUserId(classId, userId)) {
+        if (!enrollmentRepository.existsByCourseClassIdAndUser(classId, user)) {
             ClassEnrollment enrollment = new ClassEnrollment();
             enrollment.setCourseClass(courseClass);
-            enrollment.setUserId(userId);
+            enrollment.setUser(user);
             enrollment.setEnrolledAt(LocalDateTime.now());
             enrollmentRepository.save(enrollment);
 
@@ -328,7 +328,9 @@ public class ClassService {
     }
 
     public boolean isUserLearning(Long classId, Long userId) {
-        return enrollmentRepository.existsByCourseClassIdAndUserId(classId, userId);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        return enrollmentRepository.existsByCourseClassIdAndUser(classId, user);
     }
 
     public List<ClassEnrollment> getRecentEnrollments() {

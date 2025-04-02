@@ -2,6 +2,7 @@ package com.example.neighbornetbackend.repository;
 
 import com.example.neighbornetbackend.model.BorrowingAgreement;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -61,4 +62,10 @@ public interface BorrowingAgreementRepository extends JpaRepository<BorrowingAgr
             List<String> statuses
     );
 
+    @Query("SELECT COUNT(DISTINCT b.borrowerId) FROM BorrowingAgreement b WHERE b.status = :status")
+    long countDistinctBorrowerIdByStatus(@Param("status") String status);
+
+    @Modifying
+    @Query("DELETE FROM BorrowingAgreement b WHERE b.itemId = :itemId")
+    void deleteByItemId(@Param("itemId") Long itemId);
 }

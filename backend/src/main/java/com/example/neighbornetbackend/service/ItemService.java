@@ -3,10 +3,13 @@ package com.example.neighbornetbackend.service;
 import com.example.neighbornetbackend.dto.BorrowRequestDTO;
 import com.example.neighbornetbackend.dto.CreatorDTO;
 import com.example.neighbornetbackend.dto.ItemDTO;
+import com.example.neighbornetbackend.exception.ResourceNotFoundException;
 import com.example.neighbornetbackend.model.BorrowingAgreement;
 import com.example.neighbornetbackend.model.Item;
+import com.example.neighbornetbackend.model.ItemRating;
 import com.example.neighbornetbackend.model.User;
 import com.example.neighbornetbackend.repository.BorrowingAgreementRepository;
+import com.example.neighbornetbackend.repository.ItemRatingRepository;
 import com.example.neighbornetbackend.repository.ItemRepository;
 import com.example.neighbornetbackend.repository.UserRepository;
 import org.slf4j.Logger;
@@ -30,15 +33,17 @@ public class ItemService {
     private final ItemImageStorageService itemImageStorageService;
     private final BorrowingAgreementRepository borrowingAgreementRepository;
     private final ActivityService activityService;
+    private final ItemRatingRepository itemRatingRepository;
 
     private static final Logger logger = LoggerFactory.getLogger(ItemService.class);
 
-    public ItemService(ItemRepository itemRepository, UserRepository userRepository, ItemImageStorageService itemImageStorageService, BorrowingAgreementRepository borrowingAgreementRepository, ActivityService activityService) {
+    public ItemService(ItemRepository itemRepository, UserRepository userRepository, ItemImageStorageService itemImageStorageService, BorrowingAgreementRepository borrowingAgreementRepository, ActivityService activityService, ItemRatingRepository itemRatingRepository) {
         this.itemRepository = itemRepository;
         this.userRepository = userRepository;
         this.itemImageStorageService = itemImageStorageService;
         this.borrowingAgreementRepository = borrowingAgreementRepository;
         this.activityService = activityService;
+        this.itemRatingRepository = itemRatingRepository;
     }
 
     public ItemDTO createItem(Item item, List<MultipartFile> images, Long userId) throws IOException {
@@ -311,5 +316,43 @@ public class ItemService {
                 )
                 .orElse(null);
         return agreement != null ? agreement.getId() : null;
+    }
+
+    @Transactional
+    public void deleteItemAdmin(Long itemId) {
+        Item item = itemRepository.findById(itemId)
+                .orElseThrow(() -> new ResourceNotFoundException("Item not found"));
+
+        if (item.getImageUrls() != null && !item.getImageUrls().isEmpty()) {
+            for (String imageUrl : item.getImageUrls()) {
+                try {
+                    String filename = imageUrl.substring(imageUrl.lastIndexOf('/') + 1);
+                    itemImageStorageService.deleteItemImage(filename);
+                } catch (IOException e) {
+                    logger.error("Failed to delete image: " + imageUrl, e);
+                }
+            }
+        }
+
+        borrowingAgreementRepository.deleteByItemId(itemId);
+
+        itemRepository.delete(item);
+    }
+
+    public double getOverallAverageRating() {
+        return itemRatingRepository.findAll().stream()
+                .mapToDouble(ItemRating::getRating)
+                .average()
+                .orElse(0.0);
+    }
+
+    public List<ItemDTO> searchItems(String query) {
+        return getAllItems().stream()
+                .filter(item ->
+                        item.getName().toLowerCase().contains(query.toLowerCase()) ||
+                                item.getDescription().toLowerCase().contains(query.toLowerCase()) ||
+                                item.getCategory().toLowerCase().contains(query.toLowerCase())
+                )
+                .collect(Collectors.toList());
     }
 }

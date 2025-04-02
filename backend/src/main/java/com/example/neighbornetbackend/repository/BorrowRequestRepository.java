@@ -4,8 +4,11 @@ package com.example.neighbornetbackend.repository;
 import com.example.neighbornetbackend.model.BorrowRequest;
 import com.example.neighbornetbackend.model.Item;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 
@@ -21,4 +24,9 @@ public interface BorrowRequestRepository extends JpaRepository<BorrowRequest, Lo
             LocalDate startDate,
             LocalDate endDate
     );
+
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM BorrowRequest br WHERE br.item.owner.id = :userId OR br.borrower.id = :userId")
+    void deleteByUserInvolvement(@Param("userId") Long userId);
 }

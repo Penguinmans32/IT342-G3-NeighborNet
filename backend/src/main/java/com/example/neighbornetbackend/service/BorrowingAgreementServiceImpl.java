@@ -239,4 +239,9 @@ public class BorrowingAgreementServiceImpl implements BorrowingAgreementService 
     public Optional<BorrowingAgreement> findById(Long id) {
         return borrowingAgreementRepository.findById(id);
     }
+
+    @Override
+    public long getTotalBorrowers() {
+        return borrowingAgreementRepository.countDistinctBorrowerIdByStatus("ACCEPTED");
+    }
 }
