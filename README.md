@@ -14,7 +14,7 @@
 <h2 align="center">🗂️ <strong>Links</strong></h2>
 <p align="center">
   <a href="https://www.figma.com/design/N9JXCEig0TYOnKqWx1unTT/NeighborNet?node-id=0-1&t=LnxphxT733CiAe7v-1" target="_blank"><img src="https://img.shields.io/badge/Figma-Visit-blue?style=for-the-badge&logo=figma&logoColor=white" alt="Figma"/></a>
-  <a href="https://www.lucidchart.com" target="_blank"><img src="https://img.shields.io/badge/Lucidchart-Visit-blue?style=for-the-badge&logo=lucidchart&logoColor=white" alt="Lucidchart"/></a>
+  <a href="[https://www.lucidchart.com](https://lucid.app/lucidchart/e5876fdd-ff44-4aa2-b80e-b68be70d525a/edit?view_items=hgG6D.SZIVID&invitationId=inv_40d16b95-1d66-4c1e-a5dd-21d733af3575)" target="_blank"><img src="https://img.shields.io/badge/Lucidchart-Visit-blue?style=for-the-badge&logo=lucidchart&logoColor=white" alt="Lucidchart"/></a>
 </p>
 
 
@@ -62,7 +62,7 @@ I’m a third-year **BSIT** student at **CIT University**. I consider myself an 
 
 ## 📚 Course & Year
 - **Course**: BSIT
-- **Year**: 4th Year
+- **Year**: 3rd Year
 
 
 
