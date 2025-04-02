@@ -61,20 +61,17 @@ public class Item {
     @Column(name = "image_url")
     private List<String> imageUrls = new ArrayList<>();
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private User owner;
 
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "borrower_id")
     private User borrower;
-
-
 
     private LocalDateTime createdAt;
 
     public Item() {
-
     }
 
     @PrePersist

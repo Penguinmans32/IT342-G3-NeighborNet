@@ -29,6 +29,7 @@
     "react-router-dom": "^7.1.5",
     "react-timeago": "^8.0.0",
     "react-tooltip": "^5.28.0",
+    "recharts": "^2.15.1",
     "sockjs-client": "^1.6.1",
     "styled-components": "^6.1.15",
     "three": "^0.149.0"

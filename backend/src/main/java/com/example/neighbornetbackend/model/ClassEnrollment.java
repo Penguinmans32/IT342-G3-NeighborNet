@@ -14,8 +14,9 @@ public class ClassEnrollment {
     @JoinColumn(name = "course_class_id")
     private CourseClass courseClass;
 
-    @Column(name = "user_id")
-    private Long userId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private User user;
 
     @Column(name = "enrolled_at")
     private LocalDateTime enrolledAt;
@@ -23,9 +24,9 @@ public class ClassEnrollment {
     // Constructors
     public ClassEnrollment() {}
 
-    public ClassEnrollment(CourseClass courseClass, Long userId, LocalDateTime enrolledAt) {
+    public ClassEnrollment(CourseClass courseClass, User user, LocalDateTime enrolledAt) {
         this.courseClass = courseClass;
-        this.userId = userId;
+        this.user = user;
         this.enrolledAt = enrolledAt;
     }
 
@@ -46,12 +47,12 @@ public class ClassEnrollment {
         this.courseClass = courseClass;
     }
 
-    public Long getUserId() {
-        return userId;
+    public User getUser() {
+        return user;
     }
 
-    public void setUserId(Long userId) {
-        this.userId = userId;
+    public void setUser(User user) {
+        this.user = user;
     }
 
     public LocalDateTime getEnrolledAt() {

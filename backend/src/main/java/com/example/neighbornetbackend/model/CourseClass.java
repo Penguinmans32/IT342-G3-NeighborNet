@@ -64,6 +64,9 @@ public class CourseClass {
     @OneToMany(mappedBy = "classEntity", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Feedback> feedbacks = new ArrayList<>();
 
+    @OneToMany(mappedBy = "courseClass", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ClassEnrollment> enrollments = new ArrayList<>();
+
     @Type(JsonType.class)
     @Column(columnDefinition = "JSON")
     private List<String> requirements = new ArrayList<>();
@@ -348,5 +351,13 @@ public class CourseClass {
 
     public void setFeedbacks(List<Feedback> feedbacks) {
         this.feedbacks = feedbacks;
+    }
+
+    public List<ClassEnrollment> getEnrollments() {
+        return enrollments;
+    }
+
+    public void setEnrollments(List<ClassEnrollment> enrollments) {
+        this.enrollments = enrollments;
     }
 }

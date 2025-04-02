@@ -11,6 +11,8 @@ import com.example.neighbornetbackend.model.Share;
 import com.example.neighbornetbackend.model.User;
 import com.example.neighbornetbackend.repository.PostRepository;
 import org.hibernate.Hibernate;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,8 +20,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -27,11 +32,15 @@ public class PostService {
     private final PostRepository postRepository;
     private final UserService userService;
     private final NotificationService notificationService;
+    private final PostImageStorageService postImageStorageService;
 
-    public PostService(PostRepository postRepository, UserService userService, NotificationService notificationService) {
+    private static final Logger logger = LoggerFactory.getLogger(PostService.class);
+
+    public PostService(PostRepository postRepository, UserService userService, NotificationService notificationService, PostImageStorageService postImageStorageService) {
         this.postRepository = postRepository;
         this.userService = userService;
         this.notificationService = notificationService;
+        this.postImageStorageService = postImageStorageService;
     }
 
     private UserDTO convertToAuthorDTO(User user) {
@@ -276,10 +285,22 @@ public class PostService {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new ResourceNotFoundException("Post not found"));
 
-        if (!post.getUser().getId().equals(userId)) {
+        // Remove this check for admin deletions
+        if (userId != null && !post.getUser().getId().equals(userId)) {
             throw new UnauthorizedException("You can only delete your own posts");
         }
 
+        // Delete images if they exist
+        if (post.getImageUrl() != null && !post.getImageUrl().isEmpty()) {
+            try {
+                String filename = post.getImageUrl().substring(post.getImageUrl().lastIndexOf('/') + 1);
+                postImageStorageService.deletePostImage(filename);
+            } catch (IOException e) {
+                logger.error("Failed to delete post image: " + e.getMessage());
+            }
+        }
+
+        // Clear relationships
         post.getShare().clear();
         post.getShares().clear();
         post.getLikes().clear();
@@ -328,5 +349,32 @@ public class PostService {
         return content.length() > maxLength
                 ? content.substring(0, maxLength) + "..."
                 : content;
+    }
+
+    @Transactional(readOnly = true)
+    public Page<PostDTO> getAllPosts(int page, int size) {
+        try {
+            Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+            Page<Post> posts = postRepository.findAllPosts(pageable);
+
+            return posts.map(post -> convertToDTO(post, null));
+        } catch (Exception e) {
+            logger.error("Error fetching all posts: ", e);
+            throw new RuntimeException("Error fetching posts: " + e.getMessage());
+        }
+    }
+
+
+    @Transactional(readOnly = true)
+    public Page<PostDTO> searchPosts(String query, int page, int size) {
+        try {
+            Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+            Page<Post> posts = postRepository.searchPosts(query, pageable);
+
+            return posts.map(post -> convertToDTO(post, null));
+        } catch (Exception e) {
+            logger.error("Error searching posts: ", e);
+            throw new RuntimeException("Error searching posts: " + e.getMessage());
+        }
     }
 }

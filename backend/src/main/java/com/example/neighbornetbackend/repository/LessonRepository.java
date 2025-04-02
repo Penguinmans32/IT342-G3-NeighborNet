@@ -27,4 +27,8 @@ public interface LessonRepository extends JpaRepository<Lesson, Long> {
     @Query("DELETE FROM Lesson l WHERE l.classEntity.id = :classId")
     void deleteByClassId(@Param("classId") Long classId);
 
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM Lesson l WHERE l.classEntity.creator.id = :userId")
+    void deleteByCreatorId(@Param("userId") Long userId);
 }

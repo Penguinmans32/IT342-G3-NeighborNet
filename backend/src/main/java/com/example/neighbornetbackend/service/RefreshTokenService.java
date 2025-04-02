@@ -92,14 +92,17 @@ public class RefreshTokenService {
     }
 
     @Transactional
-    public int deleteByUserId(Long userId) {
+    public void deleteByUserId(Long userId) {
         try {
-            return entityManager.createQuery("DELETE FROM RefreshToken r WHERE r.user.id = :userId")
+            Optional<RefreshToken> refreshToken = refreshTokenRepository.findByUserId(userId);
+            refreshToken.ifPresent(token -> refreshTokenRepository.delete(token));
+
+            entityManager.createQuery("DELETE FROM RefreshToken r WHERE r.user.id = :userId")
                     .setParameter("userId", userId)
                     .executeUpdate();
+            entityManager.flush();
         } catch (Exception e) {
             logger.warn("Failed to delete refresh token for user {}: {}", userId, e.getMessage());
-            return 0;
         }
     }
 

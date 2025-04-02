@@ -20,4 +20,5 @@ public interface BorrowingAgreementService {
     List<BorrowingAgreement> findByItemIdAndStatus(Long itemId, String status);
     BorrowingAgreement save(BorrowingAgreement agreement);
     Optional<BorrowingAgreement> findById(Long id);
+    long getTotalBorrowers();
 }
