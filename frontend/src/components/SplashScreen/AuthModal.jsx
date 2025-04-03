@@ -234,7 +234,7 @@
               message: 'You have successfully logged in'
           });
           setTimeout(() => {
-            navigate('/community');
+              navigate('/community');
           }, 500);
       } catch (err) {
           console.error('Login error:', err);
@@ -242,7 +242,14 @@
           
           setError(errorMessage);
           
-          if (errorMessage.includes('verify your email')) {
+          if (errorMessage.includes('deleted')) {
+              showToast({
+                  type: 'error',
+                  title: 'Account Deleted',
+                  message: 'This account has been deleted. Please contact support for assistance.',
+                  duration: 8000
+              });
+          } else if (errorMessage.includes('verify your email')) {
               showToast({
                   type: 'warning',
                   title: 'Email Not Verified',

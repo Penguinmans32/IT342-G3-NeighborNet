@@ -16,6 +16,8 @@ public class UserResponse {
     private String twitterUrl;
     private String linkedinUrl;
     private String facebookUrl;
+    private LocalDateTime deletionDate;
+    private LocalDateTime scheduledDeletionDate;
 
     // Constructor
     public UserResponse(Long id, String username, String email, String role,
@@ -139,5 +141,21 @@ public class UserResponse {
 
     public void setFacebookUrl(String facebookUrl) {
         this.facebookUrl = facebookUrl;
+    }
+
+    public LocalDateTime getDeletionDate() {
+        return deletionDate;
+    }
+
+    public void setDeletionDate(LocalDateTime deletionDate) {
+        this.deletionDate = deletionDate;
+    }
+
+    public LocalDateTime getScheduledDeletionDate() {
+        return scheduledDeletionDate;
+    }
+
+    public void setScheduledDeletionDate(LocalDateTime scheduledDeletionDate) {
+        this.scheduledDeletionDate = scheduledDeletionDate;
     }
 }

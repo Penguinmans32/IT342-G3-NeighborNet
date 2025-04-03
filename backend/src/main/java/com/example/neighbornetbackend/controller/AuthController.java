@@ -2,6 +2,7 @@ package com.example.neighbornetbackend.controller;
 
 
 import com.example.neighbornetbackend.dto.*;
+import com.example.neighbornetbackend.exception.ResourceNotFoundException;
 import com.example.neighbornetbackend.exception.TokenRefreshException;
 import com.example.neighbornetbackend.model.RefreshToken;
 import com.example.neighbornetbackend.model.User;
@@ -280,12 +281,23 @@ public class AuthController {
 
         if (authentication != null && authentication.getPrincipal() != null) {
             if (authentication.getPrincipal() instanceof UserPrincipal) {
+                User user = userRepository.findById(userPrincipal.getId())
+                        .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userPrincipal.getId()));
+
+                if (user.isDeleted()) {
+                    return ResponseEntity
+                            .status(HttpStatus.FORBIDDEN)
+                            .body(com.example.neighbornetbackend.dto.ApiResponse.error("Account has been deleted"));
+                }
+
                 userData.put("id", userPrincipal.getId());
                 userData.put("username", userPrincipal.getUsername());
                 userData.put("email", userPrincipal.getEmail());
                 userData.put("role", userPrincipal.getAuthorities().stream()
                         .map(GrantedAuthority::getAuthority)
                         .collect(Collectors.toList()));
+                userData.put("deleted", user.isDeleted());
+
             } else if (authentication.getPrincipal() instanceof OAuth2User) {
                 OAuth2User oauth2User = (OAuth2User) authentication.getPrincipal();
                 Map<String, Object> attributes = oauth2User.getAttributes();
@@ -311,16 +323,24 @@ public class AuthController {
                             return userRepository.save(newUser);
                         });
 
+                if (user.isDeleted()) {
+                    return ResponseEntity
+                            .status(HttpStatus.FORBIDDEN)
+                            .body(com.example.neighbornetbackend.dto.ApiResponse.error("Account has been deleted"));
+                }
+
                 userData.put("id", user.getId());
                 userData.put("username", name);
                 userData.put("email", email);
                 userData.put("role", Collections.singletonList("ROLE_USER"));
                 userData.put("provider", "microsoft");
+                userData.put("deleted", user.isDeleted());
             }
-            return ResponseEntity.ok(userData);
+            return ResponseEntity.ok(com.example.neighbornetbackend.dto.ApiResponse.success(userData, "User data retrieved successfully"));
         }
 
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(com.example.neighbornetbackend.dto.ApiResponse.error("User not authenticated"));
     }
 
     @PostMapping("/verify-mobile")

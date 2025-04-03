@@ -1,11 +1,13 @@
 package com.example.neighbornetbackend.controller;
 
 import com.example.neighbornetbackend.dto.*;
+import com.example.neighbornetbackend.exception.UnauthorizedException;
 import com.example.neighbornetbackend.model.User;
 import com.example.neighbornetbackend.repository.UserRepository;
 import com.example.neighbornetbackend.security.CurrentUser;
 import com.example.neighbornetbackend.security.UserPrincipal;
 import com.example.neighbornetbackend.service.NotificationService;
+import com.example.neighbornetbackend.service.UserDeletionService;
 import com.example.neighbornetbackend.service.UserProfileStorageService;
 import com.example.neighbornetbackend.service.UserService;
 import org.springframework.core.io.Resource;
@@ -35,12 +37,14 @@ public class UserProfileController {
     private final UserProfileStorageService userProfileStorageService;
     private final UserService userService;
     private final NotificationService notificationService;
+    private final UserDeletionService userDeletionService;
 
-    public UserProfileController(UserRepository userRepository, UserProfileStorageService userProfileStorageService, UserService userService, NotificationService notificationService) {
+    public UserProfileController(UserRepository userRepository, UserProfileStorageService userProfileStorageService, UserService userService, NotificationService notificationService, UserDeletionService userDeletionService) {
         this.userRepository = userRepository;
         this.userProfileStorageService = userProfileStorageService;
         this.userService = userService;
         this.notificationService = notificationService;
+        this.userDeletionService = userDeletionService;
     }
 
     @GetMapping("/profile-pictures/{filename:.+}")
@@ -315,14 +319,20 @@ public class UserProfileController {
             @RequestBody DeleteAccountRequest request,
             Authentication authentication) {
         if (authentication == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not authenticated");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new ErrorResponse("User not authenticated"));
         }
 
         try {
-            userService.deleteAccount(authentication.getName(), request.getPassword());
-            return ResponseEntity.ok().body(new MessageResponse("Account successfully deleted"));
+            userDeletionService.deleteUserAccount(authentication.getName(), request.getPassword());
+            return ResponseEntity.ok()
+                    .body(new MessageResponse("Account successfully deleted"));
+        } catch (UnauthorizedException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new ErrorResponse(e.getMessage()));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
+            return ResponseEntity.badRequest()
+                    .body(new ErrorResponse(e.getMessage()));
         }
     }
 }

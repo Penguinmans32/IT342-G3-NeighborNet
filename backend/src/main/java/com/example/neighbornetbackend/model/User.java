@@ -37,7 +37,7 @@ public class User {
     @OneToMany(mappedBy = "user", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     private List<SavedClass> savedClasses = new ArrayList<>();
 
-    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToOne(mappedBy = "user", cascade = CascadeType.REMOVE, orphanRemoval = true)
     private RefreshToken refreshToken;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -45,7 +45,6 @@ public class User {
 
     @OneToMany(mappedBy = "creator", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<CourseClass> classes = new ArrayList<>();
-
 
     @Column(name = "email_verified")
     private boolean emailVerified = false;
@@ -92,6 +91,15 @@ public class User {
     @Column(name = "facebook_url")
     private String facebookUrl;
 
+    @Column(name = "deleted", nullable = false, columnDefinition = "boolean default false")
+    private boolean deleted = false;
+
+    @Column(name = "deletion_date")
+    private LocalDateTime deletionDate;
+
+    @Column(name = "scheduled_deletion_date")
+    private LocalDateTime scheduledDeletionDate;
+
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<UserAchievement> achievements = new ArrayList<>();
 
@@ -135,6 +143,7 @@ public class User {
     @PrePersist
     protected void onCreate() {
         createdDate = LocalDateTime.now();
+        deleted = false;
     }
 
     public String getProvider() {
@@ -359,5 +368,29 @@ public class User {
 
     public void setPosts(List<Post> posts) {
         this.posts = posts;
+    }
+
+    public boolean isDeleted() {
+        return deleted;
+    }
+
+    public void setDeleted(boolean deleted) {
+        this.deleted = deleted;
+    }
+
+    public LocalDateTime getDeletionDate() {
+        return deletionDate;
+    }
+
+    public void setDeletionDate(LocalDateTime deletionDate) {
+        this.deletionDate = deletionDate;
+    }
+
+    public LocalDateTime getScheduledDeletionDate() {
+        return scheduledDeletionDate;
+    }
+
+    public void setScheduledDeletionDate(LocalDateTime scheduledDeletionDate) {
+        this.scheduledDeletionDate = scheduledDeletionDate;
     }
 }

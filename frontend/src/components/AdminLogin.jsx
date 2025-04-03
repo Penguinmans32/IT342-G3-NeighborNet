@@ -47,23 +47,24 @@ const AdminLogin = () => {
         });
 
         if (response.data.success) {
-            const { accessToken } = response.data.data;
-            localStorage.setItem('token', accessToken);
-            axios.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
-            
-            const userResponse = await axios.get('http://localhost:8080/api/auth/user');
-            console.log('User data:', userResponse.data);
-            
-            setUser(userResponse.data);
-            
-            if (userResponse.data.role && 
-                (userResponse.data.role.includes('ROLE_ADMIN') || 
-                 userResponse.data.role[0] === 'ROLE_ADMIN')) {
-                navigate('/admin/dashboard');
-            } else {
-                setError('Unauthorized access');
-            }
-        }
+          const { accessToken } = response.data.data;
+          localStorage.setItem('token', accessToken);
+          axios.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
+          
+          const userResponse = await axios.get('http://localhost:8080/api/auth/user');
+          console.log('User data:', userResponse.data);
+          
+          const userData = userResponse.data.data;  
+          setUser(userData);
+          
+          if (userData.role && userData.role.includes('ROLE_ADMIN')) {
+              navigate('/admin/dashboard');
+          } else {
+              setError('Unauthorized access');
+              localStorage.removeItem('token'); 
+              delete axios.defaults.headers.common['Authorization'];
+          }
+      }
     } catch (err) {
         console.error('Login error:', err);
         setError(err.response?.data?.message || 'Invalid credentials');

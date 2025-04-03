@@ -24,6 +24,7 @@ import {
   Key,
   ArrowRight,
 } from "lucide-react"
+import { useAuth } from "../backendApi/AuthContext"
 
 const EditProfile = () => {
   const [profileData, setProfileData] = useState({
@@ -57,6 +58,7 @@ const EditProfile = () => {
   const [deletePassword, setDeletePassword] = useState("");
   const [deleting, setDeleting] = useState(false);
   const router = useNavigate()
+  const { logout } = useAuth();
 
   const canChangePassword = passwords.current && 
                          passwords.new && 
@@ -110,8 +112,13 @@ const handleDeleteAccount = async () => {
       }
     );
     
-    localStorage.removeItem("token");
-    router("/homepage");
+    localStorage.clear();
+    
+    if (logout) { 
+      logout();
+    }
+
+    window.location.href = "/";
   } catch (error) {
     showNotification(
       error.response?.data?.message || "Failed to delete account", 
@@ -121,7 +128,6 @@ const handleDeleteAccount = async () => {
   }
 };
 
-  // Sections for the sidebar navigation
   const sections = [
     { id: "bio", label: "About Me", icon: <User className="h-4 w-4" /> },
     { id: "skills", label: "Skills", icon: <Briefcase className="h-4 w-4" /> },

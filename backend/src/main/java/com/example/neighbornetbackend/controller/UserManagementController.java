@@ -45,7 +45,7 @@ public class UserManagementController {
     @GetMapping("/stats")
     public ResponseEntity<?> getUserStats() {
         try {
-            long totalUsers = userRepository.count();
+            long totalUsers = userRepository.countUsers();
             long activeUsers = userRepository.countActiveUsers();
             long newThisMonth = userRepository.countNewUsersFrom(
                     LocalDateTime.now().withDayOfMonth(1).withHour(0).withMinute(0)
@@ -103,8 +103,8 @@ public class UserManagementController {
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<?> deleteUser(@PathVariable Long userId) {
         try {
-            userDeletionService.deleteUserAndRelatedData(userId);
-            return ResponseEntity.ok(ApiResponse.success(null, "User deleted successfully"));
+            userDeletionService.softDeleteUser(userId);
+            return ResponseEntity.ok(ApiResponse.success(null, "User soft deleted successfully"));
         } catch (Exception e) {
             return ResponseEntity.badRequest()
                     .body(ApiResponse.error("Error deleting user: " + e.getMessage()));
@@ -218,6 +218,76 @@ public class UserManagementController {
         } catch (Exception e) {
             return ResponseEntity.badRequest()
                     .body(ApiResponse.error("Error creating user: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/deleted")
+    public ResponseEntity<?> getDeletedUsers(
+            @RequestParam(defaultValue = "") String search,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        try {
+            PageRequest pageRequest = PageRequest.of(page, size);
+            Page<User> deletedUsers = userRepository.searchDeletedUsers(search, pageRequest);
+            Page<UserResponse> userResponses = deletedUsers.map(user -> {
+                UserResponse response = new UserResponse(
+                        user.getId(),
+                        user.getUsername(),
+                        user.getEmail(),
+                        user.getRole(),
+                        user.getImageUrl(),
+                        user.isEmailVerified(),
+                        user.getCreatedDate(),
+                        user.getBio(),
+                        user.getGithubUrl(),
+                        user.getTwitterUrl(),
+                        user.getLinkedinUrl(),
+                        user.getFacebookUrl()
+                );
+                response.setDeletionDate(user.getDeletionDate());
+                response.setScheduledDeletionDate(user.getScheduledDeletionDate());
+                return response;
+            });
+            return ResponseEntity.ok(ApiResponse.success(userResponses, "Deleted successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Error fetching deleted users: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping("/{userId}/restore")
+    public ResponseEntity<?> restoreUser(@PathVariable Long userId) {
+        try {
+            userDeletionService.restoreUser(userId);
+            return ResponseEntity.ok(ApiResponse.success(null, "User restored successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Error restoring user: " + e.getMessage()));
+        }
+    }
+
+    @DeleteMapping("/{userId}/permanent")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<?> permanentlyDeleteUser(@PathVariable Long userId) {
+        try {
+            userDeletionService.deleteUserAndRelatedData(userId);
+            return ResponseEntity.ok(ApiResponse.success(null, "User permanently deleted successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Error permanently deleting user: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/deleted/count")
+    public ResponseEntity<?> getDeletedUsersCount() {
+        try {
+            long deletedUsersCount = userRepository.countDeletedUsers();
+            Map<String, Object> response = new HashMap<>();
+            response.put("deletedUsersCount", deletedUsersCount);
+            return ResponseEntity.ok(ApiResponse.success(response, "Deleted users count retrieved successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Error getting deleted users count: " + e.getMessage()));
         }
     }
 }
