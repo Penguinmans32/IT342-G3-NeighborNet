@@ -1,13 +1,20 @@
 package com.example.neighbornetbackend.service;
 
+import com.example.neighbornetbackend.exception.ResourceNotFoundException;
+import com.example.neighbornetbackend.exception.UnauthorizedException;
 import com.example.neighbornetbackend.model.User;
 import com.example.neighbornetbackend.repository.*;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 public class UserDeletionService {
@@ -25,6 +32,9 @@ public class UserDeletionService {
     private final FeedbackRepository feedbackRepository;
     private final ClassRepository classRepository;
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+
+    private static final int DELETION_DELAY_DAYS = 10;
 
     public UserDeletionService(
             PostRepository postRepository,
@@ -37,7 +47,7 @@ public class UserDeletionService {
             LessonRepository lessonRepository,
             FeedbackRepository feedbackRepository,
             ClassRepository classRepository,
-            UserRepository userRepository) {
+            UserRepository userRepository,PasswordEncoder passwordEncoder) {
         this.postRepository = postRepository;
         this.refreshTokenService = refreshTokenService;
         this.activityRepository = activityRepository;
@@ -49,6 +59,7 @@ public class UserDeletionService {
         this.feedbackRepository = feedbackRepository;
         this.classRepository = classRepository;
         this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -135,5 +146,50 @@ public class UserDeletionService {
                 .executeUpdate();
 
         entityManager.flush();
+    }
+
+
+    @Transactional
+    public void deleteUserAccount(String userIdentifier, String password) {
+        User user = userRepository.findByUsernameOrEmail(userIdentifier, userIdentifier)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        if (user.getProvider() == null && !passwordEncoder.matches(password, user.getPassword())) {
+            throw new UnauthorizedException("Invalid password");
+        }
+
+        softDeleteUser(user.getId());
+    }
+
+    @Transactional
+    public void softDeleteUser(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        LocalDateTime now = LocalDateTime.now();
+        user.setDeleted(true);
+        user.setDeletionDate(now);
+        user.setScheduledDeletionDate(now.plusDays(DELETION_DELAY_DAYS));
+        userRepository.save(user);
+    }
+
+    @Transactional
+    public void restoreUser(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        user.setDeleted(false);
+        user.setDeletionDate(null);
+        user.setScheduledDeletionDate(null);
+        userRepository.save(user);
+    }
+
+    @Scheduled(cron = "0 0 0 * * *")
+    @Transactional
+    public void permanentlyDeleteExpiredUsers() {
+        List<User> usersToDelete = userRepository.findUsersToDeletePermanently(LocalDateTime.now());
+        for (User user : usersToDelete) {
+            deleteUserAndRelatedData(user.getId());
+        }
     }
 }

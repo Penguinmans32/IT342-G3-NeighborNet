@@ -559,12 +559,7 @@ const Homepage = () => {
                     </motion.button>
 
                     <span className="text-white hidden lg:block font-display">
-                      {user?.username
-                        ? user.username
-                            .split(" ")
-                            .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-                            .join(" ")
-                        : "Guest"}
+                        {user?.name || profileData?.username || "User"}
                     </span>
 
                     <motion.button

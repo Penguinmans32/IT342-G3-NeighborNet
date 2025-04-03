@@ -28,13 +28,32 @@ public interface UserRepository extends JpaRepository<User, Long> {
     long countByCreatedDateBefore(@Param("date") LocalDateTime date);
 
     @Query("SELECT u FROM User u WHERE " +
-            "LOWER(u.username) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-            "LOWER(u.email) LIKE LOWER(CONCAT('%', :search, '%'))")
+            "u.role != 'ROLE_ADMIN' AND u.deleted = false AND " +
+            "(LOWER(u.username) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+            "LOWER(u.email) LIKE LOWER(CONCAT('%', :search, '%')))")
     Page<User> searchUsers(@Param("search") String search, Pageable pageable);
 
-    @Query("SELECT COUNT(u) FROM User u WHERE u.emailVerified = true")
+    @Query("SELECT COUNT(u) FROM User u WHERE " +
+            "u.role != 'ROLE_ADMIN' AND u.deleted = false AND u.emailVerified = true")
     long countActiveUsers();
 
-    @Query("SELECT COUNT(u) FROM User u WHERE u.createdDate >= :startDate")
-    long countNewUsersFrom(@Param("startDate") LocalDateTime startDate);
+    @Query("SELECT COUNT(u) FROM User u WHERE u.role != 'ROLE_ADMIN' AND u.createdDate >= :since")
+    long countNewUsersFrom(@Param("since") LocalDateTime since);
+
+    @Query("SELECT COUNT(u) FROM User u WHERE u.role != 'ROLE_ADMIN' AND u.deleted = false")
+    long countUsers();
+
+    @Query("SELECT u FROM User u WHERE " +
+            "u.role != 'ROLE_ADMIN' AND u.deleted = true AND " +
+            "(LOWER(u.username) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+            "LOWER(u.email) LIKE LOWER(CONCAT('%', :search, '%')))")
+    Page<User> searchDeletedUsers(@Param("search") String search, Pageable pageable);
+
+    @Query("SELECT COUNT(u) FROM User u WHERE u.role != 'ROLE_ADMIN' AND u.deleted = true")
+    long countDeletedUsers();
+
+    @Query("SELECT u FROM User u WHERE " +
+            "u.role != 'ROLE_ADMIN' AND u.deleted = true AND " +
+            "u.scheduledDeletionDate <= :date")
+    List<User> findUsersToDeletePermanently(@Param("date") LocalDateTime date);
 }

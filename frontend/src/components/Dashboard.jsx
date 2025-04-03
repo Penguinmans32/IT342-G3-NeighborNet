@@ -674,9 +674,13 @@ const Dashboard = () => {
           transition={{ duration: 0.5 }}
           className="mb-10"
         >
-          <h1 className="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-800 to-blue-600">
-            Welcome back, {user?.username || "User"}! <span className="wave">👋</span>
-          </h1>
+         <h1 className="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-800 to-blue-600">
+          Welcome back! <span className="wave" style={{ 
+            fontSize: '0.9em', 
+            color: '#FFD700',  // Golden color
+            textShadow: '0 0 1px rgba(0,0,0,0.3)'  // Adds a subtle shadow
+          }}>👋</span>
+        </h1>
           <p className="text-indigo-600 mt-2 text-lg">Here's what's happening in your community</p>
         </motion.div>
 

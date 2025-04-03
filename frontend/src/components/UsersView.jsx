@@ -9,7 +9,8 @@ import {
   MoreVertical,
   Edit,
   Trash2,
-  X
+  X,
+  RefreshCw 
 } from "lucide-react";
 import axios from "axios";
 import { useEffect, useState } from "react";
@@ -28,11 +29,13 @@ export default function UsersView() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [activeTab, setActiveTab] = useState('active'); 
+  const [showPermanentDeleteModal, setShowPermanentDeleteModal] = useState(false);
 
   useEffect(() => {
     fetchStats();
     fetchUsers();
-  }, [page, search]);
+  }, [page, search, activeTab]);
 
   const handleEditClick = (user) => {
     setSelectedUser(user);
@@ -58,6 +61,21 @@ export default function UsersView() {
     }
   };
 
+  const handlePermanentDelete = async () => {
+    try {
+      await axios.delete(`http://localhost:8080/api/admin/users/${selectedUser.id}/permanent`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      setShowPermanentDeleteModal(false);
+      fetchUsers();
+      fetchStats();
+    } catch (error) {
+      console.error('Error permanently deleting user:', error);
+    }
+  };
+
   const handleUpdateUser = async (formData) => {
     try {
       await axios.patch(
@@ -76,6 +94,24 @@ export default function UsersView() {
     }
   };
 
+  const handleRestoreUser = async (userId) => {
+    try {
+      await axios.post(
+        `http://localhost:8080/api/admin/users/${userId}/restore`,
+        {},
+        {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        }
+      );
+      fetchUsers();
+      fetchStats();
+    } catch (error) {
+      console.error('Error restoring user:', error);
+    }
+  };
+
   const fetchStats = async () => {
     try {
       const response = await axios.get('http://localhost:8080/api/admin/users/stats', {
@@ -91,24 +127,18 @@ export default function UsersView() {
 
   const fetchUsers = async () => {
     try {
-      const response = await axios.get(`http://localhost:8080/api/admin/users`, {
-        params: {
-          search,
-          page,
-          size: 10,
-          sortBy: 'createdDate',
-          sortDir: 'desc'
-        },
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
+      const endpoint = activeTab === 'deleted' 
+        ? '/api/admin/users/deleted'
+        : '/api/admin/users';
+      
+      const response = await axios.get(`http://localhost:8080${endpoint}`, {
+        params: { search, page, size: 10 },
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       setUsers(response.data.data.content);
       setTotalPages(response.data.data.totalPages);
-      setLoading(false);
     } catch (error) {
       console.error('Error fetching users:', error);
-      setLoading(false);
     }
   };
 
@@ -142,10 +172,6 @@ export default function UsersView() {
       setPage(newPage);
     }
   };
-
-  if (loading) {
-    return <div className="flex items-center justify-center h-screen">Loading...</div>;
-  }
 
   return (
     <div className="space-y-6">
@@ -225,6 +251,29 @@ export default function UsersView() {
         </div>
       </div>
 
+      <div className="flex space-x-4 mb-4">
+        <button
+          className={`px-4 py-2 rounded-lg ${
+            activeTab === 'active' 
+              ? 'bg-blue-600 text-white' 
+              : 'bg-gray-100 text-gray-600'
+          }`}
+          onClick={() => setActiveTab('active')}
+        >
+          Active Users
+        </button>
+        <button
+          className={`px-4 py-2 rounded-lg ${
+            activeTab === 'deleted' 
+              ? 'bg-blue-600 text-white' 
+              : 'bg-gray-100 text-gray-600'
+          }`}
+          onClick={() => setActiveTab('deleted')}
+        >
+          Deleted Users
+        </button>
+      </div>
+
       {/* Users Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
@@ -284,26 +333,61 @@ export default function UsersView() {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                      ${user.emailVerified ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}
-                    >
-                      {user.emailVerified ? 'active' : 'pending'}
-                    </span>
+                    {activeTab === 'deleted' ? (
+                      <div className="flex flex-col gap-1">
+                        <span className="text-red-600 text-xs">
+                          Deleted on: {format(new Date(user.deletionDate), 'MMM dd, yyyy')}
+                        </span>
+                        <span className="text-gray-500 text-xs">
+                          Will be permanently deleted on: {format(new Date(user.scheduledDeletionDate), 'MMM dd, yyyy')}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                        ${user.emailVerified ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}
+                      >
+                        {user.emailVerified ? 'active' : 'pending'}
+                      </span>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     <div className="flex items-center gap-2">
-                      <button 
-                        onClick={() => handleDeleteClick(user)}
-                        className="text-red-400 hover:text-red-600"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
-                      <button 
-                          onClick={() => handleEditClick(user)}
-                          className="text-blue-400 hover:text-blue-600"
-                        >
-                          <Edit className="w-5 h-5" />
-                        </button>
+                      {activeTab === 'deleted' ? (
+                        <>
+                          <button 
+                            onClick={() => handleRestoreUser(user.id)}
+                            className="text-green-400 hover:text-green-600 flex items-center gap-1"
+                          >
+                            <RefreshCw className="w-5 h-5" />
+                            <span>Restore</span>
+                          </button>
+                          <button 
+                            onClick={() => {
+                              setSelectedUser(user);
+                              setShowPermanentDeleteModal(true);
+                            }}
+                            className="text-red-400 hover:text-red-600 flex items-center gap-1"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                            <span>Delete Permanently</span>
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button 
+                            onClick={() => handleDeleteClick(user)}
+                            className="text-red-400 hover:text-red-600"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                          <button 
+                            onClick={() => handleEditClick(user)}
+                            className="text-blue-400 hover:text-blue-600"
+                          >
+                            <Edit className="w-5 h-5" />
+                          </button>
+                        </>
+                      )}
                     </div>
                   </td>
                 </motion.tr>
@@ -373,7 +457,7 @@ export default function UsersView() {
               </button>
             </div>
             <p className="text-gray-600 mb-4">
-              Are you sure you want to delete the user "{selectedUser?.username}"? This action cannot be undone.
+              Are you sure you want to delete the user "{selectedUser?.username}"? Can be still restored later.
             </p>
             <div className="flex justify-end gap-3">
               <button
@@ -392,6 +476,41 @@ export default function UsersView() {
           </div>
         </div>
       )}
+
+
+          {showPermanentDeleteModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-xl p-6 w-full max-w-md">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold">Permanent Delete User</h3>
+                  <button 
+                    onClick={() => setShowPermanentDeleteModal(false)}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <p className="text-gray-600 mb-4">
+                  Are you sure you want to permanently delete the user "{selectedUser?.username}"? 
+                  This action cannot be undone and all user data will be permanently removed.
+                </p>
+                <div className="flex justify-end gap-3">
+                  <button
+                    onClick={() => setShowPermanentDeleteModal(false)}
+                    className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handlePermanentDelete}
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                  >
+                    Permanently Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
        {/* Edit User Modal */}
        <EditUserModal

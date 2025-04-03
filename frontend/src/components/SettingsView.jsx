@@ -1,324 +1,163 @@
 import { motion } from "framer-motion";
 import {
-  Bell,
-  Lock,
   User,
-  Monitor,
-  Moon,
-  Sun,
-  Globe,
-  Mail,
-  Shield,
   Database,
-  Save,
-  Image as ImageIcon,
-  RefreshCw,
-  Trash2,
-  CheckCircle,
-  XCircle,
-  Settings,
-  Grid,
-  Palette
+  Code2,
+  Globe,
+  Server,
+  Cpu,
+  Coffee,
+  Box,
+  Code
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useAuth } from "../backendApi/AuthContext";
 
 export default function SettingsView() {
-  const [theme, setTheme] = useState("light");
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [emailNotifications, setEmailNotifications] = useState(true);
-  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
-  const [language, setLanguage] = useState("en");
+  const [adminInfo, setAdminInfo] = useState({
+    username: "Penguinmans32",
+    role: "ROLE_ADMIN",
+    lastLogin: "2025-04-03 02:10:00",
+    email: "admin@example.com"
+  });
 
-  // Mock function for saving settings
-  const saveSettings = () => {
-    // Add actual save functionality
-    alert("Settings saved successfully!");
-  };
+  const { user } = useAuth();
+ 
+  const techStack = [
+    {
+      name: "Frontend",
+      items: [
+        { name: "Vite", icon: Box, color: "purple", version: "5.0.0" },
+        { name: "React", icon: Code, color: "blue", version: "18.2.0" },
+        { name: "Tailwind CSS", icon: Code2, color: "cyan", version: "3.3.0" }
+      ]
+    },
+    {
+      name: "Backend",
+      items: [
+        { name: "Spring Boot", icon: Coffee, color: "green", version: "3.2.0" },
+        { name: "MySQL", icon: Database, color: "orange", version: "8.0" },
+        { name: "Java", icon: Cpu, color: "red", version: "17 LTS" }
+      ]
+    }
+  ];
 
   return (
-    <div className="space-y-6">
-      {/* Settings Header Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-6 text-white"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-xl font-semibold">Admin Account</h3>
-              <p className="text-blue-100 mt-1">Penguinmans32</p>
+    <div className="space-y-8">
+      {/* Admin Profile Card */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 rounded-2xl p-8 text-white shadow-xl"
+      >
+        <div className="flex items-start justify-between">
+          <div className="space-y-4">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-white/10 rounded-xl">
+                <User className="w-8 h-8" />
+              </div>
+              <div>
+              <h2 className="text-2xl font-bold">
+                {user.username.charAt(0).toUpperCase() + user.username.slice(1)}
+              </h2>
+                <p className="text-indigo-100">{user.role}</p>
+              </div>
             </div>
-            <User className="w-8 h-8 text-blue-100" />
-          </div>
-          <p className="mt-4 text-sm text-blue-100">Last updated: 2025-04-01 14:02:54</p>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-6 text-white"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-xl font-semibold">Security Status</h3>
-              <p className="text-purple-100 mt-1">Enhanced Protection</p>
+            <div className="grid grid-cols-2 gap-4 pt-4">
+              <div className="space-y-1">
+                <p className="text-indigo-200 text-sm">Last Login (UTC)</p>
+                <p className="font-medium">{adminInfo.lastLogin}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-indigo-200 text-sm">Email Address</p>
+                <p className="font-medium">{user.email}</p>
+              </div>
             </div>
-            <Shield className="w-8 h-8 text-purple-100" />
           </div>
-          <p className="mt-4 text-sm text-purple-100">All systems operational</p>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-6 text-white"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-xl font-semibold">System Status</h3>
-              <p className="text-green-100 mt-1">Healthy</p>
-            </div>
-            <Database className="w-8 h-8 text-green-100" />
+          <div className="flex gap-2">
+            <span className="px-3 py-1 bg-green-500/20 text-green-100 rounded-full text-sm font-medium">
+              Active
+            </span>
           </div>
-          <p className="mt-4 text-sm text-green-100">All services running</p>
-        </motion.div>
-      </div>
-
-      {/* Main Settings Container */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="border-b border-gray-200">
-          <nav className="flex overflow-x-auto">
-            {[
-              { icon: User, label: "Profile" },
-              { icon: Lock, label: "Security" },
-              { icon: Bell, label: "Notifications" },
-              { icon: Globe, label: "Preferences" },
-              { icon: Palette, label: "Appearance" },
-              { icon: Settings, label: "Advanced" },
-            ].map((item, index) => (
-              <button
-                key={item.label}
-                className={`flex items-center gap-2 px-6 py-4 text-sm font-medium border-b-2 ${
-                  index === 0
-                    ? "border-blue-600 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                }`}
-              >
-                <item.icon className="w-4 h-4" />
-                {item.label}
-              </button>
-            ))}
-          </nav>
         </div>
+      </motion.div>
 
-        <div className="p-6">
-          {/* Profile Settings */}
-          <div className="space-y-6">
-            <div className="flex items-start gap-6">
-              <div className="relative group">
-                <img
-                  src="https://ui-avatars.com/api/?name=Admin&background=3b82f6&color=fff&size=128"
-                  alt="Profile"
-                  className="w-32 h-32 rounded-lg"
-                />
-                <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                  <button className="p-2 bg-white rounded-full text-gray-700 hover:text-blue-600">
-                    <ImageIcon className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
-              <div className="flex-1 space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Display Name</label>
-                  <input
-                    type="text"
-                    defaultValue="Penguinmans32"
-                    className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring focus:ring-blue-200"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Email Address</label>
-                  <input
-                    type="email"
-                    defaultValue="admin@example.com"
-                    className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring focus:ring-blue-200"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Theme Settings */}
-            <div className="border-t border-gray-200 pt-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Theme Preferences</h3>
-              <div className="grid grid-cols-3 gap-4">
-                {["light", "dark", "system"].map((themeOption) => (
-                  <button
-                    key={themeOption}
-                    onClick={() => setTheme(themeOption)}
-                    className={`p-4 border rounded-lg flex flex-col items-center gap-2 ${
-                      theme === themeOption
-                        ? "border-blue-600 bg-blue-50"
-                        : "border-gray-200 hover:border-gray-300"
-                    }`}
+      {/* Tech Stack Section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        {techStack.map((stack, stackIndex) => (
+          <motion.div
+            key={stack.name}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: stackIndex * 0.1 }}
+            className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden"
+          >
+            <div className="p-6">
+              <h3 className="text-xl font-semibold text-gray-900 mb-4">
+                {stack.name} Stack
+              </h3>
+              <div className="space-y-4">
+                {stack.items.map((item, index) => (
+                  <motion.div
+                    key={item.name}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: (stackIndex * 0.1) + (index * 0.1) }}
+                    className="flex items-center justify-between p-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors"
                   >
-                    {themeOption === "light" && <Sun className="w-6 h-6 text-amber-500" />}
-                    {themeOption === "dark" && <Moon className="w-6 h-6 text-blue-600" />}
-                    {themeOption === "system" && <Monitor className="w-6 h-6 text-purple-600" />}
-                    <span className="text-sm font-medium capitalize">{themeOption}</span>
-                  </button>
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-lg bg-${item.color}-100`}>
+                        <item.icon className={`w-5 h-5 text-${item.color}-600`} />
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900">{item.name}</p>
+                        <p className="text-sm text-gray-500">v{item.version}</p>
+                      </div>
+                    </div>
+                    <span className={`px-3 py-1 rounded-full text-sm font-medium bg-${item.color}-100 text-${item.color}-600`}>
+                      Active
+                    </span>
+                  </motion.div>
                 ))}
               </div>
             </div>
-
-            {/* Notification Settings */}
-            <div className="border-t border-gray-200 pt-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Notifications</h3>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Bell className="w-5 h-5 text-gray-500" />
-                    <div>
-                      <p className="font-medium text-gray-700">Push Notifications</p>
-                      <p className="text-sm text-gray-500">Receive alerts on your dashboard</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setNotificationsEnabled(!notificationsEnabled)}
-                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                      notificationsEnabled ? "bg-blue-600" : "bg-gray-200"
-                    }`}
-                  >
-                    <span
-                      className={`inline-block h-5 w-5 transform rounded-full bg-white transition duration-200 ease-in-out ${
-                        notificationsEnabled ? "translate-x-5" : "translate-x-0"
-                      }`}
-                    />
-                  </button>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Mail className="w-5 h-5 text-gray-500" />
-                    <div>
-                      <p className="font-medium text-gray-700">Email Notifications</p>
-                      <p className="text-sm text-gray-500">Receive email updates</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setEmailNotifications(!emailNotifications)}
-                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                      emailNotifications ? "bg-blue-600" : "bg-gray-200"
-                    }`}
-                  >
-                    <span
-                      className={`inline-block h-5 w-5 transform rounded-full bg-white transition duration-200 ease-in-out ${
-                        emailNotifications ? "translate-x-5" : "translate-x-0"
-                      }`}
-                    />
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Security Settings */}
-            <div className="border-t border-gray-200 pt-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Security</h3>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Shield className="w-5 h-5 text-gray-500" />
-                    <div>
-                      <p className="font-medium text-gray-700">Two-Factor Authentication</p>
-                      <p className="text-sm text-gray-500">Add an extra layer of security</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setTwoFactorEnabled(!twoFactorEnabled)}
-                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                      twoFactorEnabled ? "bg-blue-600" : "bg-gray-200"
-                    }`}
-                  >
-                    <span
-                      className={`inline-block h-5 w-5 transform rounded-full bg-white transition duration-200 ease-in-out ${
-                        twoFactorEnabled ? "translate-x-5" : "translate-x-0"
-                      }`}
-                    />
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Language Settings */}
-            <div className="border-t border-gray-200 pt-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Language & Region</h3>
-              <select
-                value={language}
-                onChange={(e) => setLanguage(e.target.value)}
-                className="block w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring focus:ring-blue-200"
-              >
-                <option value="en">English (US)</option>
-                <option value="es">Español</option>
-                <option value="fr">Français</option>
-                <option value="de">Deutsch</option>
-                <option value="ja">日本語</option>
-              </select>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="border-t border-gray-200 pt-6 flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <button className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-gray-900">
-                  <RefreshCw className="w-5 h-5" />
-                  Reset to Default
-                </button>
-                <button className="flex items-center gap-2 px-4 py-2 text-red-600 hover:text-red-700">
-                  <Trash2 className="w-5 h-5" />
-                  Delete Account
-                </button>
-              </div>
-              <div className="flex items-center gap-4">
-                <button
-                  onClick={saveSettings}
-                  className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  <Save className="w-5 h-5" />
-                  Save Changes
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+          </motion.div>
+        ))}
       </div>
 
-      {/* System Info */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <h3 className="text-lg font-medium text-gray-900 mb-4">System Information</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* System Status */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+        className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6"
+      >
+        <h3 className="text-xl font-semibold text-gray-900 mb-4">System Status</h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
-            { label: "Version", value: "v2.1.0", icon: Grid, status: "success" },
-            { label: "Last Backup", value: "2025-04-01", icon: Database, status: "success" },
-            { label: "Storage", value: "45% used", icon: Save, status: "warning" },
-            { label: "API Status", value: "Operational", icon: Globe, status: "success" },
-          ].map((item) => (
-            <div key={item.label} className="flex items-center gap-4 p-4 rounded-lg border border-gray-200">
-              <div className={`p-2 rounded-lg ${
-                item.status === "success" ? "bg-green-100" : "bg-yellow-100"
-              }`}>
-                <item.icon className={`w-5 h-5 ${
-                  item.status === "success" ? "text-green-600" : "text-yellow-600"
-                }`} />
+            { label: "API Status", value: "Operational", icon: Globe, color: "green" },
+            { label: "Database", value: "Connected", icon: Database, color: "blue" },
+            { label: "Server Load", value: "Normal", icon: Server, color: "purple" },
+            { label: "Response Time", value: "124ms", icon: Cpu, color: "yellow" }
+          ].map((stat, index) => (
+            <motion.div
+              key={stat.label}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.4 + (index * 0.1) }}
+              className={`p-4 rounded-xl bg-${stat.color}-50 border border-${stat.color}-100`}
+            >
+              <div className="flex items-center gap-3">
+                <stat.icon className={`w-5 h-5 text-${stat.color}-600`} />
+                <div>
+                  <p className="text-sm text-gray-600">{stat.label}</p>
+                  <p className={`font-semibold text-${stat.color}-700`}>{stat.value}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-gray-500">{item.label}</p>
-                <p className="font-medium text-gray-900">{item.value}</p>
-              </div>
-            </div>
+            </motion.div>
           ))}
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }
