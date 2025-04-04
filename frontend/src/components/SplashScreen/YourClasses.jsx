@@ -107,6 +107,7 @@ const TreeNode = ({ classItem, index, onExpand, isExpanded, onDelete, onEdit, th
   const [imageLoaded, setImageLoaded] = useState(false)
   const [isAddingLesson, setIsAddingLesson] = useState(false)
   const [lessons, setLessons] = useState([])
+  const navigate = useNavigate()
 
   useEffect(() => {
     const fetchLessons = async () => {
@@ -268,7 +269,20 @@ const TreeNode = ({ classItem, index, onExpand, isExpanded, onDelete, onEdit, th
         </div>
       </motion.div>
 
-      <LessonList classId={classItem.id} lessons={lessons || []} onAddLesson={() => setIsAddingLesson(true)} />
+      <div className="space-y-4">
+        <LessonList classId={classItem.id} lessons={lessons || []} onAddLesson={() => setIsAddingLesson(true)} />
+        
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => navigate(`/class/${classItem.id}/create-quiz`)}
+          className="w-full px-4 py-3 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-xl flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all duration-300"
+        >
+          <MdAdd className="text-xl" />
+          <span>Add Quiz/Exercise</span>
+        </motion.button>
+      </div>
+
 
       {isAddingLesson && (
         <AddLessonModal
