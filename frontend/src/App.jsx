@@ -36,6 +36,8 @@ import ForgotPassword from "./components/ForgotPassword";
 import AdminDashboard from "./components/AdminDashboard";
 import AdminLogin from "./components/AdminLogin";
 import AdminRoute from "./components/AdminRoute";
+import CreateQuiz from "./components/CreateQuiz";
+import QuizPage from "./components/QuizPage";
 
 
 function App() {
@@ -206,6 +208,22 @@ function App() {
               element={
                 <ProtectedRoute>
                   <MessagesPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route 
+              path="/class/:classId/create-quiz"
+              element={
+                <ProtectedRoute>
+                  <CreateQuiz />
+                </ProtectedRoute>
+              }
+            />
+            <Route 
+              path="/class/:classId/quiz/:quizId"
+              element={
+                <ProtectedRoute>
+                  <QuizPage />
                 </ProtectedRoute>
               }
             />
