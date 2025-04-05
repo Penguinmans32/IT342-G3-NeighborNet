@@ -42,10 +42,63 @@ import {
 } from "react-icons/md"
 import axios from "axios"
 import '../styles/homepage-styles.css'
+import { ChevronRight } from 'lucide-react';
+
+const LogoutModal = ({ isOpen, onClose, onConfirm }) => {
+  if (!isOpen) return null;
+
+  return (
+    <AnimatePresence>
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          className="bg-white rounded-xl shadow-xl p-6 max-w-md w-full mx-4"
+        >
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-xl font-semibold text-gray-900">Confirm Logout</h3>
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <MdClose className="text-gray-500 text-xl" />
+            </button>
+          </div>
+
+          <p className="text-gray-600 mb-6">
+            Are you sure you want to log out? You will need to log in again to access your account.
+          </p>
+
+          <div className="flex justify-end gap-3">
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={onClose}
+              className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+            >
+              Cancel
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={onConfirm}
+              className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+            >
+              Logout
+            </motion.button>
+          </div>
+        </motion.div>
+      </div>
+    </AnimatePresence>
+  );
+};
+
 
 const Homepage = () => {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoading, setIsLoading] = useState(true)
   const [userClasses, setUserClasses] = useState([])
   const [isProfileMenuOpen, setProfileMenuOpen] = useState(false)
@@ -344,9 +397,10 @@ const Homepage = () => {
   }, [user, navigate])
 
   const handleLogout = () => {
-    logout()
-    navigate("/")
-  }
+    logout();
+    navigate("/");
+    setShowLogoutModal(false);
+  };
 
   const menuItemVariants = {
     hidden: { opacity: 0, x: -20 },
@@ -655,6 +709,22 @@ const Homepage = () => {
         <div className="hidden lg:block fixed left-12 top-32 z-40 w-72">
           <div className="sticky top-32 max-h-[calc(100vh-160px)] overflow-y-auto thin-scrollbar">
             <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="space-y-2">
+            <motion.button
+              onClick={() => navigate("/borrowing")}
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className={`w-full mb-4 px-4 py-2.5 rounded-lg flex items-center gap-2 justify-center
+                ${isDarkMode 
+                  ? "bg-indigo-600 hover:bg-indigo-700 text-white" 
+                  : "bg-blue-500 hover:bg-blue-600 text-white"
+                } transition-colors duration-200 font-medium shadow-sm hover:shadow`}
+            >
+              <span>👋</span>
+              <span>Visit Community Borrowing</span>
+            </motion.button>
+
               <h2
                 className={`text-2xl font-bold ${isDarkMode ? "text-white" : "text-gray-900"} mb-8 pl-4 tracking-tight`}
               >
@@ -1269,7 +1339,6 @@ const Homepage = () => {
                 Class Management
               </div>
               {[
-                { icon: <MdAdd />, label: "Create Class", path: "/create-class" },
                 { icon: <MdLibraryBooks />, label: "Your Classes", path: "/your-classes" },
                 { icon: <MdInventory />, label: "Your Items", path: "/your-items" },
               ].map((item, index) => (
@@ -1329,7 +1398,7 @@ const Homepage = () => {
                 className={`w-full flex items-center gap-3 px-6 py-2.5 
                           ${isDarkMode ? "text-gray-200 hover:bg-red-900/30" : "text-gray-700 hover:bg-red-50"} 
                           transition-colors rounded-lg`}
-                onClick={logout}
+                onClick={() => setShowLogoutModal(true)} // Changed this line
               >
                 <span className="text-xl text-red-500">
                   <MdLogout />
@@ -1340,6 +1409,12 @@ const Homepage = () => {
           </nav>
         </motion.div>
       )}
+
+        <LogoutModal
+          isOpen={showLogoutModal}
+          onClose={() => setShowLogoutModal(false)}
+          onConfirm={handleLogout}
+        />
       <Footer className="mt-auto" />
     </div>
   )

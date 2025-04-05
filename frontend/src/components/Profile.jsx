@@ -22,11 +22,48 @@ import {
   ChevronRight,
   Heart,
   Calendar,
+  ArrowLeft,
+  ArrowRight,
   Clock,
 } from "lucide-react"
 import axios from "axios"
 import Footer from "./SplashScreen/Footer"
 import { useAuth } from "../backendApi/AuthContext"
+
+
+const ActivityPagination = ({ currentPage, totalPages, onPageChange }) => {
+  return (
+    <div className="flex justify-center items-center gap-2 mt-6">
+      <button
+        onClick={() => onPageChange(currentPage - 1)}
+        disabled={currentPage === 1}
+        className={`p-2 rounded-lg ${
+          currentPage === 1
+            ? 'text-gray-400 cursor-not-allowed'
+            : 'text-blue-600 hover:bg-blue-50'
+        }`}
+      >
+        <ArrowLeft className="h-4 w-4" />
+      </button>
+      
+      <span className="text-sm text-gray-600">
+        Page {currentPage} of {totalPages}
+      </span>
+
+      <button
+        onClick={() => onPageChange(currentPage + 1)}
+        disabled={currentPage === totalPages}
+        className={`p-2 rounded-lg ${
+          currentPage === totalPages
+            ? 'text-gray-400 cursor-not-allowed'
+            : 'text-blue-600 hover:bg-blue-50'
+        }`}
+      >
+        <ArrowRight className="h-4 w-4" />
+      </button>
+    </div>
+  );
+};
 
 export default function Profile() {
   const { user } = useAuth()
@@ -43,6 +80,8 @@ export default function Profile() {
     communityScore: 0,
   })
   const [isSavedClassesLoading, setIsSavedClassesLoading] = useState(true)
+  const [currentActivityPage, setCurrentActivityPage] = useState(1);
+  const activitiesPerPage = 3;
   const [isFollowing, setIsFollowing] = useState(false)
   const [followerCount, setFollowerCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
@@ -898,13 +937,14 @@ export default function Profile() {
                         </motion.div>
                       )}
 
-                      {activeTab === "activity" && (
+                        {activeTab === "activity" && (
                           <motion.div
                             key="activity"
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -10 }}
                             transition={{ duration: 0.3 }}
+                            className="activities-section" // Added for scroll reference
                           >
                             <div className="relative pl-6 border-l-2 border-slate-100 space-y-8">
                               {activitiesLoading ? (
@@ -928,46 +968,107 @@ export default function Profile() {
                                   </div>
                                 ))
                               ) : activities.length > 0 ? (
-                                activities.map((activity, index) => (
-                                  <motion.div
-                                    key={activity.id}
-                                    className="relative"
-                                    initial={{ opacity: 0, x: -20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ duration: 0.4, delay: index * 0.15 }}
-                                  >
-                                    <div className="absolute -left-[25px] h-4 w-4 rounded-full bg-blue-500 border-2 border-white"></div>
-                                    <div className="mb-1 text-sm text-slate-500 flex items-center gap-2">
-                                      <Calendar className="h-3.5 w-3.5 text-slate-400" />
-                                      <span>{activity.date.toLocaleDateString()}</span>
-                                      <Clock className="h-3.5 w-3.5 text-slate-400 ml-2" />
-                                      <span>
-                                        {activity.date.toLocaleTimeString([], { 
-                                          hour: "2-digit", 
-                                          minute: "2-digit" 
-                                        })}
-                                      </span>
-                                    </div>
+                                <>
+                                  {/* Paginated Activities */}
+                                  {activities
+                                    .slice(
+                                      (currentActivityPage - 1) * activitiesPerPage,
+                                      currentActivityPage * activitiesPerPage
+                                    )
+                                    .map((activity, index) => (
+                                      <motion.div
+                                        key={activity.id}
+                                        className="relative"
+                                        initial={{ opacity: 0, x: -20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ duration: 0.4, delay: index * 0.15 }}
+                                      >
+                                        <div className="absolute -left-[25px] h-4 w-4 rounded-full bg-blue-500 border-2 border-white"></div>
+                                        <div className="mb-1 text-sm text-slate-500 flex items-center gap-2">
+                                          <Calendar className="h-3.5 w-3.5 text-slate-400" />
+                                          <span>{activity.date.toLocaleDateString()}</span>
+                                          <Clock className="h-3.5 w-3.5 text-slate-400 ml-2" />
+                                          <span>
+                                            {activity.date.toLocaleTimeString([], {
+                                              hour: "2-digit",
+                                              minute: "2-digit"
+                                            })}
+                                          </span>
+                                        </div>
+                                        <motion.div
+                                          whileHover={{ x: 3 }}
+                                          className="bg-white rounded-lg p-4 border border-slate-100 shadow-sm hover:shadow-md transition-all"
+                                        >
+                                          <div className="flex items-start gap-3">
+                                            <div className="p-2 bg-blue-50 rounded-lg">
+                                              {getActivityIcon(activity.iconName)}
+                                            </div>
+                                            <div>
+                                              <h4 className="font-medium text-slate-800 mb-1">
+                                                {activity.title}
+                                              </h4>
+                                              <p className="text-sm text-slate-600">
+                                                {activity.description}
+                                              </p>
+                                            </div>
+                                          </div>
+                                        </motion.div>
+                                      </motion.div>
+                                    ))}
+
+                                  {/* Pagination Controls */}
+                                  {activities.length > activitiesPerPage && (
                                     <motion.div
-                                      whileHover={{ x: 3 }}
-                                      className="bg-white rounded-lg p-4 border border-slate-100 shadow-sm hover:shadow-md transition-all"
+                                      initial={{ opacity: 0 }}
+                                      animate={{ opacity: 1 }}
+                                      transition={{ delay: 0.3 }}
+                                      className="mt-8 border-t border-slate-100 pt-6"
                                     >
-                                      <div className="flex items-start gap-3">
-                                        <div className="p-2 bg-blue-50 rounded-lg">
-                                          {getActivityIcon(activity.iconName)}
+                                      <div className="flex justify-center items-center gap-4">
+                                        <motion.button
+                                          whileHover={{ scale: 1.05 }}
+                                          whileTap={{ scale: 0.95 }}
+                                          onClick={() => setCurrentActivityPage((prev) => Math.max(prev - 1, 1))}
+                                          disabled={currentActivityPage === 1}
+                                          className={`p-2 rounded-lg transition-colors ${
+                                            currentActivityPage === 1
+                                              ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                                              : "bg-white text-blue-500 hover:bg-blue-50 border border-blue-100"
+                                          }`}
+                                        >
+                                          <ArrowLeft className="h-4 w-4" />
+                                        </motion.button>
+
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-sm font-medium text-slate-600">
+                                            Page {currentActivityPage} of{" "}
+                                            {Math.ceil(activities.length / activitiesPerPage)}
+                                          </span>
                                         </div>
-                                        <div>
-                                          <h4 className="font-medium text-slate-800 mb-1">
-                                            {activity.title}
-                                          </h4>
-                                          <p className="text-sm text-slate-600">
-                                            {activity.description}
-                                          </p>
-                                        </div>
+
+                                        <motion.button
+                                          whileHover={{ scale: 1.05 }}
+                                          whileTap={{ scale: 0.95 }}
+                                          onClick={() =>
+                                            setCurrentActivityPage((prev) =>
+                                              Math.min(prev + 1, Math.ceil(activities.length / activitiesPerPage))
+                                            )
+                                          }
+                                          disabled={
+                                            currentActivityPage === Math.ceil(activities.length / activitiesPerPage)
+                                          }
+                                          className={`p-2 rounded-lg transition-colors ${
+                                            currentActivityPage === Math.ceil(activities.length / activitiesPerPage)
+                                              ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                                              : "bg-white text-blue-500 hover:bg-blue-50 border border-blue-100"
+                                          }`}
+                                        >
+                                          <ArrowRight className="h-4 w-4" />
+                                        </motion.button>
                                       </div>
                                     </motion.div>
-                                  </motion.div>
-                                ))
+                                  )}
+                                </>
                               ) : (
                                 <div className="text-center py-8">
                                   <div className="text-slate-400">No activities yet</div>

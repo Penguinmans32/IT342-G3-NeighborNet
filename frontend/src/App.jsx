@@ -38,13 +38,14 @@ import AdminLogin from "./components/AdminLogin";
 import AdminRoute from "./components/AdminRoute";
 import CreateQuiz from "./components/CreateQuiz";
 import QuizPage from "./components/QuizPage";
-
+import TitleManager from "./components/TitleManager";
 
 function App() {
   return (
     <Router>
         <AuthProviderWithErrorBoundary>
           <NotificationProvider>
+          <TitleManager /> 
           <ScrollToTop />
           <Toaster
               position="top-center"
