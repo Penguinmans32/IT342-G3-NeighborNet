@@ -791,15 +791,6 @@ const YourClasses = () => {
             <p className="text-gray-600 mb-8 max-w-md mx-auto">
               Create your first class and share your knowledge with eager learners worldwide.
             </p>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => navigate("/create-class")}
-              className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-full text-lg font-medium shadow-lg hover:shadow-xl transition-all duration-300"
-            >
-              <MdAdd className="text-2xl" />
-              <span>Create Your First Class</span>
-            </motion.button>
           </motion.div>
         ) : (
           <motion.div

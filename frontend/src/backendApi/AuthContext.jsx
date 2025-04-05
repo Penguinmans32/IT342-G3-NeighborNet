@@ -43,7 +43,6 @@ export const AuthProvider = ({ children }) => {
             }
             
             const response = await axios.get('http://localhost:8080/api/auth/user');
-            console.log("User data from auth check:", response.data);
             setUser(response.data);
             return true;
         } catch (error) {

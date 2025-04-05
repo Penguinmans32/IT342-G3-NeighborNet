@@ -401,7 +401,7 @@ const LessonView = () => {
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  onClick={() => navigate('/homepage')}
+                  onClick={() => navigate(`/class/${classId}`)}
                   className="flex items-center gap-2 text-white/90 hover:text-white
                             bg-white/10 px-3 py-1.5 rounded-full backdrop-blur-sm
                             border border-white/10 transition-all duration-300"

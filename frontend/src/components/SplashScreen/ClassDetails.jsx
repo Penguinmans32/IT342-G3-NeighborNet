@@ -1424,17 +1424,6 @@ const ClassDetails = () => {
               <div className="mt-8 space-y-4">
                 <div className="flex justify-between items-center">
                   <h2 className="text-2xl font-bold">Quizzes & Exercises</h2>
-                  {isOwner && (
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => navigate(`/class/${classId}/create-quiz`)}
-                      className="px-4 py-2 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-xl flex items-center gap-2 shadow-md hover:shadow-lg transition-all duration-300"
-                    >
-                      <MdAdd className="text-xl" />
-                      <span>Add Quiz</span>
-                    </motion.button>
-                  )}
                 </div>
                 
                 <QuizList 

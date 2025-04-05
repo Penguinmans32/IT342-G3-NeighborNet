@@ -105,6 +105,7 @@ const Dashboard = () => {
   const [selectedImage, setSelectedImage] = useState(null)
   const [imagePreview, setImagePreview] = useState(null)
   const [comments, setComments] = useState({})
+  const [userProfileData, setUserProfileData] = useState(null);
   const [newComments, setNewComments] = useState({})
   const [showComments, setShowComments] = useState({})
   const [isCommenting, setIsCommenting] = useState({})
@@ -114,6 +115,7 @@ const Dashboard = () => {
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [editedCommentContent, setEditedCommentContent] = useState('');
   const [recentActivities, setRecentActivities] = useState([])
+  const [profileData, setProfileData] = useState(null)
   const [stats, setStats] = useState({
     skillsShared: 0,
     itemsBorrowed: 0,
@@ -141,12 +143,35 @@ const Dashboard = () => {
   }
 
   const navigateToProfile = (userId) => {
-    if (userId === user?.id) {
+    if (userId === user?.data?.id) {
       navigate('/profile');
     } else {
       navigate(`/profile/${userId}`);
     }
   };
+
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) return;
+  
+        const response = await axios.get(`http://localhost:8080/api/users/profile`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+  
+        setUserProfileData(response.data);
+      } catch (error) {
+        console.error("Error fetching user profile:", error);
+      }
+    };
+  
+    if (user?.data) {
+      fetchUserProfile();
+    }
+  }, [user?.data]);
 
   useEffect(() => {
     const fetchRecentActivities = async () => {
@@ -193,7 +218,6 @@ const Dashboard = () => {
         const sortedClasses = response.data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 5)
 
         setRecentClasses(sortedClasses)
-        console.log(response.data)
       } catch (error) {
         console.error("Error fetching recent classes:", error)
       }
@@ -774,16 +798,22 @@ const Dashboard = () => {
                 <button className="text-blue-600 text-sm font-medium hover:text-blue-800 transition-colors px-3 py-1 rounded-full hover:bg-blue-50">
                   View All
                 </button>
-              </div>
+              </div>  
 
               {/* Post Creation */}
               <div className="flex items-start gap-4 mb-8">
                 <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-400 to-blue-500 flex items-center justify-center overflow-hidden flex-shrink-0 border-2 border-white shadow-sm">
-                  <img
-                    src={user?.imageUrl || "/images/defaultProfile.png"}
-                    alt="Profile"
-                    className="w-full h-full object-cover"
-                  />
+                <img
+                  src={userProfileData?.imageUrl || "/images/defaultProfile.png"}
+                  alt="Profile"
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    if (e.currentTarget.src !== "/images/defaultProfile.png") {
+                      e.currentTarget.src = "/images/defaultProfile.png";
+                    }
+                  }}
+                />
                 </div>
                 <div className="flex-1 bg-indigo-50/50 rounded-2xl p-4 border border-indigo-100">
                   <textarea
@@ -879,7 +909,7 @@ const Dashboard = () => {
                             >
                               {post.author.username}
                             </h3>
-                            {user?.id === post.author.id && (
+                            {user?.data?.id === post.author.id && (
                               <div className="ml-4 flex items-center gap-2">
                                 <button
                                   onClick={() => handleStartEdit(post)}
@@ -1056,7 +1086,7 @@ const Dashboard = () => {
                               {/* Add comment input */}
                               <div className="flex gap-3">
                                 <img
-                                  src={user?.imageUrl || "/images/defaultProfile.png"}
+                                  src={userProfileData?.imageUrl || "/images/defaultProfile.png"}
                                   alt="Profile"
                                   className="w-8 h-8 rounded-full object-cover border-2 border-indigo-100"
                                 />
@@ -1160,7 +1190,7 @@ const Dashboard = () => {
                                         <Heart className={`w-4 h-4 ${comment.isLiked ? "fill-current" : ""}`} />
                                         <span>{comment.likesCount}</span>
                                       </button>
-                                      {user?.id === comment.author.id && (
+                                      {user?.data?.id === comment.author.id && (
                                         <>
                                           <button
                                             onClick={() => {

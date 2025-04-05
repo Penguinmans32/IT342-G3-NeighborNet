@@ -26,7 +26,6 @@ export const useActivities = (userId) => {
         }));
 
         setActivities(mappedActivities);
-        console.log(mappedActivities);
       } catch (err) {
         setError(err);
       } finally {

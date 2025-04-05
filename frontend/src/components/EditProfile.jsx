@@ -390,10 +390,17 @@ const handleDeleteAccount = async () => {
                 onDragOver={handleDrag}
                 onDrop={handleDrop}
               >
-                <img
-                  src={previewImage || profileData.imageUrl || "/placeholder.svg?height=160&width=160"}
+               <img
+                  src={previewImage || profileData.imageUrl || "/images/defaultProfile.png?height=160&width=160"}
                   alt="Profile"
                   className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    if (e.currentTarget.src !== "/images/defaultProfile.png?height=160&width=160") {
+                      e.currentTarget.src = "/images/defaultProfile.png?height=160&width=160";
+                    }
+                  }}
+                  loading="lazy"
                 />
 
                 <div
