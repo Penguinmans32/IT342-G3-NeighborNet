@@ -18,7 +18,20 @@ const QuestionForm = ({ onAddQuestion }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    onAddQuestion(question)
+    
+    let finalQuestion = { ...question }
+
+    if (question.type === "TRUE_FALSE") {
+      finalQuestion = {
+        ...question,
+        options: ["True", "False"], 
+        correctAnswer: question.correctAnswer === "True" ? "1" : "2" 
+      }
+    }
+
+    onAddQuestion(finalQuestion)
+    
+    // Reset form
     setQuestion({
       content: "",
       type: "MULTIPLE_CHOICE",
@@ -29,6 +42,24 @@ const QuestionForm = ({ onAddQuestion }) => {
       minWords: null,
       maxWords: null,
     })
+  }
+
+  const handleTypeChange = (type) => {
+    if (type === "TRUE_FALSE") {
+      setQuestion(prev => ({
+        ...prev,
+        type,
+        options: ["True", "False"], 
+        correctAnswer: "" 
+      }))
+    } else {
+      setQuestion(prev => ({
+        ...prev,
+        type,
+        options: ["", ""],
+        correctAnswer: "" 
+      }))
+    }
   }
 
   return (
@@ -60,7 +91,7 @@ const QuestionForm = ({ onAddQuestion }) => {
 
       <QuestionTypeSelector
         value={question.type}
-        onChange={(type) => setQuestion((prev) => ({ ...prev, type }))}
+        onChange={handleTypeChange}
       />
 
       <div className="grid grid-cols-2 gap-4">

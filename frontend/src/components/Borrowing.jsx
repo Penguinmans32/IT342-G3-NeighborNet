@@ -430,7 +430,7 @@ const Borrowing = () => {
   };
 
   useEffect(() => {
-    if (user?.id) {
+    if (user?.data?.id) {
       const socket = new SockJS('http://localhost:8080/ws');
       const stomp = new Client({
         webSocketFactory: () => socket,
@@ -455,12 +455,11 @@ const Borrowing = () => {
         }
       };
     }
-  }, [user]);
+  }, [user?.data?.id]);
 
   
 
   const handleRateItem = async (itemId, rating, isOwner) => {
-    // Prevent rating if the user is the owner
     if (isOwner) {
       console.log("You can't rate your own item");
       return;
@@ -528,7 +527,7 @@ const Borrowing = () => {
   const handleSendMessage = async (message, item) => {
     try {
       // Add check for user
-      if (!user) {
+      if (!user?.data?.id) {
         console.error('User not authenticated');
         return;
       }
@@ -550,7 +549,7 @@ const Borrowing = () => {
         const timestamp = now.toISOString().substring(0, 23);
 
         const chatMessage = {
-            senderId: user.id,
+            senderId: user.data.id,
             receiverId: messageModal.ownerId,
             content: message,
             messageType: 'TEXT',

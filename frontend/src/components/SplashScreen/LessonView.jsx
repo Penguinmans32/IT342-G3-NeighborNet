@@ -54,8 +54,9 @@ const LessonView = () => {
   const [isOwner, setIsOwner] = useState(false);
 
   useEffect(() => {
-    if (lesson && user) {
-      setIsOwner(user.id === lesson.creator?.id);
+    if (lesson && user?.data) {
+      setIsOwner(Number(user.data.id) === Number(lesson.creator?.id));
+      console.log('User ID:', user.data.id, 'Creator ID:', lesson.creator?.id); // For debugging
     }
   }, [lesson, user]);
 
@@ -479,13 +480,7 @@ const LessonView = () => {
                 </div>
 
                 {lesson && (
-                  isOwner ? (
-                    <div className="mt-6 border-t pt-6">
-                      <div className="text-sm text-gray-500 italic">
-                        As the creator of this lesson, you cannot rate your own content.
-                      </div>
-                    </div>
-                  ) : (
+                  !isOwner ? (
                     <div className="mt-6 border-t pt-6">
                       <h4 className="font-medium text-gray-900 mb-3">Lesson Rating</h4>
                       <div className="flex items-center gap-4">
@@ -497,6 +492,12 @@ const LessonView = () => {
                         <div className="text-sm text-gray-500">
                           {displayRating.average.toFixed(1)} ({displayRating.count} ratings)
                         </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="mt-6 border-t pt-6">
+                      <div className="text-sm text-gray-500 italic">
+                        As the creator of this lesson, you cannot rate your own content.
                       </div>
                     </div>
                   )

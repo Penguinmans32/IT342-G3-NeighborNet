@@ -35,8 +35,8 @@ export default function Profile() {
   const { userId } = useParams(); 
   const [isUpdating, setIsUpdating] = useState(false)
   const [savedClasses, setSavedClasses] = useState([])
-  const { achievements, loading: achievementsLoading } = useAchievements(userId || user?.id);
-  const { activities, loading: activitiesLoading } = useActivities(userId || user?.id);
+  const { achievements, loading: achievementsLoading } = useAchievements(userId || user?.data?.id);
+  const { activities, loading: activitiesLoading } = useActivities(userId || user?.data?.id);
   const [userStats, setUserStats] = useState({
     classesCreated: 0,
     itemsPosted: 0,
@@ -124,7 +124,12 @@ export default function Profile() {
 
   const fetchUserStats = async () => {
     try {
-      const targetId = userId || user?.id;
+      const targetId = userId || user?.data?.id;
+      if (!targetId) {
+        console.log("No target ID available");
+        return;
+      }
+  
       const [classStats, itemStats] = await Promise.all([
         axios.get(`http://localhost:8080/api/classes/user-stats/${targetId}`, {
           headers: {
@@ -136,26 +141,36 @@ export default function Profile() {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
         }),
-      ])
-
-      // Calculate community score based on various metrics
+      ]);
+  
       const communityScore = Math.min(
         100,
         classStats.data.classesCreated * 10 +
           classStats.data.enrolledClasses * 5 +
           itemStats.data.itemsPosted * 8 +
           itemStats.data.currentlyLent * 15,
-      )
-
+      );
+  
       setUserStats({
         classesCreated: classStats.data.classesCreated,
         itemsPosted: itemStats.data.itemsPosted,
         communityScore,
-      })
+      });
     } catch (error) {
-      console.error("Error fetching user stats:", error)
+      console.error("Error fetching user stats:", error);
+      setUserStats({
+        classesCreated: 0,
+        itemsPosted: 0,
+        communityScore: 0,
+      });
     }
-  }
+  };
+  
+  useEffect(() => {
+    if (user?.data?.id || userId) {
+      fetchUserStats();
+    }
+  }, [user, userId]);
 
   useEffect(() => {
     if (user) {
@@ -195,13 +210,13 @@ export default function Profile() {
         const endpoint = targetUserId 
           ? `http://localhost:8080/api/users/${targetUserId}/profile` 
           : "http://localhost:8080/api/users/profile";
-  
+    
         const response = await axios.get(endpoint, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
         });
-  
+    
         setProfileData({
           ...response.data,
           skills: response.data.skills || [],
@@ -218,8 +233,8 @@ export default function Profile() {
       }
     };
   
-    if (user) {
-      if (userId && userId !== user.id.toString()) {
+    if (user?.data) {
+      if (userId && userId !== user.data.id?.toString()) {
         fetchProfileData(userId);
       } else {
         fetchProfileData();
@@ -447,7 +462,7 @@ export default function Profile() {
                             const response = await axios.post(
                               'http://localhost:8080/conversations/create',
                               {
-                                userId1: user.id,
+                                userId1: user.data.id,
                                 userId2: userId
                               },
                               {
@@ -778,16 +793,24 @@ export default function Profile() {
                             ))
                           ) : (
                             <div className="col-span-2 text-center py-8 bg-slate-50 rounded-lg border border-dashed border-slate-200">
-                              <div className="text-slate-400 mb-2">No favorite classes yet</div>
-                              <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                onClick={() => router("/homepage")}
-                                className="text-blue-500 hover:text-blue-600 text-sm font-medium"
-                              >
-                                Browse classes
-                              </motion.button>
-                            </div>
-                          )}
+                            {(!userId || userId === user?.data?.id?.toString()) ? (
+                              <>
+                                <div className="text-slate-400 mb-2">No favorite classes yet</div>
+                                <motion.button
+                                  whileHover={{ scale: 1.05 }}
+                                  onClick={() => router("/homepage")}
+                                  className="text-blue-500 hover:text-blue-600 text-sm font-medium"
+                                >
+                                  Browse classes
+                                </motion.button>
+                              </>
+                            ) : (
+                              <div className="text-slate-400">
+                                This user hasn't saved any classes yet
+                              </div>
+                            )}
+                          </div>
+                        )}
                         </div>
                       </div>
                     </motion.div>

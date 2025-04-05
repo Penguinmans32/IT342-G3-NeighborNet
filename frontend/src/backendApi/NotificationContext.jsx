@@ -50,7 +50,7 @@ export const NotificationProvider = ({ children }) => {
     useEffect(() => {
         if (user) {
             const token = localStorage.getItem('token');
-            notificationService.connect(user.id, token);
+            notificationService.connect(user.data.id, token);
 
             const unsubscribe = notificationService.subscribe((notification) => {
                 console.log("New notification received:", notification);
