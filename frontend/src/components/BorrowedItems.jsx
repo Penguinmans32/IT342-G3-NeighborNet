@@ -97,7 +97,7 @@ const BorrowedItems = () => {
         itemName: item.name,
         borrowingStart: item.borrowingStart,
         borrowingEnd: item.borrowingEnd,
-        borrowerId: user.id,
+        borrowerId: user.data.id,
         lenderId: item.owner.id,
         agreementId: item.borrowingAgreementId,
         item: item

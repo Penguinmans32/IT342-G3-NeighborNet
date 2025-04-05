@@ -607,7 +607,7 @@ const ItemDetail = () => {
     const connectWebSocket = async () => {
       if (user && mounted) {
         try {
-          await webSocketService.connect(user.id, (notification) => {
+          await webSocketService.connect(user.data.id, (notification) => {
             if (mounted) {
               toast(notification.message, {
                 icon: '🔔',
@@ -616,9 +616,6 @@ const ItemDetail = () => {
           })
         } catch (error) {
           console.error("WebSocket connection failed:", error)
-          if (mounted) {
-            toast.error("Failed to connect to notification service");
-          }
         }
       }
     };

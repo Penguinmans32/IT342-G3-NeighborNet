@@ -112,54 +112,116 @@ const QuizPage = () => {
     const score = result.score
     const maxScore = result.maxScore
     const percentage = (score / maxScore) * 100
-    const passed = result.passed
+    const passed = percentage >= (quiz?.passingScore || 60)
+  
+    const formatAnswer = (question, answer) => {
+      if (question.type === 'TRUE_FALSE') {
+        return answer === "1" ? "True" : "False"
+      }
+      return answer
+    }
 
+    const getPerformanceMessage = () => {
+      if (percentage === 100) return 'Perfect Score! Excellent job! 🎉'
+      if (percentage >= 90) return 'Outstanding Performance! 🌟'
+      if (percentage >= 80) return 'Great Work! 👏'
+      if (percentage >= quiz?.passingScore) return 'Good Job! 👍'
+      return 'Keep Practicing! You can do better! 💪'
+    }
+  
+    const getGradeLevel = () => {
+      if (percentage === 100) return 'Perfect'
+      if (percentage >= 90) return 'A'
+      if (percentage >= 80) return 'B'
+      if (percentage >= 70) return 'C'
+      if (percentage >= 60) return 'D'
+      return 'F'
+    }
+  
     return (
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         className="bg-white rounded-2xl shadow-xl p-8 relative overflow-hidden"
       >
-        {showConfetti && <ReactConfetti
-          width={windowSize.width}
-          height={windowSize.height}
-          recycle={false}
-          numberOfPieces={200}
-        />}
+        {passed && showConfetti && (
+          <ReactConfetti
+            width={windowSize.width}
+            height={windowSize.height}
+            recycle={false}
+            numberOfPieces={200}
+            colors={['#10B981', '#3B82F6', '#6366F1', '#8B5CF6', '#EC4899']}
+          />
+        )}
         
         <div className="text-center space-y-6">
           <div className={`w-24 h-24 rounded-full mx-auto flex items-center justify-center ${
-            passed ? 'bg-green-100' : 'bg-red-100'
+            passed ? 'bg-green-100' : 'bg-yellow-100'
           }`}>
             {passed ? (
               <MdEmojiEvents className="text-5xl text-green-500" />
             ) : (
-              <MdClose className="text-5xl text-red-500" />
+              <MdCheckCircle className="text-5xl text-yellow-500" />
             )}
           </div>
           
-          <h2 className="text-3xl font-bold">
-            {passed ? 'Congratulations!' : 'Keep Practicing!'}
-          </h2>
-          
-          <div className="text-xl text-gray-600">
-            Your Score: {score}/{maxScore} ({Math.round(percentage)}%)
+          <div>
+            <h2 className={`text-3xl font-bold ${
+              passed ? 'text-green-600' : 'text-yellow-600'
+            }`}>
+              {getPerformanceMessage()}
+            </h2>
+            <p className="text-gray-600 mt-2">
+              Grade: <span className="font-bold">{getGradeLevel()}</span>
+            </p>
           </div>
-
+          
+          <div className="bg-gray-50 rounded-xl p-4">
+            <div className="text-xl text-gray-700 font-medium">
+              Your Score: {score}/{maxScore} ({Math.round(percentage)}%)
+            </div>
+            <div className="text-sm text-gray-500 mt-1">
+              Passing Score: {quiz?.passingScore}%
+            </div>
+            
+            {/* Progress bar */}
+            <div className="mt-3 h-3 bg-gray-200 rounded-full overflow-hidden">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${percentage}%` }}
+                className={`h-full ${
+                  passed 
+                    ? 'bg-gradient-to-r from-green-500 to-emerald-500'
+                    : 'bg-gradient-to-r from-yellow-500 to-orange-500'
+                }`}
+              />
+            </div>
+          </div>
+  
+          {/* Question review */}
           <div className="space-y-4 mt-8">
+            <h3 className="text-lg font-semibold text-gray-700">Question Review</h3>
             {result.correctAnswers && Object.entries(result.correctAnswers).map(([questionId, correctAnswer]) => {
               const question = quiz.questions.find(q => q.id.toString() === questionId)
               const userAnswer = answers[questionId]
               const isCorrect = userAnswer === correctAnswer
-
+  
               return (
                 <div key={questionId} className={`p-4 rounded-lg ${
-                  isCorrect ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'
+                  isCorrect 
+                    ? 'bg-green-50 border border-green-200' 
+                    : 'bg-yellow-50 border border-yellow-200'
                 }`}>
                   <p className="font-medium">{question.content}</p>
                   <div className="mt-2 text-sm">
-                    <p>Your answer: <span className={isCorrect ? 'text-green-600' : 'text-red-600'}>{userAnswer}</span></p>
-                    {!isCorrect && <p className="text-green-600">Correct answer: {correctAnswer}</p>}
+                    <p>Your answer: <span className={
+                      isCorrect ? 'text-green-600 font-medium' : 'text-yellow-600'
+                    }>
+                      {formatAnswer(question, userAnswer)}
+                    </span></p>
+                    {!isCorrect && <p className="text-green-600 font-medium">
+                      Correct answer: {formatAnswer(question, correctAnswer)}
+                    </p>}
                   </div>
                   {result.explanations?.[questionId] && (
                     <p className="mt-2 text-gray-600 text-sm italic">
@@ -170,7 +232,7 @@ const QuizPage = () => {
               )
             })}
           </div>
-
+  
           <div className="flex gap-4 justify-center mt-8">
             <motion.button
               whileHover={{ scale: 1.05 }}
@@ -344,31 +406,31 @@ const QuizPage = () => {
                   </div>
                 )}
   
-                {question.type === 'TRUE_FALSE' && (
-                  <div className="space-y-4">
-                    {['True', 'False'].map((option, optionIndex) => (
-                      <motion.label
-                        key={optionIndex}
-                        whileHover={{ scale: 1.01 }}
-                        className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer
-                                  transition-all duration-300
-                                  ${answers[question.id] === option 
-                                    ? 'border-blue-500 bg-blue-50/50'
-                                    : 'border-gray-200 hover:border-blue-200'}`}
-                      >
-                        <input
-                          type="radio"
-                          name={`question-${question.id}`}
-                          value={option}
-                          checked={answers[question.id] === option}
-                          onChange={() => handleAnswerChange(question.id, option)}
-                          className="w-4 h-4 text-blue-600"
-                        />
-                        <span className="text-gray-700">{option}</span>
-                      </motion.label>
-                    ))}
-                  </div>
-                )}
+                    {question.type === 'TRUE_FALSE' && (
+                    <div className="space-y-4">
+                      {['True', 'False'].map((option, optionIndex) => (
+                        <motion.label
+                          key={optionIndex}
+                          whileHover={{ scale: 1.01 }}
+                          className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer
+                                    transition-all duration-300
+                                    ${answers[question.id] === String(optionIndex + 1)
+                                      ? 'border-blue-500 bg-blue-50/50'
+                                      : 'border-gray-200 hover:border-blue-200'}`}
+                        >
+                          <input
+                            type="radio"
+                            name={`question-${question.id}`}
+                            value={String(optionIndex + 1)}  // Send "1" for True, "2" for False
+                            checked={answers[question.id] === String(optionIndex + 1)}
+                            onChange={() => handleAnswerChange(question.id, String(optionIndex + 1))}
+                            className="w-4 h-4 text-blue-600"
+                          />
+                          <span className="text-gray-700">{option}</span>
+                        </motion.label>
+                      ))}
+                    </div>
+                  )}
   
                 {question.type === 'ESSAY' && (
                   <textarea

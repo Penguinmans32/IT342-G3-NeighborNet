@@ -48,7 +48,7 @@ const MessagesPage = () => {
   
       const returnRequestMessage = {
         id: Date.now(),
-        senderId: user.id,
+        senderId: user?.data?.id,
         receiverId: returnRequestData.lenderId,
         messageType: "RETURN_REQUEST",
         content: "Sent a return request",
@@ -81,7 +81,7 @@ const MessagesPage = () => {
       return;
     }
   
-    if (!user?.id) {
+    if (!user?.data?.id) {
       console.error('No user ID available');
       return;
     }
@@ -89,7 +89,7 @@ const MessagesPage = () => {
     try {
       setSelectedContact(contact);
   
-      const response = await fetch(`http://localhost:8080/messages/read/${contact.id}/${user.id}`, {
+      const response = await fetch(`http://localhost:8080/messages/read/${contact.id}/${user.data.id}`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -131,7 +131,7 @@ const MessagesPage = () => {
   }, [conversations])
 
   useEffect(() => {
-    if (user?.id) {
+    if (user?.data?.id) {
       const socket = new SockJS("http://localhost:8080/ws");
       const stomp = new Client({
         webSocketFactory: () => socket,
@@ -166,10 +166,10 @@ const MessagesPage = () => {
   }, [user]);
 
   useEffect(() => {
-    if (user?.id) {
+    if (user?.data?.id) {
       fetchConversations()
     }
-  }, [user?.id])
+  }, [user?.data?.id])
 
   useEffect(() => {
     return () => {
@@ -222,7 +222,7 @@ const MessagesPage = () => {
     setConversations((prevConversations) => {
         const updatedConversations = [...prevConversations]
         const conversationIndex = updatedConversations.findIndex(
-            (conv) => conv.participant.id === (message.senderId === user.id ? message.receiverId : message.senderId),
+            (conv) => conv.participant.id === (message.senderId === user.data.id ? message.receiverId : message.senderId),
         )
 
         const displayContent = message.messageType === "IMAGE" ? "📷 Image" : 
@@ -235,7 +235,7 @@ const MessagesPage = () => {
                 lastMessage: displayContent,
                 lastMessageTimestamp: message.timestamp, // Make sure to use the message timestamp
                 unreadCount:
-                    message.senderId !== user.id
+                    message.senderId !== user.data.id
                         ? updatedConversations[conversationIndex].unreadCount + 1
                         : updatedConversations[conversationIndex].unreadCount,
             }
@@ -245,12 +245,12 @@ const MessagesPage = () => {
             const newConversation = {
                 id: `new-${Date.now()}`,
                 participant: {
-                    id: message.senderId === user.id ? message.receiverId : message.senderId,
+                    id: message.senderId === user.data.id ? message.receiverId : message.senderId,
                     username: message.senderName,
                 },
                 lastMessage: displayContent,
                 lastMessageTimestamp: message.timestamp, // Make sure to use the message timestamp
-                unreadCount: message.senderId !== user.id ? 1 : 0,
+                unreadCount: message.senderId !== user.data.id ? 1 : 0,
             }
             updatedConversations.unshift(newConversation)
         }
@@ -260,11 +260,11 @@ const MessagesPage = () => {
 }
 
 const fetchConversations = async () => {
-  if (!user?.id) return
+  if (!user?.data?.id) return
 
   try {
       setLoading(true)
-      const response = await fetch(`http://localhost:8080/conversations/${user.id}`)
+      const response = await fetch(`http://localhost:8080/conversations/${user.data.id}`)
 
       if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`)
@@ -542,7 +542,7 @@ console.log('Conversations:', conversations);
               <div className="flex-1 flex flex-col bg-gray-50">
                 {selectedContact && stompReady ? (
                   <Chat
-                    senderId={user.id}
+                    senderId={user.data.id}
                     receiverId={selectedContact.id}
                     receiverName={selectedContact.username}
                     onMessageSent={handleSendMessage}

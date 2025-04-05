@@ -562,6 +562,69 @@ const ClassDetails = () => {
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false)
   const [editingFeedback, setEditingFeedback] = useState(null)
   const [quizzes, setQuizzes] = useState([])
+  const [quizProgressData, setQuizProgressData] = useState({
+    unlockedQuizzes: new Set([0]),
+    completedQuizzes: new Set(),
+    currentQuizIndex: 0
+  })
+
+
+  useEffect(() => {
+    const fetchQuizProgress = async () => {
+      if (!isAuthenticated) return;
+      
+      try {
+        const token = localStorage.getItem('token');
+        const headers = { Authorization: `Bearer ${token}` };
+        
+        const attemptsPromises = quizzes.map(quiz =>
+          axios.get(`http://localhost:8080/api/classes/${classId}/quizzes/${quiz.id}/attempts`, { headers })
+        );
+        
+        const attemptsResponses = await Promise.all(attemptsPromises);
+        
+        const unlockedQuizzes = new Set([0]);
+        const completedQuizzes = new Set();
+        let currentIndex = 0;
+  
+        attemptsResponses.forEach((response, index) => {
+          const attempts = response.data;
+          if (attempts && attempts.length > 0) {
+            const completedAttempts = attempts.filter(attempt => 
+              attempt.completedAt && attempt.score !== null && attempt.maxScore !== null
+            );
+  
+            if (completedAttempts.length > 0) {
+              const bestAttempt = completedAttempts.reduce((best, current) => {
+                return (current.score > (best?.score || 0)) ? current : best;
+              }, null);
+  
+              if (bestAttempt && bestAttempt.score > 0) {
+                completedQuizzes.add(index);
+                if (index + 1 < quizzes.length) {
+                  unlockedQuizzes.add(index + 1);
+                }
+                currentIndex = Math.max(currentIndex, index + 1);
+              }
+            }
+          }
+        });
+  
+        setQuizProgressData({
+          unlockedQuizzes,
+          completedQuizzes,
+          currentQuizIndex: currentIndex
+        });
+  
+      } catch (error) {
+        console.error('Error fetching quiz progress:', error);
+      }
+    };
+  
+    if (quizzes.length > 0) {
+      fetchQuizProgress();
+    }
+  }, [classId, quizzes, isAuthenticated]);
 
   const fetchClassFeedbacks = async () => {
     try {
@@ -1377,11 +1440,7 @@ const ClassDetails = () => {
                 <QuizList 
                   classId={classId} 
                   quizzes={quizzes}
-                  progressData={{
-                    unlockedQuizzes: new Set([0]),
-                    completedQuizzes: new Set(),
-                    currentQuizIndex: 0
-                  }}
+                  progressData={quizProgressData}
                   hasStartedJourney={hasStartedJourney}
                   isOwner={isOwner}
                 />

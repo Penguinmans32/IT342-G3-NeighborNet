@@ -14,6 +14,8 @@ const OptionsEditor = ({
     }
   }
 
+  const isTrueFalse = type === "TRUE_FALSE"
+
   const removeOption = (index) => {
     const newOptions = options.filter((_, i) => i !== index)
     onOptionsChange(newOptions)
@@ -28,6 +30,54 @@ const OptionsEditor = ({
     onOptionsChange(newOptions)
   }
 
+  // Render TRUE/FALSE options differently
+  if (isTrueFalse) {
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="space-y-4"
+      >
+        <label className="block text-gray-700 font-medium">Correct Answer</label>
+        <div className="grid grid-cols-2 gap-4">
+          {["True", "False"].map((value, index) => (
+            <motion.div
+              key={value}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className={`relative rounded-xl border-2 transition-all duration-200 
+                ${correctAnswer === String(index + 1) 
+                  ? "border-blue-500 bg-blue-50" 
+                  : "border-gray-200 hover:border-blue-300"}`}
+            >
+              <input
+                type="radio"
+                name="trueFalseAnswer"
+                value={String(index + 1)}
+                checked={correctAnswer === String(index + 1)}
+                onChange={() => onCorrectAnswerChange(String(index + 1))}
+                className="absolute opacity-0 w-full h-full cursor-pointer"
+                required
+              />
+              <div className="px-4 py-3 flex items-center justify-between">
+                <span className="text-gray-700 font-medium">{value}</span>
+                {correctAnswer === String(index + 1) && (
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="w-4 h-4 rounded-full bg-blue-500"
+                  />
+                )}
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </motion.div>
+    )
+  }
+
+  // Original Multiple Choice Editor
   return (
     <motion.div
       initial={{ opacity: 0 }}
