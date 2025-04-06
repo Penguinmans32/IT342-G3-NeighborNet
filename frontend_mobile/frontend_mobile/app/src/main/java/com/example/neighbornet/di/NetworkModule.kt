@@ -5,6 +5,7 @@ import coil.ImageLoader
 import com.example.neighbornet.api.BorrowingApiService
 import com.example.neighbornet.api.ChatApiService
 import com.example.neighbornet.api.ClassApiService
+import com.example.neighbornet.api.ProfileApiService
 import com.example.neighbornet.auth.TokenManager
 import com.example.neighbornet.network.AuthInterceptor
 import com.example.neighbornet.network.AuthService
@@ -205,6 +206,12 @@ object NetworkModule {
     @Singleton
     fun provideBorrowingApiService(retrofit: Retrofit): BorrowingApiService {
         return retrofit.create(BorrowingApiService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideProfileApiService(retrofit: Retrofit): ProfileApiService {
+        return retrofit.create(ProfileApiService::class.java)
     }
 
     @Provides

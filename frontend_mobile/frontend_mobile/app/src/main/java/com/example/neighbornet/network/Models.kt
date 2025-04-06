@@ -6,6 +6,7 @@ import com.example.neighbornet.utils.ArrayDate
 import com.example.neighbornet.utils.StringDate
 import com.google.gson.annotations.SerializedName
 import kotlinx.serialization.Serializable
+import java.time.LocalDateTime
 
 data class LoginRequest(
     val username: String,
@@ -314,4 +315,117 @@ data class AgreementResponse(
 )
 
 
+data class ProfileState(
+    val data: ProfileData? = null,
+    val isLoading: Boolean = true,
+    val error: String? = null
+)
+
+data class ProfileData(
+    val username: String = "",
+    val email: String = "",
+    val imageUrl: String? = null,
+    val bio: String = "",
+    val skills: List<Skill> = emptyList(),
+    val interests: List<String> = emptyList(),
+    val socialLinks: SocialLinks = SocialLinks()
+)
+
+data class SocialLinks(
+    val github: String = "",
+    val twitter: String = "",
+    val linkedin: String = "",
+    val facebook: String = ""
+)
+
+data class UserStats(
+    val classesCreated: Int = 0,
+    val itemsPosted: Int = 0,
+    val communityScore: Int = 0
+)
+
+data class FollowData(
+    val followersCount: Int = 0,
+    val followingCount: Int = 0,
+    val isFollowing: Boolean = false
+)
+
+data class ImageResponse(
+    val imageUrl: String
+)
+
+data class FollowResponse(
+    val followersCount: Int,
+    val isFollowing: Boolean
+)
+
+data class Achievement(
+    val id: Long,
+    val name: String,
+    val description: String,
+    val iconName: String,
+    val unlocked: Boolean,
+    val currentProgress: Int,
+    val requiredProgress: Int,
+    val unlockedAt: String?,
+    val progress: Double = (currentProgress.toDouble() / requiredProgress.toDouble()) * 100
+)
+
+data class ClassItem(
+    val id: Long,
+    val title: String,
+    val description: String,
+    val thumbnailUrl: String?,
+    val category: String,
+    val creatorName: String,
+    val creatorImageUrl: String?,
+    val averageRating: Double?,
+    val createdAt: String
+)
+
+
+data class UserActivity(
+    val id: Long? = null,
+    val type: String = "",
+    val action: String = "",
+    val user: UserDTO? = null,
+    val title: String = "",
+    val createdAt: LocalDateTime? = null,
+    val engagement: ActivityEngagement? = null,
+    val thumbnailUrl: String? = null
+) {
+    data class ActivityEngagement(
+        val likes: Int = 0,
+        val comments: Int = 0
+    )
+}
+
+data class UserDTO(
+    val id: Long,
+    val username: String,
+    val imageUrl: String?,
+    val email: String?,
+    val bio: String?,
+    val skills: List<SkillDTO> = emptyList(),
+    val interests: List<String> = emptyList(),
+    val socialLinks: Map<String, String?> = emptyMap(),
+    val followersCount: Int = 0,
+    val followingCount: Int = 0,
+    val provider: String? = null,
+    val following: Boolean = false
+)
+
+data class SkillDTO(
+    val name: String,
+    val proficiencyLevel: Int
+)
+
+data class Skill(
+    val name: String,
+    val level: Int
+)
+
+enum class ProfileTab {
+    PROFILE, ACHIEVEMENTS, ACTIVITY
+}
 
