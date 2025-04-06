@@ -6,7 +6,6 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import VerifyEmail from "./components/SplashScreen/VerifyEmail";
 import { NotificationProvider } from "./backendApi/NotificationContext";
 import AboutUs from "./components/AboutUs";
-import ScrollToTop from "./components/SplashScreen/ScrolltoTop";
 import OAuth2RedirectHandler from "./auth/OAuth2RedirectHandler";
 import ClassDetails from "./components/SplashScreen/ClassDetails";
 import CreateClass from "./components/SplashScreen/CreateClass";
@@ -46,7 +45,6 @@ function App() {
         <AuthProviderWithErrorBoundary>
           <NotificationProvider>
           <TitleManager /> 
-          <ScrollToTop />
           <Toaster
               position="top-center"
               reverseOrder={false}
