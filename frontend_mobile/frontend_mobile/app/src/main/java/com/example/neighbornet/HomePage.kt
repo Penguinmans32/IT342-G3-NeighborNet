@@ -1,6 +1,7 @@
 package com.example.neighbornet
 
 import android.net.Uri
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.DrawableRes
@@ -30,14 +31,27 @@ import com.valentinilk.shimmer.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.ExitToApp
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.*
@@ -51,6 +65,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -71,13 +86,22 @@ import coil.request.ImageRequest
 import com.example.neighbornet.auth.AuthViewModel
 import com.example.neighbornet.auth.ChatViewModel
 import com.example.neighbornet.auth.ClassListViewModel
+import com.example.neighbornet.auth.ProfileViewModel
 import com.example.neighbornet.auth.TokenManager
+import com.example.neighbornet.network.Achievement
 import kotlinx.coroutines.launch
 import com.example.neighbornet.network.Class
 import com.example.neighbornet.network.CategoryData
 import com.example.neighbornet.network.CategoryInfo
+import com.example.neighbornet.network.ClassItem
+import com.example.neighbornet.network.FollowData
 import com.example.neighbornet.network.Message
 import com.example.neighbornet.network.MessageType
+import com.example.neighbornet.network.ProfileData
+import com.example.neighbornet.network.ProfileTab
+import com.example.neighbornet.network.Skill
+import com.example.neighbornet.network.UserActivity
+import com.example.neighbornet.network.UserStats
 import com.example.neighbornet.ui.screens.MapScreen
 import com.example.neighbornet.utils.AgreementMessage
 import com.example.neighbornet.utils.Avatar
@@ -1632,11 +1656,24 @@ private fun DateDivider(date: String) {
 
 @Composable
 fun ProfileContent(
+    viewModel: ProfileViewModel = hiltViewModel(),
     authViewModel: AuthViewModel = hiltViewModel(),
-    onLogoutSuccess: () -> Unit
+    onLogoutSuccess: () -> Unit,
+    onNavigateToEdit: () -> Unit = {},
+    onNavigateToHome: () -> Unit = {}
 ) {
-    val authState by authViewModel.authState.collectAsState()
+    var selectedTab by remember { mutableStateOf(ProfileTab.PROFILE) }
+    var showLogoutConfirmation by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+
+    // Collect all states
+    val authState by authViewModel.authState.collectAsState()
+    val profileState by viewModel.profileState.collectAsState()
+    val userStats by viewModel.userStats.collectAsState()
+    val activities by viewModel.activities.collectAsState()
+    val achievements by viewModel.achievements.collectAsState()
+    val savedClasses by viewModel.savedClasses.collectAsState()
+    val followData by viewModel.followData.collectAsState()
 
     // Handle logout success
     LaunchedEffect(authState.isLoggedIn) {
@@ -1645,121 +1682,812 @@ fun ProfileContent(
         }
     }
 
+    LaunchedEffect(profileState) {
+        Log.d("ProfileContent", "Profile state updated: $profileState")
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .background(MaterialTheme.colorScheme.background)
     ) {
-        // Profile header
-        Text(
-            text = "Profile",
-            style = MaterialTheme.typography.headlineMedium,
-            modifier = Modifier.padding(bottom = 24.dp)
+        // Profile Header
+        ProfileTopBar(
+            onBackClick = onNavigateToHome,
+            onLogoutClick = { showLogoutConfirmation = true }
         )
 
-        // User info (placeholder)
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp)
+        // Profile Content
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(16.dp)
         ) {
-            Column(
-                modifier = Modifier
-                    .padding(16.dp)
-                    .fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                // Profile picture placeholder
-                Box(
-                    modifier = Modifier
-                        .size(100.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = "Profile Picture",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(50.dp)
-                    )
-                }
+            item {
+                ProfileHeader(
+                    profileData = profileState.data,
+                    userStats = userStats,
+                    followData = followData,
+                    isOwnProfile = true,
+                    onEditClick = onNavigateToEdit
+                )
+            }
 
+            item {
                 Spacer(modifier = Modifier.height(16.dp))
+                ProfileTabs(
+                    selectedTab = selectedTab,
+                    onTabSelected = { selectedTab = it }
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+            }
 
+            when (selectedTab) {
+                ProfileTab.PROFILE -> {
+                    item {
+                        ProfileTabContent(
+                            profileData = profileState.data,
+                            userStats = userStats,
+                            savedClasses = savedClasses
+                        )
+                    }
+                }
+                ProfileTab.ACHIEVEMENTS -> {
+                    items(
+                        items = achievements,
+                        key = { it.id }
+                    ) { achievement ->
+                        AchievementCard(achievement = achievement)
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                }
+                ProfileTab.ACTIVITY -> {
+                    if (activities.isEmpty()) {
+                        item {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = "No activities yet",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                )
+                            }
+                        }
+                    } else {
+                        itemsIndexed(
+                            items = activities,
+                            key = { index, activity ->
+                                buildString {
+                                    append(activity.type)
+                                    append("_")
+                                    append(activity.id ?: "")
+                                    append("_")
+                                    append(index)
+                                }.hashCode()
+                            }
+                        ) { index, activity ->
+                            ActivityItem(activity = activity)
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Logout Dialog
+    if (showLogoutConfirmation) {
+        LogoutDialog(
+            onConfirm = {
+                scope.launch {
+                    authViewModel.logout()
+                }
+                showLogoutConfirmation = false
+            },
+            onDismiss = { showLogoutConfirmation = false }
+        )
+    }
+}
+
+@Composable
+private fun AchievementCard(achievement: Achievement) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Achievement Icon
+            Icon(
+                imageVector = Icons.Default.Star,
+                contentDescription = achievement.name,
+                tint = if (achievement.unlocked) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                }
+            )
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = authState.username ?: "User Name",
-                    style = MaterialTheme.typography.titleLarge
+                    text = achievement.name,
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Text(
+                    text = achievement.description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                 )
 
-                authState.userId?.let { userId ->
+                LinearProgressIndicator(
+                    progress = achievement.progress.toFloat() / 100,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ActivityItem(activity: UserActivity) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // User Avatar
+            AsyncImage(
+                model = activity.user?.imageUrl,
+                contentDescription = "User avatar",
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape),
+                contentScale = ContentScale.Crop,
+                placeholder = painterResource(id = R.drawable.default_profile)
+            )
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = activity.user?.username ?: "",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "${activity.action} ${activity.title}",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Text(
+                    text = activity.createdAt?.toString() ?: "",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                )
+            }
+
+            if (activity.engagement != null) {
+                Column(horizontalAlignment = Alignment.End) {
                     Text(
-                        text = "ID: $userId",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        text = "${activity.engagement.likes} likes",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Text(
+                        text = "${activity.engagement.comments} comments",
+                        style = MaterialTheme.typography.bodySmall
                     )
                 }
+            }
+        }
+    }
+}
 
+@Composable
+fun ProfileTopBar(
+    onBackClick: () -> Unit,
+    onLogoutClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .statusBarsPadding(),
+        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 4.dp
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(
+                onClick = onBackClick,
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surface)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ArrowBack,
+                    contentDescription = "Back",
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
+            }
+
+            Text(
+                text = "Profile",
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            IconButton(
+                onClick = onLogoutClick,
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surface)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ExitToApp,
+                    contentDescription = "Logout",
+                    tint = MaterialTheme.colorScheme.error
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun ProfileHeader(
+    profileData: ProfileData?,
+    onEditClick: () -> Unit,
+    userStats: UserStats,
+    followData: FollowData,
+    isOwnProfile: Boolean
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // Profile Picture
+        Box(
+            modifier = Modifier
+                .size(120.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.surface)
+                .border(
+                    width = 2.dp,
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                    shape = CircleShape
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            AsyncImage(
+                model = profileData?.imageUrl ?: R.drawable.default_profile,
+                contentDescription = "Profile Picture",
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+
+            // Online indicator
+            Box(
+                modifier = Modifier
+                    .size(16.dp)
+                    .clip(CircleShape)
+                    .background(Color.Green)
+                    .border(2.dp, MaterialTheme.colorScheme.surface, CircleShape)
+                    .align(Alignment.BottomEnd)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // User Info
+        Text(
+            text = profileData?.username ?: "Username",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold
+        )
+
+        Text(
+            text = profileData?.email ?: "Email",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Stats Row
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            StatItem(
+                value = followData.followersCount.toString(),
+                label = "Followers"
+            )
+            StatItem(
+                value = followData.followingCount.toString(),
+                label = "Following"
+            )
+            StatItem(
+                value = "${userStats.communityScore}%",
+                label = "Score"
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        if (isOwnProfile) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth(0.7f)
+                    .padding(vertical = 8.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
+                )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Info,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Visit our website for full profile customization",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StatItem(
+    value: String,
+    label: String
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.padding(horizontal = 8.dp)
+    ) {
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+        )
+    }
+}
+
+@Composable
+fun ProfileTabs(
+    selectedTab: ProfileTab,
+    onTabSelected: (ProfileTab) -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 1.dp
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly // This will distribute tabs evenly
+        ) {
+            ProfileTab.values().forEach { tab ->
+                TabItem(
+                    tab = tab,
+                    isSelected = selectedTab == tab,
+                    onClick = { onTabSelected(tab) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun TabItem(
+    tab: ProfileTab,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val color = if (isSelected) {
+        MaterialTheme.colorScheme.primary
+    } else {
+        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+    }
+
+    Column(
+        modifier = Modifier
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick
+            )
+            .padding(vertical = 12.dp, horizontal = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = tab.name.lowercase().replaceFirstChar { it.uppercase() },
+            style = MaterialTheme.typography.bodyMedium,
+            color = color
+        )
+
+        if (isSelected) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Box(
+                modifier = Modifier
+                    .width(24.dp)
+                    .height(2.dp)
+                    .background(color)
+            )
+        }
+    }
+}
+
+@Composable
+fun LogoutDialog(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "Confirm Logout",
+                style = MaterialTheme.typography.titleLarge
+            )
+        },
+        text = {
+            Text(
+                text = "Are you sure you want to logout?",
+                style = MaterialTheme.typography.bodyMedium
+            )
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.error
+                )
+            ) {
+                Text("Logout")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        },
+        containerColor = MaterialTheme.colorScheme.surface,
+        tonalElevation = 8.dp
+    )
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun ProfileTabContent(
+    profileData: ProfileData?,
+    userStats: UserStats,
+    savedClasses: List<ClassItem>
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+    ) {
+        // About Me Section
+        Section(
+            title = "About Me",
+            icon = Icons.Default.Person
+        ) {
+            Text(
+                text = profileData?.bio ?: "No bio added yet",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Skills Section
+        if (!profileData?.skills.isNullOrEmpty()) {
+            Section(
+                title = "Skills",
+                icon = Icons.Default.Star
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    profileData?.skills?.forEach { skill ->
+                        SkillProgressItem(skill = skill)
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Interests Section
+        Section(
+            title = "Interests",
+            icon = Icons.Default.Favorite
+        ) {
+            if (profileData?.interests?.isNotEmpty() == true) {
+                InterestsSection(interests = profileData.interests)
+            } else {
                 Text(
-                    text =  "user@email.com", // Replace with actual email
+                    text = "No interests added yet",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                 )
             }
         }
 
-        Spacer(modifier = Modifier.weight(1f))
+        Spacer(modifier = Modifier.height(24.dp))
 
-        var showLogoutConfirmation by remember { mutableStateOf(false) }
-
-        if (showLogoutConfirmation) {
-            AlertDialog(
-                onDismissRequest = { showLogoutConfirmation = false },
-                title = { Text("Confirm Logout") },
-                text = { Text("Are you sure you want to logout?") },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            scope.launch {
-                                authViewModel.logout()
-                            }
-                            showLogoutConfirmation = false
-                        },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.error
-                        )
-                    ) {
-                        Text("Logout")
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showLogoutConfirmation = false }) {
-                        Text("Cancel")
-                    }
+        // Saved Classes Section
+        Section(
+            title = "Favorite Classes",
+            icon = Icons.Default.Book
+        ) {
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                contentPadding = PaddingValues(vertical = 8.dp)
+            ) {
+                items(savedClasses) { classItem ->
+                    SavedClassCard(classItem = classItem)
                 }
-            )
+            }
         }
 
-        // Logout button
-        Button(
-            onClick = { showLogoutConfirmation = true },
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Quick Stats Section
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            StatCard(
+                label = "Classes Created",
+                value = userStats.classesCreated.toString(),
+                icon = Icons.Default.School
+            )
+            StatCard(
+                label = "Items Posted",
+                value = userStats.itemsPosted.toString(),
+                icon = Icons.Default.ShoppingCart
+            )
+            StatCard(
+                label = "Community Score",
+                value = "${userStats.communityScore}%",
+                icon = Icons.Default.Star
+            )
+        }
+    }
+}
+
+@Composable
+private fun InterestsSection(interests: List<String>) {
+    LazyRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        contentPadding = PaddingValues(vertical = 8.dp)
+    ) {
+        items(interests) { interest ->
+            InterestChip(interest = interest)
+        }
+    }
+}
+
+@Composable
+fun AchievementsTabContent(
+    achievements: List<Achievement>
+) {
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(2),
+        contentPadding = PaddingValues(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        items(achievements) { achievement ->
+            AchievementCard(achievement = achievement)
+        }
+    }
+}
+
+@Composable
+fun ActivityTabContent(
+    activities: List<UserActivity>
+) {
+    LazyColumn(
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        items(activities) { activity ->
+            ActivityItem(activity = activity)
+        }
+    }
+}
+
+@Composable
+private fun Section(
+    title: String,
+    icon: ImageVector,
+    content: @Composable () -> Unit
+) {
+    Column {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(bottom = 16.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(24.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+        }
+        content()
+    }
+}
+
+@Composable
+private fun SkillProgressItem(skill: Skill) {
+    Column {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = skill.name,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium
+            )
+            Text(
+                text = "${skill.level}%",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+            )
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        LinearProgressIndicator(
+            progress = skill.level.toFloat() / 100,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(50.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.error
+                .height(4.dp)
+                .clip(RoundedCornerShape(2.dp)),
+            color = MaterialTheme.colorScheme.primary,
+            trackColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    }
+}
+
+@Composable
+private fun InterestChip(interest: String) {
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
+    ) {
+        Text(
+            text = interest,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.primary
+        )
+    }
+}
+
+@Composable
+private fun SavedClassCard(classItem: ClassItem) {
+    Card(
+        modifier = Modifier
+            .width(280.dp)
+            .clickable { /* Navigate to class */ },
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column {
+            // Class thumbnail
+            AuthenticatedThumbnailImage(
+                url = classItem.thumbnailUrl,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(140.dp),
+                contentDescription = classItem.title,
+                contentScale = ContentScale.Crop
             )
-        ) {
-            if (authState.isLoading) {
-                CircularProgressIndicator(
-                    color = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.size(24.dp)
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = classItem.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
-            } else {
-                Text("Logout")
+                Text(
+                    text = classItem.description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
+        }
+    }
+}
+
+@Composable
+private fun StatCard(
+    label: String,
+    value: String,
+    icon: ImageVector
+) {
+    Card(
+        modifier = Modifier.width(100.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+            )
         }
     }
 }
