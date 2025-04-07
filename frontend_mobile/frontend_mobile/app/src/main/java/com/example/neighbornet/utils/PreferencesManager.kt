@@ -20,4 +20,8 @@ class PreferencesManager(context: Context) {
     fun setFirstTimeLaunch(isFirstTime: Boolean) {
         sharedPreferences.edit().putBoolean(KEY_FIRST_TIME_LAUNCH, isFirstTime).apply()
     }
+
+    fun clearAllPreferences() {
+        sharedPreferences.edit().clear().apply()
+    }
 } 

@@ -36,13 +36,14 @@ import javax.inject.Inject
 @HiltViewModel
 class ChatViewModel @Inject constructor(
     private val chatRepository: ChatRepository,
-    private val tokenManager: TokenManager
+    private val tokenManager: TokenManager,
+    private val chatStateManager: ChatStateManager
 ) : ViewModel() {
-    private val _messages = MutableStateFlow<List<Message>>(emptyList())
-    val messages: StateFlow<List<Message>> = _messages.asStateFlow()
 
-    private val _isConnected = MutableStateFlow(false)
-    val isConnected: StateFlow<Boolean> = _isConnected.asStateFlow()
+    val messages = chatStateManager.messages
+    val conversations = chatStateManager.conversations
+    val userItems = chatStateManager.userItems
+    val isConnected = chatStateManager.isConnected
 
     private val _currentUser = MutableStateFlow<String?>(null)
     val currentUser: StateFlow<String?> = _currentUser.asStateFlow()
@@ -53,18 +54,22 @@ class ChatViewModel @Inject constructor(
     private val _currentUserId = MutableStateFlow<Long?>(null)
     val currentUserId: StateFlow<Long?> = _currentUserId.asStateFlow()
 
-    private val _conversations = MutableStateFlow<List<ConversationDTO>>(emptyList())
-    val conversations: StateFlow<List<ConversationDTO>> = _conversations.asStateFlow()
-
-    private val _userItems = MutableStateFlow<List<Item>>(emptyList())
-    val userItems: StateFlow<List<Item>> = _userItems.asStateFlow()
-
     private val _isLoadingItems = MutableStateFlow(false)
     val isLoadingItems: StateFlow<Boolean> = _isLoadingItems.asStateFlow()
 
     private val _itemsError = MutableStateFlow<String?>(null)
     val itemsError: StateFlow<String?> = _itemsError.asStateFlow()
 
+    private val _isInitialized = MutableStateFlow(false)
+    val isInitialized = _isInitialized.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            tokenManager.getToken()?.let {
+                _isInitialized.value = true
+            }
+        }
+    }
 
     fun fetchUserItems(userId: Long) {
         viewModelScope.launch {
@@ -72,11 +77,11 @@ class ChatViewModel @Inject constructor(
                 _isLoadingItems.value = true
                 _itemsError.value = null
                 val items = chatRepository.getUserItems(userId)
-                _userItems.value = items
+                chatStateManager.updateUserItems(items)
             } catch (e: Exception) {
                 Log.e("ChatViewModel", "Error fetching user items", e)
                 _itemsError.value = "Failed to load items: ${e.message}"
-                _userItems.value = emptyList()
+                chatStateManager.updateUserItems(emptyList())
             } finally {
                 _isLoadingItems.value = false
             }
@@ -99,7 +104,7 @@ class ChatViewModel @Inject constructor(
             try {
                 val token = tokenManager.getToken()
                 if (token != null) {
-                    _isConnected.value = false
+                    chatStateManager.updateConnectionState(false)
                     setupStompClient(token)
                     subscribeToMessages(senderId.toString())
                     fetchExistingMessages(senderId, receiverId)
@@ -108,7 +113,7 @@ class ChatViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 Log.e("ChatViewModel", "Error connecting to WebSocket", e)
-                _isConnected.value = false
+                chatStateManager.updateConnectionState(false)
             }
         }
     }
@@ -137,8 +142,7 @@ class ChatViewModel @Inject constructor(
                     onConnect = {
                         viewModelScope.launch {
                             Log.d("ChatViewModel", "WebSocket connected successfully")
-                            _isConnected.value = true
-                            // Resubscribe to messages when reconnected
+                            chatStateManager.updateConnectionState(true)
                             _currentUserId.value?.let { userId ->
                                 subscribeToMessages(userId.toString())
                             }
@@ -147,7 +151,7 @@ class ChatViewModel @Inject constructor(
                     onError = { error ->
                         Log.e("ChatViewModel", "WebSocket connection error", error)
                         viewModelScope.launch {
-                            _isConnected.value = false
+                            chatStateManager.updateConnectionState(false)
                             delay(5000)
                             setupStompClient(token)
                         }
@@ -155,7 +159,7 @@ class ChatViewModel @Inject constructor(
                 )
             } catch (e: Exception) {
                 Log.e("ChatViewModel", "Error connecting to WebSocket", e)
-                _isConnected.value = false
+                chatStateManager.updateConnectionState(false)
             }
         }
     }
@@ -170,7 +174,7 @@ class ChatViewModel @Inject constructor(
                 try {
                     val newMessage = message.toMessage()
                     viewModelScope.launch {
-                        _messages.update { current ->
+                        chatStateManager.updateMessage { current ->
                             when (newMessage.messageType) {
                                 MessageType.AGREEMENT_UPDATE, MessageType.BORROWING_UPDATE -> {
                                     // Update existing agreement message with new status
@@ -256,7 +260,7 @@ class ChatViewModel @Inject constructor(
                     formData = Gson().toJson(response)
                 )
 
-                _messages.update { current ->
+                chatStateManager.updateMessage { current ->
                     (current + tempMessage)
                         .distinctBy { it.id }
                         .sortedBy { it.timestamp }
@@ -269,11 +273,6 @@ class ChatViewModel @Inject constructor(
     }
 
     fun sendMessage(senderId: Long, receiverId: Long, content: String) {
-        if (!_isConnected.value) {
-            Log.e("ChatViewModel", "Cannot send message: Not connected")
-            return
-        }
-
         viewModelScope.launch {
             try {
                 val message = Message(
@@ -292,7 +291,7 @@ class ChatViewModel @Inject constructor(
                 stompClient?.send("/app/chat", savedMessage.toJson())
 
                 // Update UI
-                _messages.update { current ->
+                chatStateManager.updateMessage { current ->
                     (current + savedMessage).sortedBy { it.timestamp }
                 }
             } catch (e: Exception) {
@@ -325,7 +324,7 @@ class ChatViewModel @Inject constructor(
                 stompClient?.send("/app/chat", savedMessage.toJson())
 
                 // Update UI
-                _messages.update { current ->
+                chatStateManager.updateMessage { current ->
                     (current + savedMessage).sortedBy { it.timestamp }
                 }
             } catch (e: Exception) {
@@ -336,10 +335,22 @@ class ChatViewModel @Inject constructor(
 
     suspend fun fetchExistingMessages(senderId: Long, receiverId: Long) {
         try {
+            if (!_isInitialized.value) {
+                Log.d("ChatViewModel", "Reinitializing chat connection")
+                val token = tokenManager.getToken()
+                if (token != null) {
+                    _isInitialized.value = true
+                } else {
+                    Log.e("ChatViewModel", "No token available")
+                    return
+                }
+            }
+
             val messages = chatRepository.getMessages(senderId, receiverId)
-            _messages.value = messages.sortedBy { it.timestamp }
+            chatStateManager.updateMessages(messages)
         } catch (e: Exception) {
             Log.e("ChatViewModel", "Error fetching messages", e)
+            _isInitialized.value = false
         }
     }
 
@@ -363,11 +374,6 @@ class ChatViewModel @Inject constructor(
         ownerUsername: String,
         onSuccess: (Long, String) -> Unit
     ) {
-        if (!_isConnected.value) {
-            Log.e("ChatViewModel", "Cannot send message: Not connected")
-            return
-        }
-
         viewModelScope.launch {
             try {
                 // First create/get conversation
@@ -381,6 +387,23 @@ class ChatViewModel @Inject constructor(
             } catch (e: Exception) {
                 Log.e("ChatViewModel", "Error sending message and creating conversation", e)
             }
+        }
+    }
+
+    fun clearChatState() {
+        viewModelScope.launch {
+            chatStateManager.clearAll()
+            _isInitialized.value = false
+            messageSubscription?.unsubscribe()
+            stompClient?.disconnect()
+        }
+    }
+
+    fun clearCurrentChat() {
+        viewModelScope.launch {
+            chatStateManager.clearAll()
+            messageSubscription?.unsubscribe()
+            stompClient?.disconnect()
         }
     }
 }

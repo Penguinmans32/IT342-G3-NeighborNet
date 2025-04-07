@@ -1,5 +1,6 @@
 package com.example.neighbornet
 
+import android.app.Activity
 import android.net.Uri
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -1387,6 +1388,51 @@ fun ChatContent(
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
+    var hasError by remember { mutableStateOf(false) }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            viewModel.clearChatState()
+        }
+    }
+
+    LaunchedEffect(senderId, receiverId) {
+        try {
+            viewModel.clearChatState()
+            delay(100)
+            viewModel.connectWebSocket(senderId, receiverId)
+            viewModel.fetchExistingMessages(senderId, receiverId)
+            hasError = false
+        } catch (e: Exception) {
+            hasError = true
+            Log.e("ChatContent", "Error initializing chat", e)
+        }
+    }
+
+    LaunchedEffect(messages) {
+        if (messages.isNotEmpty()) {
+            listState.animateScrollToItem(messages.size - 1)
+        }
+    }
+
+    LaunchedEffect(isConnected) {
+        if (!isConnected) {
+            delay(5000)
+            viewModel.connectWebSocket(senderId, receiverId)
+        }
+    }
+
+    if (hasError || messages.isEmpty()) {
+        LaunchedEffect(Unit) {
+            delay(1000)
+            try {
+                viewModel.fetchExistingMessages(senderId, receiverId)
+                hasError = false
+            } catch (e: Exception) {
+                hasError = true
+            }
+        }
+    }
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -1448,6 +1494,19 @@ fun ChatContent(
                 }
             }
         }
+
+/*        // Add connection status indicator
+        if (!isConnected) {
+            Text(
+                text = "Connecting...",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.error.copy(alpha = 0.1f))
+                    .padding(8.dp),
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.error
+            )
+        }*/
 
         ChatInputArea(
             messageInput = messageInput,
@@ -1682,6 +1741,10 @@ fun ProfileContent(
         }
     }
 
+    LaunchedEffect(Unit) {
+        viewModel.refreshAllProfileData()
+    }
+
     LaunchedEffect(profileState) {
         Log.d("ProfileContent", "Profile state updated: $profileState")
     }
@@ -1778,12 +1841,15 @@ fun ProfileContent(
         }
     }
 
-    // Logout Dialog
     if (showLogoutConfirmation) {
+        val activity = LocalContext.current as? Activity
+
         LogoutDialog(
             onConfirm = {
-                scope.launch {
-                    authViewModel.logout()
+                activity?.let { currentActivity ->
+                    scope.launch {
+                        authViewModel.logoutAndExitApp(currentActivity)
+                    }
                 }
                 showLogoutConfirmation = false
             },
@@ -2168,37 +2234,29 @@ fun LogoutDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    val context = LocalContext.current
+    val activity = context as? Activity
+
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = {
-            Text(
-                text = "Confirm Logout",
-                style = MaterialTheme.typography.titleLarge
-            )
-        },
-        text = {
-            Text(
-                text = "Are you sure you want to logout?",
-                style = MaterialTheme.typography.bodyMedium
-            )
-        },
+        title = { Text("Confirm Logout") },
+        text = { Text("Are you sure you want to logout?") },
         confirmButton = {
-            Button(
-                onClick = onConfirm,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.error
-                )
+            TextButton(
+                onClick = {
+                    activity?.let {
+                        onConfirm()
+                    }
+                }
             ) {
-                Text("Logout")
+                Text("Yes")
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text("No")
             }
-        },
-        containerColor = MaterialTheme.colorScheme.surface,
-        tonalElevation = 8.dp
+        }
     )
 }
 

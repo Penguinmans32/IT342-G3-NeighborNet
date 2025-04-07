@@ -15,32 +15,36 @@ import javax.inject.Inject
 @HiltViewModel
 class ChatListViewModel @Inject constructor(
     private val chatRepository: ChatRepository,
-    private val tokenManager: TokenManager
+    private val tokenManager: TokenManager,
+    private val chatStateManager: ChatStateManager
 ) : ViewModel() {
-    private val _conversations = MutableStateFlow<List<ConversationDTO>>(emptyList())
-    val conversations: StateFlow<List<ConversationDTO>> = _conversations.asStateFlow()
-
-    private val _loading = MutableStateFlow(false)
-    val loading: StateFlow<Boolean> = _loading.asStateFlow()
+    val conversations = chatStateManager.chatList
+    val loading = chatStateManager.chatListLoading
 
     init {
         loadConversations()
     }
 
-    private fun loadConversations() {
+    fun loadConversations() {
         viewModelScope.launch {
-            _loading.value = true
+            chatStateManager.updateChatListLoading(true)
             try {
                 val userId = tokenManager.getCurrentUserId()
                 userId?.let { id ->
                     val userConversations = chatRepository.getUserConversations(id)
-                    _conversations.value = userConversations
+                    chatStateManager.updateChatList(userConversations)
                 }
             } catch (e: Exception) {
                 Log.e("ChatListViewModel", "Error loading conversations", e)
+                chatStateManager.updateChatList(emptyList())
             } finally {
-                _loading.value = false
+                chatStateManager.updateChatListLoading(false)
             }
         }
+    }
+
+    fun clearChatListState() {
+        chatStateManager.updateChatList(emptyList())
+        chatStateManager.updateChatListLoading(false)
     }
 }

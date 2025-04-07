@@ -85,6 +85,12 @@ class SessionManager(context: Context) {
         }
     }
 
+    init {
+        if (isLoggedIn() && getAccessToken().isNullOrEmpty()) {
+            clearAuthData()
+        }
+    }
+
     fun getUserId(): Long {
         val userId = sharedPreferences.getLong(KEY_USER_ID, -1L)
         Log.d("SessionManager", "Retrieved user ID: $userId")
