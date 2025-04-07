@@ -33,9 +33,12 @@ class ChatRepository @Inject constructor(
     suspend fun getMessages(senderId: Long, receiverId: Long): List<Message> {
         return withContext(Dispatchers.IO) {
             try {
-                api.getMessages(senderId, receiverId)
+                val token = tokenManager.getToken() ?: throw Exception("No token available")
+                val authHeader = "Bearer $token"
+
+                api.getMessages(senderId, receiverId, authHeader)
             } catch (e: Exception) {
-                Log.e("ChatRepository", "Error fetching messages", e)
+                Log.e("ChatRepository", "Error fetching messages: ${e.message}", e)
                 emptyList()
             }
         }

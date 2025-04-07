@@ -6,6 +6,8 @@ import com.example.neighbornet.api.BorrowingApiService
 import com.example.neighbornet.api.ChatApiService
 import com.example.neighbornet.api.ClassApiService
 import com.example.neighbornet.api.ProfileApiService
+import com.example.neighbornet.auth.ChatStateManager
+import com.example.neighbornet.auth.ProfileStateManager
 import com.example.neighbornet.auth.TokenManager
 import com.example.neighbornet.network.AuthInterceptor
 import com.example.neighbornet.network.AuthService
@@ -230,5 +232,17 @@ object NetworkModule {
     @Singleton
     fun provideAuthService(retrofit: Retrofit): AuthService {
         return retrofit.create(AuthService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideProfileStateManager(): ProfileStateManager {
+        return ProfileStateManager()
+    }
+
+    @Provides
+    @Singleton
+    fun provideChatStateManager(): ChatStateManager {
+        return ChatStateManager()
     }
 }

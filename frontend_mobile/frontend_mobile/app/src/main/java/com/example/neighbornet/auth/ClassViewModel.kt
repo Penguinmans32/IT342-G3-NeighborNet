@@ -20,32 +20,23 @@ import kotlinx.coroutines.async
 @HiltViewModel
 class ClassViewModel @Inject constructor(
     private val classRepository: ClassRepository,
-    private val savedStateHandle: SavedStateHandle
+    private val savedStateHandle: SavedStateHandle,
+    private val classStateManager: ClassStateManager
 ) : ViewModel() {
 
-    private val _classId = MutableStateFlow<Long?>(null)
-    val classId = _classId.asStateFlow()
-
-    private val _classDetails = MutableStateFlow<ClassResponse?>(null)
-    val classDetails = _classDetails.asStateFlow()
-
-    private val _lessons = MutableStateFlow<List<LessonResponse>>(emptyList())
-    val lessons = _lessons.asStateFlow()
-
-    private val _feedbacks = MutableStateFlow<List<FeedbackResponse>>(emptyList())
-    val feedbacks = _feedbacks.asStateFlow()
-
-    private val _relatedClasses = MutableStateFlow<List<Class>>(emptyList())
-    val relatedClasses = _relatedClasses.asStateFlow()
-
-    private val _isLearning = MutableStateFlow(false)
-    val isLearning = _isLearning.asStateFlow()
-
-    private val _userRating = MutableStateFlow<Double?>(null)
-    val userRating = _userRating.asStateFlow()
-
-    private val _progress = MutableStateFlow<List<LessonProgress>>(emptyList())
-    val progress = _progress.asStateFlow()
+    val classId = classStateManager.classId
+    val classDetails = classStateManager.classDetails
+    val lessons = classStateManager.lessons
+    val feedbacks = classStateManager.feedbacks
+    val relatedClasses = classStateManager.relatedClasses
+    val isLearning = classStateManager.isLearning
+    val userRating = classStateManager.userRating
+    val progress = classStateManager.progress
+    val currentLesson = classStateManager.currentLesson
+    val nextLesson = classStateManager.nextLesson
+    val prevLesson = classStateManager.prevLesson
+    val isLessonCompleted = classStateManager.isLessonCompleted
+    val lessonRating = classStateManager.lessonRating
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
@@ -56,33 +47,20 @@ class ClassViewModel @Inject constructor(
     private val _startLearningSuccess = MutableStateFlow<Boolean?>(null)
     val startLearningSuccess = _startLearningSuccess.asStateFlow()
 
-    private val _currentLesson = MutableStateFlow<LessonResponse?>(null)
-    val currentLesson = _currentLesson.asStateFlow()
-
-    private val _nextLesson = MutableStateFlow<LessonResponse?>(null)
-    val nextLesson = _nextLesson.asStateFlow()
-
-    private val _prevLesson = MutableStateFlow<LessonResponse?>(null)
-    val prevLesson = _prevLesson.asStateFlow()
-
-    private val _isLessonCompleted = MutableStateFlow(false)
-    val isLessonCompleted = _isLessonCompleted.asStateFlow()
-
     private val _videoProgress = MutableStateFlow(0f)
     val videoProgress = _videoProgress.asStateFlow()
 
-    private val _lessonRating = MutableStateFlow<Double?>(null)
-    val lessonRating = _lessonRating.asStateFlow()
-
     private val _isRatingLoading = MutableStateFlow(false)
     val isRatingLoading = _isRatingLoading.asStateFlow()
+
+
 
     fun submitLessonRating(classId: Long, lessonId: Long, rating: Double) {
         viewModelScope.launch {
             try {
                 _isRatingLoading.value = true
                 classRepository.rateLessonProgress(classId, lessonId, rating)
-                _lessonRating.value = rating
+                classStateManager.updateLessonState(rating = rating)
                 loadLesson(classId, lessonId)
             } catch (e: Exception) {
                 _error.value = "Failed to submit rating: ${e.message}"
@@ -96,7 +74,7 @@ class ClassViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val rating = classRepository.getLessonRating(classId, lessonId)
-                _lessonRating.value = rating
+                classStateManager.updateLessonState(rating = rating)
             } catch (e: Exception) {
                 // Handle error if needed
             }
@@ -105,8 +83,8 @@ class ClassViewModel @Inject constructor(
 
 
     fun initializeWithClassId(classId: Long) {
-        if (_classId.value != classId) {
-            _classId.value = classId
+        if (this.classId.value != classId) {
+            classStateManager.updateClassState(classId = classId)
             loadClassDetails()
         }
     }
@@ -116,23 +94,24 @@ class ClassViewModel @Inject constructor(
             try {
                 _isLoading.value = true
                 val lesson = classRepository.getLessonById(classId, lessonId)
-                _currentLesson.value = lesson
-
                 val rating = classRepository.getLessonRating(classId, lessonId)
-                _lessonRating.value = rating
 
-
-                // Load next and previous lessons
-                lesson.nextLessonId?.let { nextId ->
-                    _nextLesson.value = classRepository.getLessonById(classId, nextId)
+                val nextLesson = lesson.nextLessonId?.let { nextId ->
+                    classRepository.getLessonById(classId, nextId)
                 }
-                lesson.prevLessonId?.let { prevId ->
-                    _prevLesson.value = classRepository.getLessonById(classId, prevId)
+                val prevLesson = lesson.prevLessonId?.let { prevId ->
+                    classRepository.getLessonById(classId, prevId)
                 }
 
-                // Check completion status
                 val progress = classRepository.getLessonProgress(classId, lessonId)
-                _isLessonCompleted.value = progress.completed
+
+                classStateManager.updateLessonState(
+                    currentLesson = lesson,
+                    nextLesson = nextLesson,
+                    prevLesson = prevLesson,
+                    isCompleted = progress.completed,
+                    rating = rating
+                )
             } catch (e: Exception) {
                 _error.value = e.message
             } finally {
@@ -145,7 +124,7 @@ class ClassViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 classRepository.markLessonComplete(classId, lessonId)
-                _isLessonCompleted.value = true
+                classStateManager.updateLessonState(isCompleted = true)
                 loadClassDetails()
             } catch (e: Exception) {
                 _error.value = e.message
@@ -160,10 +139,9 @@ class ClassViewModel @Inject constructor(
 
     private fun loadClassDetails() {
         viewModelScope.launch {
-            _classId.value?.let { id ->
+            classId.value?.let { id ->
                 _isLoading.value = true
                 try {
-                    // Fetch all data in parallel
                     val details = async { classRepository.getClassDetails(id) }
                     val lessonsList = async { classRepository.getClassLessons(id) }
                     val feedbacksList = async { classRepository.getClassFeedbacks(id) }
@@ -171,16 +149,18 @@ class ClassViewModel @Inject constructor(
                     val learningStatus = async { classRepository.getLearningStatus(id) }
                     val progressList = async { classRepository.getProgress(id) }
 
-                    _classDetails.value = details.await()
-                    _lessons.value = lessonsList.await()
-                    _feedbacks.value = feedbacksList.await()
-                    _relatedClasses.value = relatedList.await()
-                    _isLearning.value = learningStatus.await()
-                    _progress.value = progressList.await()
+                    classStateManager.updateClassState(
+                        classDetails = details.await(),
+                        lessons = lessonsList.await(),
+                        feedbacks = feedbacksList.await(),
+                        relatedClasses = relatedList.await(),
+                        isLearning = learningStatus.await(),
+                        progress = progressList.await()
+                    )
 
                     try {
                         val rating = classRepository.getUserRating(id)
-                        _userRating.value = rating.rating
+                        classStateManager.updateClassState(userRating = rating.rating)
                     } catch (e: Exception) {
                         // User might not have rated yet
                     }
@@ -197,11 +177,13 @@ class ClassViewModel @Inject constructor(
 
     fun startLearning() {
         viewModelScope.launch {
-            _classId.value?.let { id ->
+            classId.value?.let { id ->
                 try {
                     val updatedClass = classRepository.startLearning(id)
-                    _classDetails.value = updatedClass
-                    _isLearning.value = true
+                    classStateManager.updateClassState(
+                        classDetails = updatedClass,
+                        isLearning = true
+                    )
                     _startLearningSuccess.value = true
                     _error.value = null
                 } catch (e: Exception) {
@@ -214,10 +196,10 @@ class ClassViewModel @Inject constructor(
 
     fun submitRating(rating: Double) {
         viewModelScope.launch {
-            _classId.value?.let { id ->
+            classId.value?.let { id ->
                 try {
                     classRepository.rateClass(id, rating)
-                    _userRating.value = rating
+                    classStateManager.updateClassState(userRating = rating)
                     loadClassDetails()
                     _error.value = null
                 } catch (e: Exception) {
@@ -229,7 +211,7 @@ class ClassViewModel @Inject constructor(
 
     fun submitFeedback(content: String, rating: Int) {
         viewModelScope.launch {
-            _classId.value?.let { id ->
+            classId.value?.let { id ->
                 try {
                     classRepository.submitFeedback(id, content, rating)
                     loadClassDetails()

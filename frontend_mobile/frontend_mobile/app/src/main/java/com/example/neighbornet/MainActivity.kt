@@ -62,28 +62,40 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        authViewModel.initGoogleSignIn(this)
+        preferencesManager = PreferencesManager(this)
 
-        FirebaseAuth.getInstance().addAuthStateListener { firebaseAuth ->
-            firebaseAuth.currentUser?.let { user ->
-                lifecycleScope.launch {
-                    authViewModel.handleSocialLogin(user)
-                }
-            }
+        if (!authViewModel.hasValidToken()) {
+            preferencesManager.clearAllPreferences()
+            authViewModel.clearAuthState()
         }
 
-        preferencesManager = PreferencesManager(this)
+
+        authViewModel.initGoogleSignIn(this)
 
         setContent {
             NeighbornetTheme {
                 val snackbarHostState = remember { SnackbarHostState() }
                 var currentScreen by remember {
                     mutableStateOf(
-                        if (preferencesManager.isFirstTimeLaunch()) "landing" else "login"
+                        when {
+                            !authViewModel.hasValidToken() -> "login"
+                            preferencesManager.isFirstTimeLaunch() -> "landing"
+                            else -> "home"
+                        }
                     )
                 }
                 val authState by authViewModel.authState.collectAsState()
                 val navController = rememberNavController()
+
+                LaunchedEffect(Unit) {
+                    FirebaseAuth.getInstance().addAuthStateListener { firebaseAuth ->
+                        firebaseAuth.currentUser?.let { user ->
+                            lifecycleScope.launch {
+                                authViewModel.handleSocialLogin(user)
+                            }
+                        }
+                    }
+                }
 
                 LaunchedEffect(currentScreen) {
                     if (currentScreen != "landing" && preferencesManager.isFirstTimeLaunch()) {

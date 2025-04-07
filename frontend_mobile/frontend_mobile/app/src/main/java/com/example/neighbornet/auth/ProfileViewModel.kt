@@ -27,7 +27,8 @@ import javax.inject.Inject
 class ProfileViewModel @Inject constructor(
     private val apiService: ProfileApiService,
     private val sessionManager: SessionManager,
-    private val tokenManager: TokenManager
+    private val tokenManager: TokenManager,
+    private val profileStateManager: ProfileStateManager
 ) : ViewModel() {
 
     private val _profileState = MutableStateFlow(ProfileState())
@@ -57,6 +58,14 @@ class ProfileViewModel @Inject constructor(
         fetchFollowData()
     }
 
+    fun refreshAllProfileData() {
+        fetchProfileData()
+        fetchUserStats()
+        fetchActivities()
+        fetchAchievements()
+        fetchSavedClasses()
+        fetchFollowData()
+    }
 
     private fun fetchUserStats() {
         viewModelScope.launch {

@@ -24,6 +24,9 @@ import kotlinx.coroutines.tasks.await
 import android.webkit.CookieManager
 import android.webkit.WebStorage
 import android.webkit.WebView
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKey
+import com.example.neighbornet.utils.PreferencesManager
 import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -45,7 +48,10 @@ class AuthViewModel @Inject constructor(
     application: Application,
     private val tokenManager: TokenManager,
     private val firebaseAuthService: FirebaseAuthService,
-    private val authService: AuthService
+    private val authService: AuthService,
+    private val profileStateManager: ProfileStateManager,
+    private val chatStateManager: ChatStateManager,
+    private val classStateManager: ClassStateManager
 ): AndroidViewModel(application) {
     private val sessionManager = SessionManager(application)
     private val _authState = MutableStateFlow(AuthState())
@@ -57,7 +63,7 @@ class AuthViewModel @Inject constructor(
     }
 
     init {
-        if (sessionManager.isLoggedIn()) {
+        if (sessionManager.isLoggedIn() && tokenManager.getToken() != null) {
             _authState.value = _authState.value.copy(
                 isLoggedIn = true,
                 accessToken = sessionManager.getAccessToken(),
@@ -65,12 +71,30 @@ class AuthViewModel @Inject constructor(
                 userId = sessionManager.getUserId(),
                 username = sessionManager.getUsername()
             )
+        } else {
+            sessionManager.clearAuthData()
+            tokenManager.clearAllData()
+            _authState.value = AuthState()
         }
     }
 
     private fun clearAuthData() {
         sessionManager.clearAuthData()
         _authState.value = AuthState() // Reset to initial state
+    }
+
+    fun hasValidToken(): Boolean {
+        val token = tokenManager.getToken()
+        val isLoggedIn = sessionManager.isLoggedIn()
+        return !token.isNullOrEmpty() && isLoggedIn
+    }
+
+    fun clearAuthState() {
+        viewModelScope.launch {
+            _authState.value = AuthState()
+            tokenManager.clearAllData()
+            sessionManager.clearAuthData()
+        }
     }
 
     private fun getCurrentUserId(): Long {
@@ -156,7 +180,7 @@ class AuthViewModel @Inject constructor(
         }
     }
 
-    fun logout() {
+    fun logout(activity: Activity) {
         viewModelScope.launch {
             try {
                 _authState.value = _authState.value.copy(isLoading = true)
@@ -164,7 +188,12 @@ class AuthViewModel @Inject constructor(
                 val userId = getCurrentUserId()
                 Log.d("AuthViewModel", "Logging out user with ID: $userId")
 
-                tokenManager.clearToken()
+                profileStateManager.clearAll()
+                chatStateManager.clearAll()
+                classStateManager.clearAll()
+
+                tokenManager.clearAllData()
+                sessionManager.clearAuthData()
 
                 try {
                     sessionManager.clearAuthData()
@@ -207,6 +236,8 @@ class AuthViewModel @Inject constructor(
 
                 _authState.value = AuthState()
 
+                activity.finishAffinity()
+                System.exit(0)
                 try {
                     initGoogleSignIn(getApplication())
                 } catch (e: Exception) {
@@ -216,12 +247,114 @@ class AuthViewModel @Inject constructor(
             } catch (e: Exception) {
                 Log.e("AuthViewModel", "Error during logout", e)
                 try {
-                    tokenManager.clearToken()
+                    profileStateManager.clearAll()
+                    chatStateManager.clearAll()
+                    classStateManager.clearAll()
+                    tokenManager.clearAllData()
                     sessionManager.clearAuthData()
                     _authState.value = AuthState()
+                    activity.finishAffinity()
+                    System.exit(0)
                 } catch (e2: Exception) {
                     Log.e("AuthViewModel", "Error in final cleanup", e2)
                 }
+            }
+        }
+    }
+
+    fun logoutAndExitApp(activity: Activity) {
+        viewModelScope.launch {
+            try {
+                _authState.value = _authState.value.copy(isLoading = true)
+
+                // Clear all state managers
+                profileStateManager.clearAll()
+                chatStateManager.clearAll()
+                classStateManager.clearAll()
+
+                // Clear auth state first
+                _authState.value = AuthState()
+
+                // Clear Firebase Auth
+                FirebaseAuth.getInstance().signOut()
+
+                // Clear Google Sign In
+                try {
+                    if (::googleSignInClient.isInitialized) {
+                        googleSignInClient.signOut().await()
+                        googleSignInClient.revokeAccess().await()
+                    }
+                } catch (e: Exception) {
+                    Log.e("AuthViewModel", "Error signing out from Google", e)
+                }
+
+                // Clear ALL shared preferences
+                activity.getApplicationContext().let { context ->
+                    // Clear encrypted preferences
+                    val masterKey = MasterKey.Builder(context)
+                        .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                        .build()
+
+                    // Clear auth prefs
+                    EncryptedSharedPreferences.create(
+                        context,
+                        "auth_prefs",
+                        masterKey,
+                        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+                    ).edit().clear().commit()
+
+                    // Clear token prefs
+                    EncryptedSharedPreferences.create(
+                        context,
+                        "token_prefs",
+                        masterKey,
+                        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+                    ).edit().clear().commit()
+
+                    // Clear regular prefs
+                    context.getSharedPreferences("app_preferences", Context.MODE_PRIVATE)
+                        .edit().clear().commit()
+                }
+
+                // Clear session and token managers
+                sessionManager.clearAuthData()
+                tokenManager.clearAllData()
+
+                // Clear WebView data
+                CookieManager.getInstance().removeAllCookies(null)
+                CookieManager.getInstance().flush()
+                WebStorage.getInstance().deleteAllData()
+
+                // Force clear all databases
+                activity.applicationContext.let { context ->
+                    context.deleteDatabase("webview.db")
+                    context.deleteDatabase("webviewCache.db")
+                    context.deleteDatabase("webviewCookiesChromium.db")
+                }
+
+                // Exit app
+                activity.finishAffinity()
+                System.exit(0)
+            } catch (e: Exception) {
+                Log.e("AuthViewModel", "Error during logout", e)
+                // Fallback: force clear everything and exit
+                try {
+                    FirebaseAuth.getInstance().signOut()
+                    activity.getApplicationContext().let { context ->
+                        context.getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
+                            .edit().clear().commit()
+                        context.getSharedPreferences("token_prefs", Context.MODE_PRIVATE)
+                            .edit().clear().commit()
+                        context.getSharedPreferences("app_preferences", Context.MODE_PRIVATE)
+                            .edit().clear().commit()
+                    }
+                } catch (e: Exception) {
+                    Log.e("AuthViewModel", "Final cleanup failed", e)
+                }
+                activity.finishAffinity()
+                System.exit(0)
             }
         }
     }

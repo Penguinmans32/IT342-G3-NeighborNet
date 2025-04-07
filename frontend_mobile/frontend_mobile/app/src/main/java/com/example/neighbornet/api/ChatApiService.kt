@@ -9,6 +9,7 @@ import com.example.neighbornet.network.ReturnRequest
 import okhttp3.MultipartBody
 import retrofit2.http.Body
 import retrofit2.http.GET
+import retrofit2.http.Header
 import retrofit2.http.Multipart
 import retrofit2.http.POST
 import retrofit2.http.PUT
@@ -20,7 +21,8 @@ interface ChatApiService {
     @GET("messages/{senderId}/{receiverId}")
     suspend fun getMessages(
         @Path("senderId") senderId: Long,
-        @Path("receiverId") receiverId: Long
+        @Path("receiverId") receiverId: Long,
+        @Header("Authorization") authorization: String
     ): List<Message>
 
     @Multipart
