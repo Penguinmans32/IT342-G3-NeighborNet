@@ -19,13 +19,15 @@ public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
     private final SimpMessagingTemplate messagingTemplate;
+    private final FCMService fcmService;
 
     public NotificationService(NotificationRepository notificationRepository,
                                UserRepository userRepository,
-                               SimpMessagingTemplate messagingTemplate) {
+                               SimpMessagingTemplate messagingTemplate, FCMService fcmService) {
         this.notificationRepository = notificationRepository;
         this.userRepository = userRepository;
         this.messagingTemplate = messagingTemplate;
+        this.fcmService = fcmService;
     }
 
     @Transactional
@@ -56,6 +58,15 @@ public class NotificationService {
                 "/queue/notifications",
                 notificationDTO
         );
+
+        if (user.getFcmToken() != null && !user.getFcmToken().isEmpty()) {
+            fcmService.sendNotification(
+                    user.getFcmToken(),
+                    title,
+                    message,
+                    type
+            );
+        }
     }
 
     public List<Notification> getUserNotifications(Long userId) {
