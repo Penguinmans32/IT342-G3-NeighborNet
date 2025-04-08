@@ -6,6 +6,7 @@ class NotificationService {
         this.client = null;
         this.connected = false;
         this.subscribers = new Set();
+        this.processedMessageIds = new Set(); // Add this to track processed messages
     }
 
     connect(userId, token) {
@@ -46,12 +47,40 @@ class NotificationService {
             this.client.subscribe(`/user/${userId}/queue/notifications`, message => {
                 try {
                     const notification = JSON.parse(message.body);
-                    this.notifySubscribers(notification);
+                    this.handleMessage(notification);
                 } catch (error) {
                     console.error('Error processing notification:', error);
                 }
             });
         }
+    }
+
+    handleMessage(message) {
+        // Generate or use existing message ID
+        const messageId = message.id || message.messageId || `msg_${Date.now()}`;
+
+        // Check if we've already processed this message
+        if (this.processedMessageIds.has(messageId)) {
+            console.log('Duplicate message detected, skipping:', messageId);
+            return;
+        }
+
+        // Add to processed messages
+        this.processedMessageIds.add(messageId);
+
+        // Clean up message ID after 5 seconds
+        setTimeout(() => {
+            this.processedMessageIds.delete(messageId);
+        }, 5000);
+
+        // Create notification with message ID
+        const notification = {
+            ...message,
+            messageId: messageId
+        };
+
+        // Notify subscribers
+        this.notifySubscribers(notification);
     }
 
     subscribe(callback) {
@@ -60,7 +89,13 @@ class NotificationService {
     }
 
     notifySubscribers(notification) {
-        this.subscribers.forEach(callback => callback(notification));
+        this.subscribers.forEach(callback => {
+            try {
+                callback(notification);
+            } catch (error) {
+                console.error('Error in notification subscriber:', error);
+            }
+        });
     }
 
     disconnect() {
@@ -68,6 +103,8 @@ class NotificationService {
             this.client.deactivate();
             this.connected = false;
         }
+        // Clear processed message IDs on disconnect
+        this.processedMessageIds.clear();
     }
 }
 
