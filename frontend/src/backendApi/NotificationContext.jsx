@@ -21,6 +21,32 @@ export const NotificationProvider = ({ children }) => {
     const [toasts, setToasts] = useState([]); // Temporary toast notifications
     const [unreadCount, setUnreadCount] = useState(0);
     const { user } = useAuth();
+    const [processedMessageIds] = useState(new Set());
+    const [messageSourceTracker] = useState(new Map());
+
+    const showToast = useCallback(({ type, title, message, duration = 5000, messageId }) => {
+        if (messageId && processedMessageIds.has(messageId)) {
+            return;
+        }
+
+        const id = Date.now();
+        const newToast = { id, type, title, message, duration };
+        
+        setToasts(prev => [...prev, newToast]);
+        
+        if (messageId) {
+            processedMessageIds.add(messageId);
+            setTimeout(() => {
+                processedMessageIds.delete(messageId);
+            }, 5000);
+        }
+        
+        if (duration) {
+            setTimeout(() => {
+                setToasts(prev => prev.filter(toast => toast.id !== id));
+            }, duration);
+        }
+    }, [processedMessageIds]);
 
     // Fetch persistent notifications from backend
     const fetchNotifications = useCallback(async () => {
@@ -51,26 +77,50 @@ export const NotificationProvider = ({ children }) => {
         if (user) {
             const token = localStorage.getItem('token');
             notificationService.connect(user.data.id, token);
-
+    
             const unsubscribe = notificationService.subscribe((notification) => {
                 console.log("New notification received:", notification);
                 fetchNotifications();
                 
-                // Show toast for new notifications
+                if (notification.messageType === 'CHAT' || notification.type === 'CHAT') {
+                    const isInChat = window.location.pathname === '/messages' || 
+                                   window.location.pathname.includes('/chat');
+                    
+                    if (isInChat) {
+                        return;
+                    }
+                }
+    
+                const messageId = notification.id || notification.messageId || `${notification.senderId}-${Date.now()}`;
+                
+                const now = Date.now();
+                const recentMessage = messageSourceTracker.get(messageId);
+                if (recentMessage && (now - recentMessage) < 5000) {
+                    return;
+                }
+    
+                messageSourceTracker.set(messageId, now);
+                
+                setTimeout(() => {
+                    messageSourceTracker.delete(messageId);
+                }, 5000);
+    
                 showToast({
                     type: notification.type || 'DEFAULT',
                     title: notification.title,
                     message: notification.message,
-                    duration: 5000
+                    duration: 5000,
+                    messageId: messageId
                 });
             });
-
+    
             return () => {
                 unsubscribe();
                 notificationService.disconnect();
+                messageSourceTracker.clear(); 
             };
         }
-    }, [user, fetchNotifications]);
+    }, [user, fetchNotifications, showToast]);
 
     // Initial fetch of notifications
     useEffect(() => {
@@ -78,20 +128,6 @@ export const NotificationProvider = ({ children }) => {
             fetchNotifications();
         }
     }, [user, fetchNotifications]);
-
-    // Toast notification handler
-    const showToast = useCallback(({ type, title, message, duration = 5000 }) => {
-        const id = Date.now();
-        const newToast = { id, type, title, message, duration };
-        
-        setToasts(prev => [...prev, newToast]);
-        
-        if (duration) {
-            setTimeout(() => {
-                setToasts(prev => prev.filter(toast => toast.id !== id));
-            }, duration);
-        }
-    }, []);
 
     // Persistent notification handlers
     const addNotification = useCallback((notification) => {
