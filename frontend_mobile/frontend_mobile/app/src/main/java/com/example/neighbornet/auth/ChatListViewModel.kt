@@ -25,6 +25,20 @@ class ChatListViewModel @Inject constructor(
         loadConversations()
     }
 
+    fun markMessagesAsRead(otherUserId: Long) {
+        viewModelScope.launch {
+            try {
+                val currentUserId = tokenManager.getCurrentUserId()
+                currentUserId?.let { userId ->
+                    chatRepository.markMessagesAsRead(otherUserId, userId)
+                    loadConversations()
+                }
+            } catch (e: Exception) {
+                Log.e("ChatListViewModel", "Error marking messages as read", e)
+            }
+        }
+    }
+
     fun loadConversations() {
         viewModelScope.launch {
             chatStateManager.updateChatListLoading(true)
