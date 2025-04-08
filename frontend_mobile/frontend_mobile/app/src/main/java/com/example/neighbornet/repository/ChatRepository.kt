@@ -44,6 +44,16 @@ class ChatRepository @Inject constructor(
         }
     }
 
+    suspend fun markMessagesAsRead(senderId: Long, receiverId: Long) {
+        withContext(Dispatchers.IO) {
+            try {
+                api.markMessagesAsRead(senderId, receiverId)
+            } catch (e: Exception) {
+                Log.e("ChatRepository", "Error marking messages as read", e)
+            }
+        }
+    }
+
     suspend fun sendAgreement(agreement: AgreementRequest): AgreementResponse {
         return withContext(Dispatchers.IO) {
             try {

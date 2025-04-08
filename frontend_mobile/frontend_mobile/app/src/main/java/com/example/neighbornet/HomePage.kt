@@ -8,19 +8,25 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.updateTransition
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -31,6 +37,7 @@ import androidx.compose.ui.graphics.BlendMode
 import com.valentinilk.shimmer.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -44,7 +51,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Edit
+import kotlin.math.*
 import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
@@ -54,6 +61,10 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.Logout
 import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -61,6 +72,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -76,6 +88,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
@@ -1370,6 +1383,7 @@ fun CategoryDetailScreen(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ChatContent(
     modifier: Modifier = Modifier,
@@ -1390,12 +1404,25 @@ fun ChatContent(
     val listState = rememberLazyListState()
     var hasError by remember { mutableStateOf(false) }
 
+    // Add subtle animation for background
+    val infiniteTransition = rememberInfiniteTransition()
+    val gradientAngle by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(20000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        )
+    )
+
+    // Keep existing effects
     DisposableEffect(Unit) {
         onDispose {
             viewModel.clearChatState()
         }
     }
 
+    // Keep existing LaunchedEffects
     LaunchedEffect(senderId, receiverId) {
         try {
             viewModel.clearChatState()
@@ -1409,10 +1436,8 @@ fun ChatContent(
         }
     }
 
-    LaunchedEffect(messages) {
-        if (messages.isNotEmpty()) {
-            listState.animateScrollToItem(messages.size - 1)
-        }
+    LaunchedEffect(listState.firstVisibleItemIndex) {
+        listState.scrollToItem(listState.firstVisibleItemIndex)
     }
 
     LaunchedEffect(isConnected) {
@@ -1422,6 +1447,7 @@ fun ChatContent(
         }
     }
 
+    // Keep existing error handling
     if (hasError || messages.isEmpty()) {
         LaunchedEffect(Unit) {
             delay(1000)
@@ -1442,102 +1468,150 @@ fun ChatContent(
         }
     }
 
-    Column(
+    Box(
         modifier = modifier
             .fillMaxSize()
             .background(
-                Brush.verticalGradient(
+                brush = Brush.linearGradient(
                     colors = listOf(
                         MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
-                        MaterialTheme.colorScheme.surface.copy(alpha = 0.85f)
+                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f),
+                        MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
+                    ),
+                    start = Offset(
+                        x = cos(gradientAngle * PI.toFloat() / 180f),
+                        y = sin(gradientAngle * PI.toFloat() / 180f)
+                    ),
+                    end = Offset(
+                        x = cos((gradientAngle + 180f) * PI.toFloat() / 180f),
+                        y = sin((gradientAngle + 180f) * PI.toFloat() / 180f)
                     )
                 )
             )
     ) {
-        // Chat Header
-        ChatHeader(
-            receiverName = receiverName,
-            onInfoClick = { /* Handle info click */ }
-        )
-
-        // Messages List
-        LazyColumn(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth(),
-            state = listState,
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+        Column(
+            modifier = Modifier.fillMaxSize()
         ) {
-            val groupedMessages = messages.groupBy { message ->
-                message.timestamp.toLocalDate().format(DateTimeFormatter.ofPattern("MMMM dd, yyyy"))
+            // Enhanced Chat Header
+            ChatHeader(
+                receiverName = receiverName,
+                onInfoClick = { /* Handle info click */ },
+                isOnline = isConnected
+            )
+
+            // Messages List with enhanced styling
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+            ) {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp),
+                    state = listState,
+                    contentPadding = PaddingValues(vertical = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    val groupedMessages = messages.groupBy { message ->
+                        message.timestamp.toLocalDate().format(DateTimeFormatter.ofPattern("MMMM dd, yyyy"))
+                    }
+
+                    groupedMessages.forEach { (date, messagesForDate) ->
+                        item {
+                            DateDivider(date = date)
+                        }
+
+                        items(messagesForDate) { message ->
+                            key(message.id) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .animateItemPlacement()
+                                ) {
+                                    MessageBubble(
+                                        message = message,
+                                        isFromCurrentUser = message.senderId == senderId,
+                                        receiverName = receiverName,
+                                        currentUserId = senderId,
+                                        onAcceptAgreement = { agreementId ->
+                                            viewModel.respondToAgreement(agreementId, "ACCEPTED")
+                                        },
+                                        onRejectAgreement = { agreementId ->
+                                            viewModel.respondToAgreement(agreementId, "REJECTED")
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
-            groupedMessages.forEach { (date, messagesForDate) ->
-                item {
-                    DateDivider(date = date)
-                }
-
-                items(messagesForDate) { message ->
-                    MessageBubble(
-                        message = message,
-                        isFromCurrentUser = message.senderId == senderId,
-                        receiverName = receiverName,
-                        currentUserId = senderId,
-                        onAcceptAgreement = { agreementId ->
-                            viewModel.respondToAgreement(agreementId, "ACCEPTED")
-                        },
-                        onRejectAgreement = { agreementId ->
-                            viewModel.respondToAgreement(agreementId, "REJECTED")
+            // Enhanced Chat Input Area
+            ChatInputArea(
+                messageInput = messageInput,
+                onMessageInputChange = { messageInput = it },
+                onSendClick = {
+                    if (isConnected) {
+                        if (selectedImageUri != null) {
+                            onImageSelected(selectedImageUri!!)
+                            selectedImageUri = null
+                        } else if (messageInput.isNotBlank()) {
+                            val message = Message(
+                                id = null,
+                                senderId = senderId,
+                                receiverId = receiverId,
+                                content = messageInput,
+                                messageType = MessageType.TEXT,
+                                timestamp = LocalDateTime.now().toString()
+                            )
+                            onMessageSent(message)
+                            messageInput = ""
                         }
+                    }
+                },
+                isConnected = isConnected,
+                onImageClick = { imagePickerLauncher.launch("image/*") },
+                onAgreementClick = { showAgreementForm = true },
+                selectedImageUri = selectedImageUri,
+                onClearImage = { selectedImageUri = null }
+            )
+        }
+
+        // Connection status indicator with animation
+        AnimatedVisibility(
+            visible = !isConnected,
+            enter = slideInVertically { -it } + fadeIn(),
+            exit = slideOutVertically { -it } + fadeOut(),
+            modifier = Modifier.align(Alignment.TopCenter)
+        ) {
+            Surface(
+                color = MaterialTheme.colorScheme.errorContainer,
+                contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                modifier = Modifier.fillMaxWidth(),
+                shadowElevation = 4.dp
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Reconnecting...",
+                        style = MaterialTheme.typography.bodyMedium
                     )
                 }
             }
         }
-
-/*        // Add connection status indicator
-        if (!isConnected) {
-            Text(
-                text = "Connecting...",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.error.copy(alpha = 0.1f))
-                    .padding(8.dp),
-                textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.error
-            )
-        }*/
-
-        ChatInputArea(
-            messageInput = messageInput,
-            onMessageInputChange = { messageInput = it },
-            onSendClick = {
-                if (isConnected) {
-                    if (selectedImageUri != null) {
-                        onImageSelected(selectedImageUri!!)
-                        selectedImageUri = null
-                    } else if (messageInput.isNotBlank()) {
-                        val message = Message(
-                            id = null,
-                            senderId = senderId,
-                            receiverId = receiverId,
-                            content = messageInput,
-                            messageType = MessageType.TEXT,
-                            timestamp = LocalDateTime.now().toString()
-                        )
-                        onMessageSent(message)
-                        messageInput = ""
-                    }
-                }
-            },
-            isConnected = isConnected,
-            onImageClick = { imagePickerLauncher.launch("image/*") },
-            onAgreementClick = { showAgreementForm = true },
-            selectedImageUri = selectedImageUri,
-            onClearImage = { selectedImageUri = null }
-        )
     }
 
+    // Agreement Form Dialog
     if (showAgreementForm) {
         BorrowingAgreementDialog(
             receiverId = receiverId,
@@ -1555,13 +1629,15 @@ fun ChatContent(
 @Composable
 private fun ChatHeader(
     receiverName: String,
-    onInfoClick: () -> Unit
+    onInfoClick: () -> Unit,
+    isOnline: Boolean
 ) {
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .height(64.dp),
-        shadowElevation = 4.dp
+            .height(70.dp),
+        shadowElevation = 8.dp,
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
     ) {
         Row(
             modifier = Modifier
@@ -1574,15 +1650,26 @@ private fun ChatHeader(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Avatar
+                // Enhanced Avatar
                 Box(
                     modifier = Modifier
-                        .size(40.dp)
-                        .background(
+                        .size(44.dp)
+                        .border(
+                            width = 2.dp,
                             brush = Brush.linearGradient(
                                 colors = listOf(
                                     MaterialTheme.colorScheme.primary,
                                     MaterialTheme.colorScheme.secondary
+                                )
+                            ),
+                            shape = CircleShape
+                        )
+                        .padding(2.dp)
+                        .background(
+                            brush = Brush.linearGradient(
+                                colors = listOf(
+                                    MaterialTheme.colorScheme.primaryContainer,
+                                    MaterialTheme.colorScheme.secondaryContainer
                                 )
                             ),
                             shape = CircleShape
@@ -1591,30 +1678,61 @@ private fun ChatHeader(
                 ) {
                     Text(
                         text = receiverName.first().toString(),
-                        color = Color.White,
-                        style = MaterialTheme.typography.titleMedium
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
                     )
                 }
 
-                // Name and status
+                // Enhanced Name and Status
                 Column {
                     Text(
                         text = receiverName,
-                        style = MaterialTheme.typography.titleMedium
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold
+                        )
                     )
-                    Text(
-                        text = "Online",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .background(
+                                    color = if (isOnline)
+                                        MaterialTheme.colorScheme.primary
+                                    else
+                                        MaterialTheme.colorScheme.outline,
+                                    shape = CircleShape
+                                )
+                        )
+                        Text(
+                            text = if (isOnline) "Online" else "Offline",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (isOnline)
+                                MaterialTheme.colorScheme.primary
+                            else
+                                MaterialTheme.colorScheme.outline
+                        )
+                    }
                 }
             }
 
-            // Info button
-            IconButton(onClick = onInfoClick) {
+            // Enhanced Info Button
+            IconButton(
+                onClick = onInfoClick,
+                modifier = Modifier
+                    .size(40.dp)
+                    .background(
+                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.1f),
+                        shape = CircleShape
+                    )
+            ) {
                 Icon(
                     imageVector = Icons.Outlined.Info,
-                    contentDescription = "Information"
+                    contentDescription = "Information",
+                    tint = MaterialTheme.colorScheme.primary
                 )
             }
         }
@@ -1630,10 +1748,19 @@ fun MessageBubble(
     onAcceptAgreement: (Long) -> Unit = {},
     onRejectAgreement: (Long) -> Unit = {}
 ) {
+
+    val animatedOffset by animateFloatAsState(
+        targetValue = 0f,
+        animationSpec = tween(300, easing = FastOutSlowInEasing),
+        label = "message_offset"
+    )
+
     Column(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .offset(x = animatedOffset.dp),
         horizontalAlignment = if (isFromCurrentUser) Alignment.End else Alignment.Start
-    ) {
+    ){
         Row(
             modifier = Modifier.padding(vertical = 2.dp),
             horizontalArrangement = if (isFromCurrentUser) Arrangement.End else Arrangement.Start
@@ -2042,7 +2169,14 @@ fun ProfileHeader(
             modifier = Modifier
                 .size(120.dp)
                 .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.surface)
+                .background(
+                    brush = Brush.linearGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.primary,
+                            MaterialTheme.colorScheme.secondary
+                        )
+                    )
+                )
                 .border(
                     width = 2.dp,
                     color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
@@ -2050,12 +2184,23 @@ fun ProfileHeader(
                 ),
             contentAlignment = Alignment.Center
         ) {
-            AsyncImage(
-                model = profileData?.imageUrl ?: R.drawable.default_profile,
-                contentDescription = "Profile Picture",
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop
-            )
+            if (profileData?.imageUrl != null) {
+                AsyncImage(
+                    model = profileData.imageUrl,
+                    contentDescription = "Profile Picture",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Text(
+                    text = profileData?.username?.firstOrNull()?.uppercase() ?: "",
+                    style = MaterialTheme.typography.headlineLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 48.sp
+                    ),
+                    color = MaterialTheme.colorScheme.onPrimary
+                )
+            }
 
             // Online indicator
             Box(
@@ -2239,24 +2384,169 @@ fun LogoutDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Confirm Logout") },
-        text = { Text("Are you sure you want to logout?") },
+        title = {
+            Text(
+                text = "Confirm Logout",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.ExtraBold,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 16.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(80.dp)
+                        .align(Alignment.CenterHorizontally)
+                        .background(
+                            brush = Brush.radialGradient(
+                                colors = listOf(
+                                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+                                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.1f)
+                                )
+                            ),
+                            shape = CircleShape
+                        )
+                        .border(
+                            width = 2.dp,
+                            brush = Brush.linearGradient(
+                                colors = listOf(
+                                    MaterialTheme.colorScheme.primary,
+                                    MaterialTheme.colorScheme.secondary
+                                )
+                            ),
+                            shape = CircleShape
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Logout,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(40.dp)
+                            .padding(4.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+                Spacer(modifier = Modifier.height(24.dp))
+                Text(
+                    text = "Are you sure you want to logout?",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
         confirmButton = {
-            TextButton(
+            Button(
                 onClick = {
                     activity?.let {
                         onConfirm()
                     }
-                }
+                },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary
+                ),
+                modifier = Modifier
+                    .padding(horizontal = 8.dp)
+                    .shadow(
+                        elevation = 8.dp,
+                        shape = RoundedCornerShape(12.dp)
+                    ),
+                shape = RoundedCornerShape(12.dp)
             ) {
-                Text("Yes")
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(vertical = 4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Check,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        "Yes, Logout",
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontWeight = FontWeight.Bold
+                        )
+                    )
+                }
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("No")
+            OutlinedButton(
+                onClick = onDismiss,
+                modifier = Modifier
+                    .padding(horizontal = 8.dp)
+                    .border(
+                        width = 1.dp,
+                        brush = Brush.linearGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                                MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f)
+                            )
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.primary
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(vertical = 4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Close,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        "Cancel",
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontWeight = FontWeight.Bold
+                        )
+                    )
+                }
             }
-        }
+        },
+        shape = RoundedCornerShape(24.dp),
+        containerColor = MaterialTheme.colorScheme.surface,
+        modifier = Modifier
+            .border(
+                width = 1.dp,
+                brush = Brush.linearGradient(
+                    colors = listOf(
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                        MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f)
+                    )
+                ),
+                shape = RoundedCornerShape(24.dp)
+            )
+            .background(
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        MaterialTheme.colorScheme.surface,
+                        MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
+                    )
+                ),
+                shape = RoundedCornerShape(24.dp)
+            ),
+        properties = DialogProperties(
+            dismissOnBackPress = true,
+            dismissOnClickOutside = true
+        )
     )
 }
 
@@ -2337,10 +2627,11 @@ fun ProfileTabContent(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Quick Stats Section
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             StatCard(
                 label = "Classes Created",
@@ -2523,29 +2814,64 @@ private fun StatCard(
     icon: ImageVector
 ) {
     Card(
-        modifier = Modifier.width(100.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 100.dp)
+            .padding(vertical = 4.dp),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 4.dp,
+            pressedElevation = 8.dp
+        ),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(24.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = value,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-            )
+            // Label and Value Column
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                )
+
+                Text(
+                    text = value,
+                    style = MaterialTheme.typography.headlineMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 28.sp
+                    ),
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+
+            // Icon with background
+            Box(
+                modifier = Modifier
+                    .size(56.dp)
+                    .background(
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                        shape = RoundedCornerShape(16.dp)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(32.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
         }
     }
 }

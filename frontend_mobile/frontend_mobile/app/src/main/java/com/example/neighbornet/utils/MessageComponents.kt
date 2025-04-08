@@ -3,9 +3,11 @@ package com.example.neighbornet.utils
 import android.graphics.drawable.ColorDrawable
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -19,6 +21,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -28,10 +31,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.rounded.Done
 import androidx.compose.material.icons.rounded.Forum
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.MarkUnreadChatAlt
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.Button
@@ -47,14 +53,20 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
@@ -62,6 +74,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.example.neighbornet.AuthenticatedThumbnailImage
@@ -77,27 +90,136 @@ import java.time.format.DateTimeFormatter
 
 @Composable
 fun TextMessage(content: String) {
-    Text(
-        text = content,
-        modifier = Modifier.padding(12.dp),
-        style = MaterialTheme.typography.bodyMedium
-    )
+    Box(
+        modifier = Modifier
+            .padding(4.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
+                        MaterialTheme.colorScheme.surface.copy(alpha = 0.85f)
+                    )
+                )
+            )
+    ) {
+        SelectionContainer {
+            Text(
+                text = content,
+                modifier = Modifier
+                    .padding(
+                        horizontal = 16.dp,
+                        vertical = 12.dp
+                    )
+                    .animateContentSize(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessLow
+                        )
+                    ),
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    lineHeight = 20.sp,
+                    letterSpacing = 0.2.sp
+                ),
+                color = MaterialTheme.colorScheme.onSurface,
+                softWrap = true,
+                maxLines = Int.MAX_VALUE
+            )
+        }
+    }
 }
 
 @Composable
 fun ImageMessage(imageUrl: String?) {
     if (imageUrl != null) {
         val transformedUrl = UrlUtils.getFullImageUrl(imageUrl)
-        AsyncImage(
-            model = transformedUrl,
-            contentDescription = "Shared image",
+        var isExpanded by remember { mutableStateOf(false) }
+        var isLoading by remember { mutableStateOf(true) }
+
+        Box(
             modifier = Modifier
                 .padding(4.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .fillMaxWidth()
-                .height(200.dp),
-            contentScale = ContentScale.Crop,
-        )
+                .clip(RoundedCornerShape(16.dp))
+                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.1f))
+                .clickable { isExpanded = !isExpanded }
+        ) {
+            AsyncImage(
+                model = transformedUrl,
+                contentDescription = "Shared image",
+                modifier = Modifier
+                    .then(
+                        if (isExpanded) {
+                            Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 200.dp, max = 400.dp)
+                                .animateContentSize(
+                                    animationSpec = spring(
+                                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                                        stiffness = Spring.StiffnessLow
+                                    )
+                                )
+                        } else {
+                            Modifier
+                                .fillMaxWidth()
+                                .height(200.dp)
+                                .animateContentSize()
+                        }
+                    )
+                    .shadow(
+                        elevation = 4.dp,
+                        shape = RoundedCornerShape(16.dp)
+                    ),
+                contentScale = if (isExpanded) ContentScale.Fit else ContentScale.Crop,
+                onLoading = { isLoading = true },
+                onSuccess = { isLoading = false },
+                onError = { isLoading = false }
+            )
+
+            // Loading indicator
+            if (isLoading) {
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(48.dp),
+                        color = MaterialTheme.colorScheme.primary,
+                        strokeWidth = 3.dp
+                    )
+                }
+            }
+
+            // Expand/Collapse hint
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.BottomCenter)
+                    .background(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                Color.Black.copy(alpha = 0.3f)
+                            )
+                        )
+                    )
+                    .padding(8.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = if (isExpanded)
+                        Icons.Rounded.KeyboardArrowUp
+                    else
+                        Icons.Rounded.KeyboardArrowDown,
+                    contentDescription = if (isExpanded) "Collapse image" else "Expand image",
+                    tint = Color.White,
+                    modifier = Modifier
+                        .size(24.dp)
+                        .alpha(0.7f)
+                )
+            }
+        }
     }
 }
 
@@ -143,10 +265,6 @@ fun AgreementMessage(
                 }
             )
 
-            // Show accept/reject buttons only if:
-            // 1. Agreement is pending
-            // 2. Current user is the lender
-            // 3. Current user ID is not null
             if (agreement.status == "PENDING" &&
                 currentUserId != null &&
                 currentUserId.toString() == agreement.lenderId  // Compare with String
@@ -234,12 +352,28 @@ fun ReturnRequestMessage(formData: String?) {
 fun Avatar(name: String) {
     Box(
         modifier = Modifier
-            .size(32.dp)
-            .background(
+            .size(36.dp)
+            .shadow(
+                elevation = 4.dp,
+                shape = CircleShape,
+                spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+            )
+            .border(
+                width = 2.dp,
                 brush = Brush.linearGradient(
                     colors = listOf(
-                        MaterialTheme.colorScheme.primary,
-                        MaterialTheme.colorScheme.secondary
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                        MaterialTheme.colorScheme.secondary.copy(alpha = 0.7f)
+                    )
+                ),
+                shape = CircleShape
+            )
+            .padding(2.dp)
+            .background(
+                brush = Brush.radialGradient(
+                    colors = listOf(
+                        MaterialTheme.colorScheme.primaryContainer,
+                        MaterialTheme.colorScheme.primary
                     )
                 ),
                 shape = CircleShape
@@ -248,8 +382,16 @@ fun Avatar(name: String) {
     ) {
         Text(
             text = name.first().uppercase(),
-            color = Color.White,
-            style = MaterialTheme.typography.bodyMedium
+            color = MaterialTheme.colorScheme.onPrimary,
+            style = MaterialTheme.typography.bodyMedium.copy(
+                fontWeight = FontWeight.Bold,
+                shadow = Shadow(
+                    color = Color.Black.copy(alpha = 0.2f),
+                    offset = Offset(1f, 1f),
+                    blurRadius = 2f
+                )
+            ),
+            modifier = Modifier.scale(1.2f)
         )
     }
 }
@@ -315,7 +457,7 @@ fun ChatListScreen(
                                 )
                             )
                             Text(
-                                text = "Welcome back, there",
+                                text = "Welcome back, There!",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f)
                             )
@@ -502,6 +644,8 @@ private fun ConversationsList(
     conversations: List<ConversationDTO>,
     onChatSelected: (userId: Long, userName: String) -> Unit
 ) {
+    val viewModel: ChatListViewModel = hiltViewModel()
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(
@@ -525,6 +669,7 @@ private fun ConversationsList(
                 unreadCount = conversation.unreadCount,
                 userImage = conversation.participant.imageUrl,
                 onClick = {
+                    viewModel.markMessagesAsRead(conversation.participant.id)
                     onChatSelected(
                         conversation.participant.id,
                         conversation.participant.username
@@ -578,15 +723,38 @@ private fun EnhancedChatListItem(
                     )
                     .padding(2.dp)
                     .clip(CircleShape)
-                    .shimmerEffect()
+                    .background(
+                        brush = Brush.linearGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.primary,
+                                MaterialTheme.colorScheme.secondary
+                            )
+                        )
+                    )
             ) {
-                AuthenticatedThumbnailImage(
-                    url = userImage,
-                    contentDescription = "Profile picture of $userName",
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
+                if (userImage != null) {
+                    AuthenticatedThumbnailImage(
+                        url = userImage,
+                        contentDescription = "Profile picture of $userName",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = userName.firstOrNull()?.uppercase() ?: "",
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                fontWeight = FontWeight.Bold
+                            )
+                        )
+                    }
+                }
 
+                // Online indicator
                 Box(
                     modifier = Modifier
                         .size(14.dp)

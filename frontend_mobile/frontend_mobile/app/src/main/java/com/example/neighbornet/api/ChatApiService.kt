@@ -64,4 +64,10 @@ interface ChatApiService {
         @Path("id") agreementId: Long,
         @Body request: Map<String, String>
     ): AgreementResponse
+
+    @PUT("messages/read/{senderId}/{receiverId}")
+    suspend fun markMessagesAsRead(
+        @Path("senderId") senderId: Long,
+        @Path("receiverId") receiverId: Long
+    )
 }
