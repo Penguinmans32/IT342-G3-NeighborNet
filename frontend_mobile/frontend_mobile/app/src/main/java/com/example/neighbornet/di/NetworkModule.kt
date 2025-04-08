@@ -5,6 +5,7 @@ import coil.ImageLoader
 import com.example.neighbornet.api.BorrowingApiService
 import com.example.neighbornet.api.ChatApiService
 import com.example.neighbornet.api.ClassApiService
+import com.example.neighbornet.api.FCMApi
 import com.example.neighbornet.api.ProfileApiService
 import com.example.neighbornet.auth.ChatStateManager
 import com.example.neighbornet.auth.ProfileStateManager
@@ -244,5 +245,11 @@ object NetworkModule {
     @Singleton
     fun provideChatStateManager(): ChatStateManager {
         return ChatStateManager()
+    }
+
+    @Provides
+    @Singleton
+    fun provideFCMApi(retrofit: Retrofit): FCMApi {
+        return retrofit.create(FCMApi::class.java)
     }
 }

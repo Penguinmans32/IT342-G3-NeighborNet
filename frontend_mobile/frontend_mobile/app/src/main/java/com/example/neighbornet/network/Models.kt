@@ -429,3 +429,7 @@ enum class ProfileTab {
     PROFILE, ACHIEVEMENTS, ACTIVITY
 }
 
+data class FCMTokenRequest(
+    val token: String
+)
+

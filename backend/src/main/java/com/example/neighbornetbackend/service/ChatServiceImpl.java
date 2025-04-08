@@ -27,6 +27,7 @@ public class ChatServiceImpl implements ChatService {
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
     private final ItemRepository itemRepository;
+    private final FCMService fcmService;
 
     @Autowired
     private BorrowingAgreementRepository borrowingAgreementRepository;
@@ -34,12 +35,13 @@ public class ChatServiceImpl implements ChatService {
 
     public ChatServiceImpl(ChatMessageRepository chatMessageRepository,
                            NotificationService notificationService,
-                           UserRepository userRepository, ObjectMapper objectMapper, ItemRepository itemRepository) {
+                           UserRepository userRepository, ObjectMapper objectMapper, ItemRepository itemRepository, FCMService fcmService) {
         this.chatMessageRepository = chatMessageRepository;
         this.notificationService = notificationService;
         this.userRepository = userRepository;
         this.objectMapper = objectMapper;
         this.itemRepository = itemRepository;
+        this.fcmService = fcmService;
     }
 
     @Override
@@ -69,6 +71,9 @@ public class ChatServiceImpl implements ChatService {
             User sender = userRepository.findById(chatMessage.getSenderId())
                     .orElseThrow(() -> new RuntimeException("Sender not found"));
 
+            User receiver = userRepository.findById(chatMessage.getReceiverId())
+                    .orElseThrow(() -> new RuntimeException("Receiver not found"));
+
             if (chatMessage.getItem() != null) {
                 Item item = chatMessage.getItem();
                 notificationService.createAndSendNotification(
@@ -88,6 +93,24 @@ public class ChatServiceImpl implements ChatService {
                         "New Message",
                         notificationContent,
                         "CHAT_MESSAGE"
+                );
+            }
+
+            if (receiver.getFcmToken() != null && !receiver.getFcmToken().isEmpty()) {
+                String notificationContent;
+                if (chatMessage.getItem() != null) {
+                    notificationContent = sender.getUsername() + " sent you a message about '" +
+                            chatMessage.getItem().getName() + "'";
+                } else if ("FORM".equals(chatMessage.getMessageType())) {
+                    notificationContent = sender.getUsername() + " sent you a borrowing agreement";
+                } else {
+                    notificationContent = chatMessage.getContent();
+                }
+
+                fcmService.sendChatNotification(
+                        receiver.getFcmToken(),
+                        sender.getUsername(),
+                        notificationContent
                 );
             }
 

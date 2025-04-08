@@ -103,6 +103,9 @@ public class User {
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<UserAchievement> achievements = new ArrayList<>();
 
+    @Column(name = "fcm_token")
+    private String fcmToken;
+
     @ManyToMany
     @JoinTable(
             name = "user_followers",
@@ -226,7 +229,6 @@ public class User {
         this.notifications = notifications;
     }
 
-    // Add helper method to add notification
     public void addNotification(Notification notification) {
         notifications.add(notification);
         notification.setUser(this);
@@ -235,6 +237,14 @@ public class User {
     public void removeNotification(Notification notification) {
         notifications.remove(notification);
         notification.setUser(null);
+    }
+
+    public String getFcmToken() {
+        return fcmToken;
+    }
+
+    public void setFcmToken(String fcmToken) {
+        this.fcmToken = fcmToken;
     }
 
     public List<SavedClass> getSavedClasses() {
