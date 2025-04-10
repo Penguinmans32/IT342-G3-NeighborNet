@@ -8,10 +8,9 @@ import com.example.neighbornetbackend.model.BorrowingAgreement;
 import com.example.neighbornetbackend.model.Item;
 import com.example.neighbornetbackend.model.ItemRating;
 import com.example.neighbornetbackend.model.User;
-import com.example.neighbornetbackend.repository.BorrowingAgreementRepository;
-import com.example.neighbornetbackend.repository.ItemRatingRepository;
-import com.example.neighbornetbackend.repository.ItemRepository;
-import com.example.neighbornetbackend.repository.UserRepository;
+import com.example.neighbornetbackend.repository.*;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -28,22 +27,28 @@ import java.util.stream.Collectors;
 @Service
 @Transactional
 public class ItemService {
+    @PersistenceContext
+    private EntityManager entityManager;
+
+
     private final ItemRepository itemRepository;
     private final UserRepository userRepository;
     private final ItemImageStorageService itemImageStorageService;
     private final BorrowingAgreementRepository borrowingAgreementRepository;
     private final ActivityService activityService;
     private final ItemRatingRepository itemRatingRepository;
+    private final ChatMessageRepository chatMessageRepository;
 
     private static final Logger logger = LoggerFactory.getLogger(ItemService.class);
 
-    public ItemService(ItemRepository itemRepository, UserRepository userRepository, ItemImageStorageService itemImageStorageService, BorrowingAgreementRepository borrowingAgreementRepository, ActivityService activityService, ItemRatingRepository itemRatingRepository) {
+    public ItemService(ItemRepository itemRepository, UserRepository userRepository, ItemImageStorageService itemImageStorageService, BorrowingAgreementRepository borrowingAgreementRepository, ActivityService activityService, ItemRatingRepository itemRatingRepository,  ChatMessageRepository chatMessageRepository) {
         this.itemRepository = itemRepository;
         this.userRepository = userRepository;
         this.itemImageStorageService = itemImageStorageService;
         this.borrowingAgreementRepository = borrowingAgreementRepository;
         this.activityService = activityService;
         this.itemRatingRepository = itemRatingRepository;
+        this.chatMessageRepository = chatMessageRepository;
     }
 
     public ItemDTO createItem(Item item, List<MultipartFile> images, Long userId) throws IOException {
@@ -323,6 +328,7 @@ public class ItemService {
         Item item = itemRepository.findById(itemId)
                 .orElseThrow(() -> new ResourceNotFoundException("Item not found"));
 
+        // Delete physical image files first
         if (item.getImageUrls() != null && !item.getImageUrls().isEmpty()) {
             for (String imageUrl : item.getImageUrls()) {
                 try {
@@ -334,9 +340,41 @@ public class ItemService {
             }
         }
 
-        borrowingAgreementRepository.deleteByItemId(itemId);
+        // Clear the persistence context
+        entityManager.clear();
 
-        itemRepository.delete(item);
+        // Delete chat messages referencing this item
+        entityManager.createNativeQuery(
+                        "DELETE FROM chat_message WHERE item_id = ?")
+                .setParameter(1, itemId)
+                .executeUpdate();
+
+        // Delete image URLs from the item_image_urls table
+        entityManager.createNativeQuery(
+                        "DELETE FROM item_image_urls WHERE item_id = ?")
+                .setParameter(1, itemId)
+                .executeUpdate();
+
+        // Delete borrow requests
+        entityManager.createNativeQuery(
+                        "DELETE FROM borrow_requests WHERE item_id = ?")
+                .setParameter(1, itemId)
+                .executeUpdate();
+
+        // Delete borrowing agreements
+        entityManager.createNativeQuery(
+                        "DELETE FROM borrowing_agreement WHERE item_id = ?")
+                .setParameter(1, itemId)
+                .executeUpdate();
+
+        // Finally delete the item
+        entityManager.createNativeQuery(
+                        "DELETE FROM items WHERE id = ?")
+                .setParameter(1, itemId)
+                .executeUpdate();
+
+        // Ensure all changes are synchronized
+        entityManager.flush();
     }
 
     public double getOverallAverageRating() {

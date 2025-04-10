@@ -117,6 +117,64 @@ const MessagesPage = () => {
   };
 
   useEffect(() => {
+    if (stompClient && stompReady) {
+      const subscription = stompClient.subscribe(`/user/${user?.data?.id}/queue/messages`, (message) => {
+        const newMessage = JSON.parse(message.body);
+        
+        // Update conversations when receiving a new message
+        setConversations(prevConversations => {
+          const updatedConversations = [...prevConversations];
+          const senderId = newMessage.senderId === user.data.id ? newMessage.receiverId : newMessage.senderId;
+          
+          const conversationIndex = updatedConversations.findIndex(
+            conv => conv.participant.id === senderId
+          );
+  
+          const displayContent = newMessage.messageType === "IMAGE" ? "📷 Image" : 
+                               newMessage.messageType === "FORM" ? "📋 Agreement" : 
+                               newMessage.content;
+  
+          if (conversationIndex !== -1) {
+            const updatedConversation = {
+              ...updatedConversations[conversationIndex],
+              lastMessage: displayContent,
+              lastMessageTimestamp: newMessage.timestamp,
+              unreadCount: newMessage.senderId !== user.data.id 
+                ? (updatedConversations[conversationIndex].unreadCount || 0) + 1
+                : updatedConversations[conversationIndex].unreadCount
+            };
+            // Remove the conversation from its current position
+            updatedConversations.splice(conversationIndex, 1);
+            // Add it to the beginning of the array
+            updatedConversations.unshift(updatedConversation);
+          } else {
+            // Create new conversation if it doesn't exist
+            const newConversation = {
+              id: `conv-${Date.now()}`,
+              participant: {
+                id: senderId,
+                username: newMessage.senderName || "Unknown User"
+              },
+              lastMessage: displayContent,
+              lastMessageTimestamp: newMessage.timestamp,
+              unreadCount: newMessage.senderId !== user.data.id ? 1 : 0
+            };
+            updatedConversations.unshift(newConversation);
+          }
+  
+          return updatedConversations;
+        });
+      });
+  
+      return () => {
+        if (subscription) {
+          subscription.unsubscribe();
+        }
+      };
+    }
+  }, [stompClient, stompReady, user?.data?.id]);
+
+  useEffect(() => {
     const handleOpenChat = (event) => {
       const { contactId, contactName } = event.detail
       const conversation = conversations.find((conv) => conv.participant.id.toString() === contactId.toString())
@@ -291,40 +349,49 @@ const fetchConversations = async () => {
 
 const handleSendMessage = (message) => {
   if (stompClient && stompClient.connected) {
-      const now = new Date();
-      const timestamp = now.toISOString().substring(0, 23);
+    const now = new Date();
+    const timestamp = now.toISOString().substring(0, 23);
 
-      const messageToSend = {
-          ...message,
-          timestamp: timestamp
-      };
+    const messageToSend = {
+      ...message,
+      timestamp: timestamp
+    };
 
-      setConversations(prevConversations => {
-          const updatedConversations = [...prevConversations];
-          const conversationIndex = updatedConversations.findIndex(
-              conv => conv.participant.id === message.receiverId
-          );
+    // Update conversations immediately when sending a message
+    setConversations(prevConversations => {
+      const updatedConversations = [...prevConversations];
+      const conversationIndex = updatedConversations.findIndex(
+        conv => conv.participant.id === message.receiverId
+      );
 
-          if (conversationIndex !== -1) {
-              const updatedConversation = {
-                  ...updatedConversations[conversationIndex],
-                  lastMessage: message.messageType === "IMAGE" ? "📷 Image" : message.content,
-                  lastMessageTimestamp: timestamp
-              };
-              updatedConversations.splice(conversationIndex, 1);
-              updatedConversations.unshift(updatedConversation);
-          }
+      const displayContent = message.messageType === "IMAGE" ? "📷 Image" : 
+                           message.messageType === "FORM" ? "📋 Agreement" : 
+                           message.content;
 
-          return updatedConversations;
-      });
+      if (conversationIndex !== -1) {
+        const updatedConversation = {
+          ...updatedConversations[conversationIndex],
+          lastMessage: displayContent,
+          lastMessageTimestamp: timestamp,
+          unreadCount: 0 // Reset unread count for sender's messages
+        };
+        // Remove the conversation from its current position
+        updatedConversations.splice(conversationIndex, 1);
+        // Add it to the beginning of the array
+        updatedConversations.unshift(updatedConversation);
+      }
 
-      // Send message through WebSocket
-      stompClient.publish({
-          destination: '/app/chat',
-          body: JSON.stringify(messageToSend)
-      });
+      return updatedConversations;
+    });
+
+    // Send message through WebSocket
+    stompClient.publish({
+      destination: '/app/chat',
+      body: JSON.stringify(messageToSend)
+    });
   }
-}
+};
+
 
   const filteredConversations = conversations.filter((conversation) =>
     conversation.participant.username.toLowerCase().includes(searchQuery.toLowerCase()),
@@ -542,6 +609,7 @@ console.log('Conversations:', conversations);
               <div className="flex-1 flex flex-col bg-gray-50">
                 {selectedContact && stompReady ? (
                   <Chat
+                    key={selectedContact.id}
                     senderId={user.data.id}
                     receiverId={selectedContact.id}
                     receiverName={selectedContact.username}

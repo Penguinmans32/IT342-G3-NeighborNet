@@ -1002,7 +1002,7 @@ const Borrowing = () => {
                                         <p className="font-medium text-gray-900">
                                           {item.owner?.username || "Anonymous"}
                                         </p>
-                                        <p className="text-gray-500">{item.availabilityPeriod}</p>
+                                        <p className="text-gray-500">Availability: {item.availabilityPeriod}</p>
                                       </div>
                                     </div>
                                     {/* Show message button only if not borrowed and not owner */}
