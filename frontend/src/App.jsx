@@ -38,12 +38,15 @@ import AdminRoute from "./components/AdminRoute";
 import CreateQuiz from "./components/CreateQuiz";
 import QuizPage from "./components/QuizPage";
 import TitleManager from "./components/TitleManager";
+import { HMSRoomProvider } from '@100mslive/react-sdk';
+import StudyRooms from "./components/StudyRooms";
 
 function App() {
   return (
     <Router>
         <AuthProviderWithErrorBoundary>
           <NotificationProvider>
+          <HMSRoomProvider>
           <TitleManager /> 
           <Toaster
               position="top-center"
@@ -226,7 +229,16 @@ function App() {
                 </ProtectedRoute>
               }
             />
+             <Route 
+              path="/study-rooms"
+              element={
+                <ProtectedRoute>
+                  <StudyRooms />
+                </ProtectedRoute>
+              }
+            />
           </Routes>
+          </HMSRoomProvider>
           </NotificationProvider>
         </AuthProviderWithErrorBoundary>
     </Router>
