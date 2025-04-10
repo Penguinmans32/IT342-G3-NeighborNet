@@ -37,6 +37,7 @@ import {
   MdStar,
   MdBookmark,
   MdBookmarkBorder,
+  MdGroup,
   MdDeleteSweep,
   MdOutlineWbSunny,
 } from "react-icons/md"
@@ -1340,6 +1341,7 @@ const Homepage = () => {
               </div>
               {[
                 { icon: <MdLibraryBooks />, label: "Your Classes", path: "/your-classes" },
+                { icon: <MdGroup />, label: "Study Rooms", path: "/study-rooms" },
                 { icon: <MdInventory />, label: "Your Items", path: "/your-items" },
               ].map((item, index) => (
                 <motion.button
