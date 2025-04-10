@@ -69,6 +69,19 @@ const Chat = ({ senderId, receiverId, receiverName = '?', onMessageSent, stompCl
     );
   }
 
+  const getMessageTypeWeight = (type) => {
+    switch (type) {
+      case "FORM":
+        return 3;
+      case "IMAGE":
+        return 2;
+      case "TEXT":
+        return 1;
+      default:
+        return 0;
+    }
+  };
+
   const handleOpenGallery = (images, startIndex = 0) => {
     setSelectedGalleryImages(images)
     setGalleryStartIndex(startIndex)
@@ -184,6 +197,11 @@ const Chat = ({ senderId, receiverId, receiverName = '?', onMessageSent, stompCl
       alert("An unexpected error occurred. Please try again.");
     }
   };
+
+  useEffect(() => {
+    setMessages([]);
+    fetchMessages(); 
+  }, [receiverId]); 
 
   useEffect(() => {
     const handleReturnRequest = async (returnRequest) => {
@@ -482,19 +500,6 @@ const Chat = ({ senderId, receiverId, receiverName = '?', onMessageSent, stompCl
                 return !(isTempMessage && msg.content === processedMessage.content);
               });
           
-              const getMessageTypeWeight = (type) => {
-                switch (type) {
-                  case "FORM":
-                    return 3;
-                  case "IMAGE":
-                    return 2;
-                  case "TEXT":
-                    return 1;
-                  default:
-                    return 0;
-                }
-              };
-          
               const updatedMessages = [...filteredMessages, processedMessage].sort((a, b) => {
                 const timestampA = new Date(a.timestamp).getTime();
                 const timestampB = new Date(b.timestamp).getTime();
@@ -605,7 +610,8 @@ const Chat = ({ senderId, receiverId, receiverName = '?', onMessageSent, stompCl
           destination: "/app/chat",
           body: JSON.stringify(chatMessage),
         })
-  
+
+        onMessageSent(chatMessage);
         setMessages((prev) => [...prev, tempMessage])
         setMessageInput("")
         scrollToBottom()

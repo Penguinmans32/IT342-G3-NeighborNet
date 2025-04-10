@@ -1,4 +1,3 @@
-// NotificationContext.jsx
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { notificationService } from './NotificationService';
@@ -17,8 +16,8 @@ export const useNotification = () => {
 };
 
 export const NotificationProvider = ({ children }) => {
-    const [notifications, setNotifications] = useState([]); // Persistent notifications
-    const [toasts, setToasts] = useState([]); // Temporary toast notifications
+    const [notifications, setNotifications] = useState([]);
+    const [toasts, setToasts] = useState([]); 
     const [unreadCount, setUnreadCount] = useState(0);
     const { user } = useAuth();
     const [processedMessageIds] = useState(new Set());
@@ -74,53 +73,53 @@ export const NotificationProvider = ({ children }) => {
 
     // Connect to WebSocket for real-time notifications
     useEffect(() => {
-        if (user) {
-            const token = localStorage.getItem('token');
-            notificationService.connect(user.data.id, token);
-    
-            const unsubscribe = notificationService.subscribe((notification) => {
-                console.log("New notification received:", notification);
-                fetchNotifications();
+    if (user && user.id) { // Changed from user.data.id to user.id
+        const token = localStorage.getItem('token');
+        notificationService.connect(user.id, token); // Changed from user.data.id to user.id
+
+        const unsubscribe = notificationService.subscribe((notification) => {
+            console.log("New notification received:", notification);
+            fetchNotifications();
+            
+            if (notification.messageType === 'CHAT' || notification.type === 'CHAT') {
+                const isInChat = window.location.pathname === '/messages' || 
+                               window.location.pathname.includes('/chat');
                 
-                if (notification.messageType === 'CHAT' || notification.type === 'CHAT') {
-                    const isInChat = window.location.pathname === '/messages' || 
-                                   window.location.pathname.includes('/chat');
-                    
-                    if (isInChat) {
-                        return;
-                    }
-                }
-    
-                const messageId = notification.id || notification.messageId || `${notification.senderId}-${Date.now()}`;
-                
-                const now = Date.now();
-                const recentMessage = messageSourceTracker.get(messageId);
-                if (recentMessage && (now - recentMessage) < 5000) {
+                if (isInChat) {
                     return;
                 }
-    
-                messageSourceTracker.set(messageId, now);
-                
-                setTimeout(() => {
-                    messageSourceTracker.delete(messageId);
-                }, 5000);
-    
-                showToast({
-                    type: notification.type || 'DEFAULT',
-                    title: notification.title,
-                    message: notification.message,
-                    duration: 5000,
-                    messageId: messageId
-                });
+            }
+
+            const messageId = notification.id || notification.messageId || `${notification.senderId}-${Date.now()}`;
+            
+            const now = Date.now();
+            const recentMessage = messageSourceTracker.get(messageId);
+            if (recentMessage && (now - recentMessage) < 5000) {
+                return;
+            }
+
+            messageSourceTracker.set(messageId, now);
+            
+            setTimeout(() => {
+                messageSourceTracker.delete(messageId);
+            }, 5000);
+
+            showToast({
+                type: notification.type || 'DEFAULT',
+                title: notification.title,
+                message: notification.message,
+                duration: 5000,
+                messageId: messageId
             });
-    
-            return () => {
-                unsubscribe();
-                notificationService.disconnect();
-                messageSourceTracker.clear(); 
-            };
-        }
-    }, [user, fetchNotifications, showToast]);
+        });
+
+        return () => {
+            unsubscribe();
+            notificationService.disconnect();
+            messageSourceTracker.clear(); 
+        };
+    }
+}, [user, fetchNotifications, showToast]);
 
     // Initial fetch of notifications
     useEffect(() => {
