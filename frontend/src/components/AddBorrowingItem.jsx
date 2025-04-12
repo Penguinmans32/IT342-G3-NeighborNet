@@ -19,6 +19,7 @@ import {
 } from 'react-icons/md';
 import axios from 'axios';
 import LocationInput from './LocationInput';
+import DateRangeCalendar from './DateRangeCalendar';
 
 const AddBorrowingItem = () => {
   const navigate = useNavigate();
@@ -71,6 +72,13 @@ const AddBorrowingItem = () => {
     return format(new Date(date), 'yyyy-MM-dd');
   };
 
+  const handleDateRangeChange = ({ start, end }) => {
+    setItemData(prev => ({
+      ...prev,
+      availableFrom: start,
+      availableUntil: end || start // If end is not selected yet, use start date as end date temporarily
+    }));
+  };
 
   const handleFiles = (files) => {
     if (files && files.length > 0) {
@@ -132,6 +140,11 @@ const AddBorrowingItem = () => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   };
 
+  // Adding this function that was missing in your original code
+  const isValidPhone = (phone) => {
+    // Simple validation for demonstration
+    return /^[0-9+\s-]{7,15}$/.test(phone);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -546,40 +559,34 @@ const AddBorrowingItem = () => {
                   className="bg-white/80 backdrop-blur-md rounded-2xl shadow-xl p-8 mb-8"
                 >
                   <div className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                            <MdCalendarToday className="text-blue-500" />
-                            Available From
-                          </label>
-                          <input
-                            type="date"
-                            name="availableFrom"
-                            value={itemData.availableFrom}
-                            min={getCurrentDate()} 
-                            onChange={handleChange}
-                            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 
-                                      focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                            required
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                            <MdCalendarToday className="text-blue-500" />
-                            Available Until
-                          </label>
-                          <input
-                            type="date"
-                            name="availableUntil"
-                            value={itemData.availableUntil}
-                            min={itemData.availableFrom || getCurrentDate()}
-                            onChange={handleChange}
-                            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 
-                                      focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                            required
-                          />
-                        </div>
+                    {/* New Calendar Range Picker */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                        <MdCalendarToday className="text-blue-500" />
+                        Available Dates
+                      </label>
+                      <DateRangeCalendar
+                        startDate={itemData.availableFrom}
+                        endDate={itemData.availableUntil}
+                        onChange={handleDateRangeChange}
+                        minDate={getCurrentDate()}
+                      />
+                      <p className="text-xs text-gray-500 mt-2">
+                        Select the date range when your item will be available for borrowing
+                      </p>
                     </div>
+
+                    {/* Original date inputs (hidden, but kept for form submission) */}
+                    <input
+                      type="hidden"
+                      name="availableFrom"
+                      value={itemData.availableFrom}
+                    />
+                    <input
+                      type="hidden"
+                      name="availableUntil"
+                      value={itemData.availableUntil}
+                    />
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
@@ -761,105 +768,105 @@ const AddBorrowingItem = () => {
           </form>
    
            {/* Preview Card */}
-              {formStep === totalSteps && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="bg-white/80 backdrop-blur-md rounded-2xl shadow-xl p-8 mb-8"
-                >
-                  <h2 className="text-2xl font-bold mb-6">Preview Your Listing</h2>
-                  <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-                    {/* Image Gallery */}
-                        <div className="bg-gray-100 p-4">
-                          {itemData.images.length > 0 ? (
-                            <div className="grid grid-cols-2 gap-4">
-                              {itemData.images.map((img, index) => (
-                                <div 
-                                  key={index} 
-                                  className="aspect-[4/3] relative overflow-hidden rounded-lg shadow-md bg-white"
-                                >
-                                  <img
-                                    src={img.preview}
-                                    alt={`Item ${index + 1}`}
-                                    className="w-full h-full object-cover"
-                                    loading="lazy"
-                                  />
-                                  <div className="absolute bottom-2 left-2 bg-black/50 text-white px-2 py-1 text-sm rounded">
-                                    Image {index + 1}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <div className="flex items-center justify-center h-48">
-                              <p className="text-gray-400">No images provided</p>
-                            </div>
-                          )}
-                        </div>
-
-                    {/* Item Details */}
-                    <div className="p-8">
-                      <div className="flex items-center gap-3 mb-4">
-                        <span className="px-4 py-1.5 bg-blue-100 text-blue-600 text-sm font-medium rounded-full">
-                          {isOtherCategory ? customCategory || "Custom Category" : itemData.category || "Uncategorized"}
-                        </span>
-                        <span className="text-sm text-gray-500 flex items-center gap-1">
-                          <MdLocationOn className="text-blue-500" />
-                          {itemData.location || "No location specified"}
-                        </span>
-                      </div>
-
-                      <h3 className="text-2xl font-bold text-gray-900 mb-3">
-                        {itemData.name}
-                      </h3>
-
-                      <p className="text-gray-600 mb-6">
-                        {itemData.description || "No description provided"}
-                      </p>
-
-                      <div className="space-y-4">
-                        <div className="flex items-center gap-4 text-sm text-gray-500">
-                          <div className="flex items-center gap-1">
-                            <MdCalendarToday className="text-blue-500" />
-                            <span>
-                              {itemData.availableFrom && itemData.availableUntil 
-                                ? `${new Date(itemData.availableFrom).toLocaleDateString()} - ${new Date(itemData.availableUntil).toLocaleDateString()}`
-                                : "Dates not specified"}
-                            </span>
+           {formStep === totalSteps && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-white/80 backdrop-blur-md rounded-2xl shadow-xl p-8 mb-8 mt-20" // Added mt-16 for more top margin
+            >
+              <h2 className="text-2xl font-bold mb-6">Preview Your Listing</h2>
+              <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+                {/* Image Gallery */}
+                <div className="bg-gray-100 p-4">
+                  {itemData.images.length > 0 ? (
+                    <div className="grid grid-cols-2 gap-4">
+                      {itemData.images.map((img, index) => (
+                        <div 
+                          key={index} 
+                          className="aspect-[4/3] relative overflow-hidden rounded-lg shadow-md bg-white"
+                        >
+                          <img
+                            src={img.preview}
+                            alt={`Item ${index + 1}`}
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                          />
+                          <div className="absolute bottom-2 left-2 bg-black/50 text-white px-2 py-1 text-sm rounded">
+                            Image {index + 1}
                           </div>
                         </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center h-48">
+                      <p className="text-gray-400">No images provided</p>
+                    </div>
+                  )}
+                </div>
 
-                        {itemData.availabilityPeriod && (
-                          <div className="flex items-center gap-1 text-sm text-gray-500">
-                            <MdAccessTime className="text-blue-500" />
-                            <span>{itemData.availabilityPeriod}</span>
-                          </div>
-                        )}
+                {/* Item Details */}
+                <div className="p-8">
+                  <div className="flex items-center gap-3 mb-4">
+                    <span className="px-4 py-1.5 bg-green-100 text-green-600 text-sm font-medium rounded-full">
+                      {isOtherCategory ? customCategory || "Custom Category" : itemData.category || "Uncategorized"}
+                    </span>
+                    <span className="text-sm text-gray-500 flex items-center gap-1">
+                      <MdLocationOn className="text-green-500" />
+                      {itemData.location || "No location specified"}
+                    </span>
+                  </div>
 
-                        {itemData.terms && (
-                          <div className="p-4 bg-gray-50 rounded-xl">
-                            <h4 className="font-medium text-gray-700 mb-2">Borrowing Terms</h4>
-                            <p className="text-sm text-gray-600">{itemData.terms}</p>
-                          </div>
-                        )}
+                  <h3 className="text-2xl font-bold text-gray-900 mb-3">
+                    {itemData.name}
+                  </h3>
 
-                        {itemData.contactPreference && (
-                          <div className="flex items-center gap-2 text-sm text-gray-500">
-                            <MdOutlineMessage className="text-blue-500" />
-                            <span>Contact via: {itemData.contactPreference}</span>
-                            {itemData.contactPreference === 'email' && itemData.email && (
-                              <span className="text-blue-500">{itemData.email}</span>
-                            )}
-                            {itemData.contactPreference === 'phone' && itemData.phone && (
-                              <span className="text-blue-500">{itemData.phone}</span>
-                            )}
-                          </div>
-                        )}
+                  <p className="text-gray-600 mb-6">
+                    {itemData.description || "No description provided"}
+                  </p>
+
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-4 text-sm text-gray-500">
+                      <div className="flex items-center gap-1">
+                        <MdCalendarToday className="text-green-500" />
+                        <span>
+                          {itemData.availableFrom && itemData.availableUntil 
+                            ? `${new Date(itemData.availableFrom).toLocaleDateString()} - ${new Date(itemData.availableUntil).toLocaleDateString()}`
+                            : "Dates not specified"}
+                        </span>
                       </div>
                     </div>
+
+                    {itemData.availabilityPeriod && (
+                      <div className="flex items-center gap-1 text-sm text-gray-500">
+                        <MdAccessTime className="text-green-500" />
+                        <span>{itemData.availabilityPeriod}</span>
+                      </div>
+                    )}
+
+                    {itemData.terms && (
+                      <div className="p-4 bg-gray-50 rounded-xl">
+                        <h4 className="font-medium text-gray-700 mb-2">Borrowing Terms</h4>
+                        <p className="text-sm text-gray-600">{itemData.terms}</p>
+                      </div>
+                    )}
+
+                    {itemData.contactPreference && (
+                      <div className="flex items-center gap-2 text-sm text-gray-500">
+                        <MdOutlineMessage className="text-green-500" />
+                        <span>Contact via: {itemData.contactPreference}</span>
+                        {itemData.contactPreference === 'email' && itemData.email && (
+                          <span className="text-green-500">{itemData.email}</span>
+                        )}
+                        {itemData.contactPreference === 'phone' && itemData.phone && (
+                          <span className="text-green-500">{itemData.phone}</span>
+                        )}
+                      </div>
+                    )}
                   </div>
-                </motion.div>
-              )}
+                </div>
+              </div>
+            </motion.div>
+          )}
          </div>
        </div>
      );

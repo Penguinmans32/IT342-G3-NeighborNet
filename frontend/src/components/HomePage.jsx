@@ -1417,7 +1417,6 @@ const Homepage = () => {
           onClose={() => setShowLogoutModal(false)}
           onConfirm={handleLogout}
         />
-      <Footer className="mt-auto" />
     </div>
   )
 }
