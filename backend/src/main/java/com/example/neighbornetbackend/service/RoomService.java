@@ -133,4 +133,19 @@ public class RoomService {
         return roomRepository.findById(roomId)
                 .orElseThrow(() -> new RuntimeException("Room not found"));
     }
+
+    public void incrementParticipants(Long roomId) {
+        Room room = getRoomById(roomId);
+        room.setActiveParticipants(room.getActiveParticipants() + 1);
+        roomRepository.save(room);
+    }
+
+    public void decrementParticipants(Long roomId) {
+        Room room = getRoomById(roomId);
+        int currentParticipants = room.getActiveParticipants();
+        if (currentParticipants > 0) {
+            room.setActiveParticipants(currentParticipants - 1);
+            roomRepository.save(room);
+        }
+    }
 }

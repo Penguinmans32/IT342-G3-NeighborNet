@@ -16,6 +16,7 @@ public class Room {
     private String hmsRoomId;
     private String creatorId;
     private LocalDateTime createdAt;
+    private Integer activeParticipants = 0;
 
     public Room() {
 
@@ -76,5 +77,13 @@ public class Room {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public Integer getActiveParticipants() {
+        return activeParticipants;
+    }
+
+    public void setActiveParticipants(Integer activeParticipants) {
+        this.activeParticipants = activeParticipants;
     }
 }
