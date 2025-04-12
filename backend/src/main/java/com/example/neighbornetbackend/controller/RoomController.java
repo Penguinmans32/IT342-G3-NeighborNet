@@ -74,4 +74,16 @@ public class RoomController {
         }
         return "listener";
     }
+
+    @PutMapping("/{roomId}/join")
+    public ResponseEntity<Void> joinRoom(@PathVariable Long roomId) {
+        roomService.incrementParticipants(roomId);
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping("/{roomId}/leave")
+    public ResponseEntity<Void> leaveRoom(@PathVariable Long roomId) {
+        roomService.decrementParticipants(roomId);
+        return ResponseEntity.ok().build();
+    }
 }

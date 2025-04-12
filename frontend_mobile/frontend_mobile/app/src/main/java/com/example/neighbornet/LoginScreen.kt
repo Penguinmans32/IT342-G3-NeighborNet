@@ -11,7 +11,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.scaleIn
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.RowScope
@@ -20,6 +19,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.material3.*
@@ -62,8 +62,13 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import androidx.media3.common.BuildConfig
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.Canvas
 import androidx.compose.ui.composed
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.unit.Dp
 import com.example.neighbornet.utils.shimmerEffect
 import kotlinx.coroutines.delay
 
@@ -110,23 +115,23 @@ fun LoginScreen(
         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)
     )
 
-    // Background animation
-    val gradient = remember {
-        Brush.verticalGradient(
-            colors = listOf(
-                Color(0xFFF8F9FA),
-                Color(0xFFE9ECEF)
-            )
+    val gradientBackground = Brush.verticalGradient(
+        colors = listOf(
+            Color(0xFFE3F2FD),  // Light blue
+            Color(0xFFBBDEFB),  // Lighter blue
+            Color(0xFFF8F9FA)   // Almost white
         )
-    }
+    )
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(gradient)
+            .background(gradientBackground)
     ) {
-        // Floating elements animation
-        FloatingElements()
+
+        WaveBackground()
+
+        FloatingLearningObjects()
 
         Scaffold(
             snackbarHost = {
@@ -136,7 +141,7 @@ fun LoginScreen(
                             .padding(16.dp)
                             .shimmerEffect(),
                         shape = RoundedCornerShape(12.dp),
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f),
                         contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                         snackbarData = data
                     )
@@ -154,19 +159,19 @@ fun LoginScreen(
             ) {
                 Spacer(modifier = Modifier.height(60.dp))
 
-                // Animated Logo Container
+                // Animated Logo Container with enhanced effects
                 Box(
                     modifier = Modifier
-                        .size(140.dp)
+                        .size(150.dp)
                         .scale(avatarScale)
                         .shadow(
-                            elevation = 12.dp,
+                            elevation = 16.dp,
                             shape = CircleShape,
-                            spotColor = MaterialTheme.colorScheme.primary
+                            spotColor = Color(0xFF7986CB)
                         )
                 ) {
                     Image(
-                        painter = painterResource(id = R.drawable.avatar),
+                        painter = painterResource(id = R.drawable.logo),
                         contentDescription = "Avatar",
                         modifier = Modifier
                             .fillMaxSize()
@@ -575,18 +580,32 @@ private fun CustomTextField(
 @Composable
 fun FloatingElements() {
     Box(modifier = Modifier.fillMaxSize()) {
-        repeat(3) { index ->
+        repeat(5) { index ->
             FloatingElement(
-                delay = index * 1000L,
-                initialOffset = 100f * index
+                delay = index * 700L,
+                initialOffset = 80f * index,
+                size = (30 + index * 5).dp,
+                alpha = 0.1f - (index * 0.01f)
             )
         }
     }
 }
 
 @Composable
-private fun FloatingElement(delay: Long, initialOffset: Float) {
+private fun FloatingElement(delay: Long, initialOffset: Float, size: Dp, alpha: Float) {
     var position by remember { mutableStateOf(initialOffset) }
+    var horizontalPosition by remember { mutableStateOf(0f) }
+
+    // Colors for bubbles
+    val colors = listOf(
+        Color(0xFF7986CB),
+        Color(0xFF5C6BC0),
+        Color(0xFF3F51B5),
+        Color(0xFF3949AB),
+        Color(0xFF1A237E)
+    )
+
+    val colorIndex = delay.toInt() % colors.size
 
     LaunchedEffect(Unit) {
         delay(delay)
@@ -594,19 +613,101 @@ private fun FloatingElement(delay: Long, initialOffset: Float) {
             initialValue = -100f,
             targetValue = 100f,
             animationSpec = infiniteRepeatable(
-                animation = tween(3000),
+                animation = tween(3000 + delay.toInt() % 1000),
                 repeatMode = RepeatMode.Reverse
             )
         ) { value, _ -> position = value }
+
+        animate(
+            initialValue = -50f,
+            targetValue = 50f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(2500 + delay.toInt() % 1500),
+                repeatMode = RepeatMode.Reverse
+            )
+        ) { value, _ -> horizontalPosition = value }
     }
 
     Box(
         modifier = Modifier
-            .offset(y = position.dp)
-            .size(40.dp)
+            .offset(x = horizontalPosition.dp, y = position.dp)
+            .size(size)
             .background(
-                MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                colors[colorIndex].copy(alpha = alpha),
                 CircleShape
             )
     )
+}
+
+@Composable
+fun WaveBackground() {
+    val configuration = LocalConfiguration.current
+    val screenWidth = configuration.screenWidthDp.dp.value
+    val screenHeight = configuration.screenHeightDp.dp.value
+
+    Canvas(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(screenHeight.dp * 0.4f)
+    ) {
+        val width = size.width
+        val height = size.height
+
+        // First wave (darker)
+        val path1 = Path().apply {
+            moveTo(0f, height * 0.3f)
+            cubicTo(
+                width * 0.25f, height * 0.1f,
+                width * 0.75f, height * 0.5f,
+                width, height * 0.2f
+            )
+            lineTo(width, 0f)
+            lineTo(0f, 0f)
+            close()
+        }
+
+        drawPath(
+            path = path1,
+            color = Color(0xFF1A237E),
+            style = Fill
+        )
+
+        // Second wave (medium)
+        val path2 = Path().apply {
+            moveTo(0f, height * 0.35f)
+            cubicTo(
+                width * 0.3f, height * 0.2f,
+                width * 0.6f, height * 0.6f,
+                width, height * 0.35f
+            )
+            lineTo(width, 0f)
+            lineTo(0f, 0f)
+            close()
+        }
+
+        drawPath(
+            path = path2,
+            color = Color(0xFF303F9F).copy(alpha = 0.7f),
+            style = Fill
+        )
+
+        // Third wave (lightest)
+        val path3 = Path().apply {
+            moveTo(0f, height * 0.5f)
+            cubicTo(
+                width * 0.35f, height * 0.3f,
+                width * 0.65f, height * 0.7f,
+                width, height * 0.5f
+            )
+            lineTo(width, 0f)
+            lineTo(0f, 0f)
+            close()
+        }
+
+        drawPath(
+            path = path3,
+            color = Color(0xFF5C6BC0).copy(alpha = 0.5f),
+            style = Fill
+        )
+    }
 }

@@ -32,6 +32,13 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Book
+import androidx.compose.material.icons.filled.Calculate
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.School
+import androidx.compose.material.icons.filled.Science
+import androidx.compose.material.icons.filled.SportsBasketball
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.outlined.Email
@@ -46,12 +53,15 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.Dp
 import com.example.neighbornet.utils.shimmerEffect
+import kotlinx.coroutines.delay
 
 
 @Composable
@@ -102,19 +112,24 @@ fun SignUpScreen(
         )
     }
 
-    // Background gradient
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(
                 brush = Brush.verticalGradient(
                     colors = listOf(
-                        Color(0xFFF8F9FA),
-                        Color(0xFFE9ECEF)
+                        Color(0xFFE3F2FD),  // Light blue
+                        Color(0xFFBBDEFB),  // Lighter blue
+                        Color(0xFFF8F9FA)   // Almost white
                     )
                 )
             )
     ) {
+
+        WaveBackground()
+
+        FloatingLearningObjects()
+
         Scaffold(
             snackbarHost = {
                 SnackbarHost(snackbarHostState) { data ->
@@ -442,6 +457,116 @@ fun RowScope.SocialButton(
                         label = "social button scale"
                     ).value
                 )
+        )
+    }
+}
+
+@Composable
+fun FloatingLearningObjects() {
+    Box(modifier = Modifier.fillMaxSize()) {
+        // Define learning-themed icons to use
+        val learningIcons = listOf(
+            Icons.Default.Book,
+            Icons.Default.School,
+            Icons.Default.MusicNote,
+            Icons.Default.SportsBasketball,
+            Icons.Default.Palette,
+            Icons.Default.Science,
+            Icons.Default.Calculate
+        )
+
+        repeat(7) { index ->
+            FloatingLearningObject(
+                delay = index * 800L,
+                icon = learningIcons[index % learningIcons.size],
+                size = (32 + (index % 3) * 8).dp,
+                offsetX = index * 70f,
+                offsetY = 100f + index * 120f,
+                rotation = index * 30f
+            )
+        }
+    }
+}
+
+@Composable
+fun FloatingLearningObject(
+    delay: Long,
+    icon: ImageVector,
+    size: Dp,
+    offsetX: Float,
+    offsetY: Float,
+    rotation: Float
+) {
+    var yPosition by remember { mutableStateOf(offsetY) }
+    var xPosition by remember { mutableStateOf(offsetX) }
+    var currentRotation by remember { mutableStateOf(rotation) }
+
+    // Define colors for different learning objects
+    val iconColors = listOf(
+        Color(0xFF2196F3),  // Blue
+        Color(0xFF4CAF50),  // Green
+        Color(0xFFFFC107),  // Amber
+        Color(0xFFE91E63),  // Pink
+        Color(0xFF9C27B0)   // Purple
+    )
+
+    val iconColor = iconColors[(delay % iconColors.size).toInt()]
+
+    LaunchedEffect(Unit) {
+        delay(delay)
+
+        // Vertical floating animation
+        launch {
+            animate(
+                initialValue = yPosition,
+                targetValue = yPosition - 50f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(2000 + (delay % 1000).toInt()),
+                    repeatMode = RepeatMode.Reverse
+                )
+            ) { value, _ -> yPosition = value }
+        }
+
+        // Horizontal floating animation
+        launch {
+            animate(
+                initialValue = xPosition,
+                targetValue = xPosition + 30f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(3000 + (delay % 1500).toInt()),
+                    repeatMode = RepeatMode.Reverse
+                )
+            ) { value, _ -> xPosition = value }
+        }
+
+        // Rotation animation
+        launch {
+            animate(
+                initialValue = currentRotation,
+                targetValue = currentRotation + 360f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(10000 + (delay % 5000).toInt()),
+                    repeatMode = RepeatMode.Restart
+                )
+            ) { value, _ -> currentRotation = value }
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .offset(x = xPosition.dp, y = yPosition.dp)
+            .size(size)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = "Learning Object",
+            tint = iconColor.copy(alpha = 0.65f),
+            modifier = Modifier
+                .size(size)
+                .graphicsLayer {
+                    rotationZ = currentRotation
+                    alpha = 0.65f
+                }
         )
     }
 }
