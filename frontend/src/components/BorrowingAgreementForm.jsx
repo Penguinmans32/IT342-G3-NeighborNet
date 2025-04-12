@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { MdClose, MdImage } from 'react-icons/md';
+import { MdClose, MdImage, MdCalendarToday } from 'react-icons/md';
+import DateRangeCalendar from './DateRangeCalendar';
 
 const BorrowingAgreementForm = ({ onSubmit, onClose, senderId, receiverId, stompClient }) => {
   const [items, setItems] = useState([]);
@@ -182,6 +183,28 @@ const BorrowingAgreementForm = ({ onSubmit, onClose, senderId, receiverId, stomp
     }
   };
   
+  const handleDateRangeChange = ({ start, end }) => {
+    // Maintain the same validation logic
+    if (selectedItem) {
+      const error = validateDates(
+        start,
+        end,
+        selectedItem.availableFrom,
+        selectedItem.availableUntil
+      );
+
+      if (error) {
+        alert(error);
+        return;
+      }
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      borrowingStart: start,
+      borrowingEnd: end
+    }));
+  };
 
   return (
     <motion.div
@@ -225,7 +248,7 @@ const BorrowingAgreementForm = ({ onSubmit, onClose, senderId, receiverId, stomp
               name="itemId"
               value={formData.itemId}
               onChange={handleChange}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
               required
             >
               <option value="">Select an item to borrow</option>
@@ -240,9 +263,9 @@ const BorrowingAgreementForm = ({ onSubmit, onClose, senderId, receiverId, stomp
           {/* Item Details Section */}
           {selectedItem && (
             <div className="p-4 border-b bg-gray-50">
-              <div className="flex gap-4">
+              <div className="flex flex-col md:flex-row gap-4">
                 {/* Item Images */}
-                <div className="w-1/3">
+                <div className="w-full md:w-1/3">
                   <div className="aspect-square rounded-lg overflow-hidden bg-gray-100">
                     {selectedItem.imageUrls && selectedItem.imageUrls.length > 0 ? (
                       <img
@@ -272,10 +295,10 @@ const BorrowingAgreementForm = ({ onSubmit, onClose, senderId, receiverId, stomp
                 </div>
 
                 {/* Item Information */}
-                <div className="w-2/3 space-y-4">
+                <div className="w-full md:w-2/3 space-y-4">
                   <div>
                     <h3 className="text-xl font-semibold text-gray-900">{selectedItem.name}</h3>
-                    <span className="inline-block px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full mt-2">
+                    <span className="inline-block px-3 py-1 bg-green-100 text-green-800 text-sm rounded-full mt-2">
                       {selectedItem.category}
                     </span>
                   </div>
@@ -321,49 +344,41 @@ const BorrowingAgreementForm = ({ onSubmit, onClose, senderId, receiverId, stomp
 
           {/* Agreement Form Fields */}
           <div className="p-4">
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Start Date*
-              </label>
-              <input
-                type="date"
-                name="borrowingStart"
-                value={formData.borrowingStart}
-                onChange={handleChange}
-                min={selectedItem ? new Date(selectedItem.availableFrom).toISOString().split('T')[0] : ''}
-                max={selectedItem ? new Date(selectedItem.availableUntil).toISOString().split('T')[0] : ''}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                required
-              />
-              {selectedItem && (
-                <p className="text-xs text-gray-500 mt-1">
-                  Available from: {new Date(selectedItem.availableFrom).toLocaleDateString()}
+            {selectedItem && (
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-3 flex items-center gap-1">
+                  <MdCalendarToday className="text-green-500" />
+                  Borrowing Period*
+                </label>
+                
+                <div className="bg-white rounded-lg shadow-sm">
+                  <DateRangeCalendar
+                    startDate={formData.borrowingStart}
+                    endDate={formData.borrowingEnd}
+                    onChange={handleDateRangeChange}
+                    minDate={selectedItem.availableFrom}
+                    maxDate={selectedItem.availableUntil}
+                  />
+                </div>
+                
+                <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                  <span className="inline-block w-3 h-3 bg-green-100 rounded-full mr-1"></span>
+                  Item available: {new Date(selectedItem.availableFrom).toLocaleDateString()} - {new Date(selectedItem.availableUntil).toLocaleDateString()}
                 </p>
-              )}
-            </div>
+              </div>
+            )}
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                End Date*
-              </label>
-              <input
-                type="date"
-                name="borrowingEnd"
-                value={formData.borrowingEnd}
-                onChange={handleChange}
-                min={formData.borrowingStart || (selectedItem ? new Date(selectedItem.availableFrom).toISOString().split('T')[0] : '')}
-                max={selectedItem ? new Date(selectedItem.availableUntil).toISOString().split('T')[0] : ''}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                required
-              />
-              {selectedItem && (
-                <p className="text-xs text-gray-500 mt-1">
-                  Available until: {new Date(selectedItem.availableUntil).toLocaleDateString()}
-                </p>
-              )}
-            </div>
-          </div>
+            {/* Hidden inputs to maintain the form submission logic */}
+            <input
+              type="hidden"
+              name="borrowingStart"
+              value={formData.borrowingStart}
+            />
+            <input
+              type="hidden"
+              name="borrowingEnd"
+              value={formData.borrowingEnd}
+            />
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -374,7 +389,7 @@ const BorrowingAgreementForm = ({ onSubmit, onClose, senderId, receiverId, stomp
                 value={formData.terms}
                 onChange={handleChange}
                 rows="4"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
                 placeholder="Enter terms and conditions..."
                 required
               />
@@ -390,7 +405,7 @@ const BorrowingAgreementForm = ({ onSubmit, onClose, senderId, receiverId, stomp
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+                className="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all shadow-md"
                 disabled={loading}
               >
                 {loading ? 'Sending...' : 'Send Agreement'}

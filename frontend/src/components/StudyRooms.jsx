@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { useNavigate } from "react-router-dom"
 import { toast } from "react-hot-toast"
-import { BookOpen, Users, ChevronRight, Copy, ExternalLink, Key } from "lucide-react"
+import { BookOpen, Users, ChevronRight, Copy, ExternalLink, Key, Home, Sparkles } from "lucide-react"
 
 const ReturnLinkModal = ({ isOpen, onClose, onContinue }) => {
     const appUrl = window.location.origin;
@@ -378,67 +378,107 @@ const StudyRooms = () => {
   const displayRooms = rooms.length > 0 ? rooms : sampleRooms
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="max-w-7xl mx-auto p-6 sm:p-8">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Study Rooms</h1>
-            <p className="text-gray-600">
-              Join or create virtual study spaces for collaborative learning
-            </p>
-          </div>
-          <div className="flex gap-3 self-end sm:self-auto">
-            <motion.button
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
-              onClick={() => setIsCreatingRoom(true)}
-              className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl 
+    <div className="min-h-screen bg-gradient-to-b from-white to-emerald-50">
+      {/* Stylish header with subtle pattern background */}
+      <div className="bg-white shadow-sm border-b border-emerald-100 relative overflow-hidden">
+        <div className="absolute inset-0 opacity-5 pattern-dots-lg"></div>
+        <div className="max-w-7xl mx-auto p-6 sm:p-8 relative">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
+            <div className="flex justify-between w-full">
+              <motion.button
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => navigate('/homepage')}
+                className="px-5 py-2.5 bg-gray-100 text-gray-700 rounded-xl 
+                       hover:bg-gray-200 transition-all shadow-sm hover:shadow
+                       flex items-center gap-2"
+              >
+                <Home size={18} />
+                <span>Homepage</span>
+              </motion.button>
+              
+              <motion.button
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => setIsCreatingRoom(true)}
+                className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl 
                        hover:bg-emerald-700 transition-all shadow-sm hover:shadow
                        flex items-center gap-2"
-            >
-              <BookOpen size={18} />
-              <span>Create Room</span>
-            </motion.button>
+              >
+                <BookOpen size={18} />
+                <span>Create Room</span>
+              </motion.button>
+            </div>
           </div>
-        </div>
-
-        {rooms.length === 0 && (
-          <div className="bg-gray-50 rounded-xl p-4 mb-6 border border-gray-200">
-            <p className="text-gray-600 text-center py-2">
-              Sample rooms shown below. Create your first room to get started!
+          
+          <div className="mt-8 text-center">
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="inline-flex items-center gap-2 mb-3 px-4 py-1 rounded-full bg-emerald-100 text-emerald-700 text-sm font-medium"
+            >
+              <Sparkles size={14} />
+              <span>Collaborative Learning Environment</span>
+            </motion.div>
+            
+            <h1 className="text-4xl font-bold text-gray-900 mb-2">
+              Study Rooms
+            </h1>
+            <p className="text-gray-600 max-w-2xl mx-auto">
+              Join or create virtual study spaces for collaborative learning. Connect with peers, 
+              share knowledge, and excel together in real-time.
             </p>
           </div>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto p-6 sm:p-8 pt-10">
+        {rooms.length === 0 && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+            className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-5 mb-8 border border-emerald-100 shadow-sm"
+          >
+            <p className="text-emerald-800 text-center py-2 font-medium">
+              Sample rooms shown below. Create your first room to get started!
+            </p>
+          </motion.div>
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {displayRooms.map((room) => (
+          {displayRooms.map((room, index) => (
             <motion.div
-            key={room?.id || Math.random()}
-            whileHover={{
+              key={room?.id || Math.random()}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+              whileHover={{
                 y: -5,
                 boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)",
-            }}
-            className="p-6 bg-white rounded-xl shadow-md hover:shadow-lg 
+              }}
+              className="p-6 bg-white rounded-xl shadow-md hover:shadow-lg 
                         transition-all duration-300 cursor-pointer border border-gray-100"
-            onClick={() => handleRoomClick(room)}
+              onClick={() => handleRoomClick(room)}
             >
-            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xl font-semibold text-gray-900">{room.name}</h3>
                 <div className="flex items-center gap-3">
-                <div className="flex items-center text-gray-500 text-sm">
+                  <div className="flex items-center text-gray-500 text-sm">
                     <Users size={14} className="mr-1" />
                     <span>{room.activeParticipants || 0}</span>
-                </div>
-                <div className="h-8 w-8 rounded-full bg-emerald-100 flex items-center justify-center">
+                  </div>
+                  <div className="h-8 w-8 rounded-full bg-emerald-100 flex items-center justify-center">
                     <BookOpen size={16} className="text-emerald-600" />
+                  </div>
                 </div>
-                </div>
-            </div>
-            <p className="text-gray-600 mb-6">{room.description}</p>
-            <div className="flex items-center text-sm text-emerald-600 font-medium">
+              </div>
+              <p className="text-gray-600 mb-6">{room.description}</p>
+              <div className="flex items-center text-sm text-emerald-600 font-medium">
                 <span>Click to join</span>
                 <ChevronRight size={16} className="ml-1" />
-            </div>
+              </div>
             </motion.div>         
           ))}
         </div>
@@ -571,7 +611,7 @@ const StudyRooms = () => {
         )}
 
         {/* 100ms Credits Footer */}
-        <div className="mt-12 pt-6 border-t border-gray-200">
+        <div className="mt-12 pt-6 border-t border-emerald-100">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 text-sm text-gray-600">
             <div className="flex items-center space-x-2">
               <span>Powered by</span>
