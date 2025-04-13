@@ -43,6 +43,7 @@ import androidx.navigation.NavType
 import androidx.navigation.navArgument
 import com.example.neighbornet.auth.ChatViewModel
 import com.example.neighbornet.utils.ChatListScreen
+import com.example.neighbornet.utils.ForgotPasswordScreen
 import com.example.neighbornet.utils.ItemDetailsScreen
 import com.example.neighbornet.utils.PreferencesManager
 import com.example.neighbornet.utils.chatGraph
@@ -140,6 +141,7 @@ class MainActivity : ComponentActivity() {
                             "login" -> LoginScreen(
                                 onLoginSuccess = { currentScreen = "home" },
                                 onSignUpClick = { currentScreen = "signup" },
+                                onForgotPasswordClick = { currentScreen = "forgotpassword" },
                                 onGoogleLogin = { /* TODO */ },
                                 onGithubLogin = { /* TODO */ },
                                 onMicrosoftLogin = { /* TODO */ }
@@ -356,6 +358,9 @@ class MainActivity : ComponentActivity() {
                                     }
                                 }
                             }
+                            "forgotpassword" -> ForgotPasswordScreen(
+                                onNavigateToLogin = { currentScreen = "login" }
+                            )
                         }
 
                         // Show any errors

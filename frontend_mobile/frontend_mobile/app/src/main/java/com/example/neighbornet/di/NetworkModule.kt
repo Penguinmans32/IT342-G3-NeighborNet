@@ -6,6 +6,7 @@ import com.example.neighbornet.api.BorrowingApiService
 import com.example.neighbornet.api.ChatApiService
 import com.example.neighbornet.api.ClassApiService
 import com.example.neighbornet.api.FCMApi
+import com.example.neighbornet.api.ForgotPasswordApi
 import com.example.neighbornet.api.ProfileApiService
 import com.example.neighbornet.auth.ChatStateManager
 import com.example.neighbornet.auth.ProfileStateManager
@@ -13,6 +14,7 @@ import com.example.neighbornet.auth.TokenManager
 import com.example.neighbornet.network.AuthInterceptor
 import com.example.neighbornet.network.AuthService
 import com.example.neighbornet.network.StompClient
+import com.example.neighbornet.repository.AuthRepository
 import com.example.neighbornet.utils.ArrayDate
 import com.example.neighbornet.utils.ArrayDateAdapter
 import com.example.neighbornet.utils.LoggingGsonConverterFactory
@@ -251,5 +253,17 @@ object NetworkModule {
     @Singleton
     fun provideFCMApi(retrofit: Retrofit): FCMApi {
         return retrofit.create(FCMApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideForgotPasswordApi(retrofit: Retrofit): ForgotPasswordApi {
+        return retrofit.create(ForgotPasswordApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideAuthRepository(forgotPasswordApi: ForgotPasswordApi): AuthRepository {
+        return AuthRepository(forgotPasswordApi)
     }
 }
