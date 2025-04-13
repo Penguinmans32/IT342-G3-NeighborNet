@@ -9,6 +9,7 @@ import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd"
 import QuestionForm from "./QuestionForm"
 import QuizPreview from "./QuizPreview"
 import Confetti from 'react-confetti'
+import AIQuizGenerator from "./AIQuizGenerator"
 
 const QuestionTypes = {
   MULTIPLE_CHOICE: "MULTIPLE_CHOICE",
@@ -54,6 +55,25 @@ const CreateQuiz = () => {
     if (quizData.questions.length >= 5) score += 30;
     return Math.min(score, 100);
   }
+
+  const handleAddGeneratedQuiz = (generatedQuiz) => {
+    setQuizData({
+      title: generatedQuiz.title,
+      description: generatedQuiz.description,
+      timeLimit: 60, 
+      passingScore: 60,
+      questions: generatedQuiz.questions.map(question => {
+        return {
+          content: question.content,
+          type: question.type,
+          points: question.points || 1,
+          options: question.options || [],
+          correctAnswer: question.correctAnswer,
+          explanation: question.explanation
+        };
+      }),
+    });
+  };
 
   const handleSubmit = async () => {
     if (!quizData.title.trim()) {
@@ -682,19 +702,11 @@ const CreateQuiz = () => {
 
               <QuestionForm onAddQuestion={handleAddQuestion} />
               
-              {/* AI Question Generator Button (Visual only) */}
               <div className="mt-6 border-t border-slate-100 pt-6">
-                <motion.button
-                  whileHover={{ scale: 1.01 }}
-                  whileTap={{ scale: 0.99 }}
-                  className="w-full py-3 bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white rounded-xl flex items-center justify-center gap-2 shadow-sm hover:shadow-md transition-all font-medium"
-                >
-                  <Sparkles className="w-5 h-5" />
-                  <span>Generate Questions with AI</span>
-                </motion.button>
-                <p className="text-xs text-center text-slate-500 mt-2">
-                  Let AI help you create questions based on your lesson content
-                </p>
+                <AIQuizGenerator 
+                  onAddGeneratedQuiz={handleAddGeneratedQuiz} 
+                  classId={classId}
+                />
               </div>
             </motion.div>
 
