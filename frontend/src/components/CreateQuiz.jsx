@@ -10,6 +10,7 @@ import QuestionForm from "./QuestionForm"
 import QuizPreview from "./QuizPreview"
 import Confetti from 'react-confetti'
 import AIQuizGenerator from "./AIQuizGenerator"
+import ContentImportQuizGenerator from "./ContentImportQuizGenerator"
 
 const QuestionTypes = {
   MULTIPLE_CHOICE: "MULTIPLE_CHOICE",
@@ -707,6 +708,13 @@ const CreateQuiz = () => {
                   onAddGeneratedQuiz={handleAddGeneratedQuiz} 
                   classId={classId}
                 />
+              </div>
+
+              <div className="mt-6">
+                  <ContentImportQuizGenerator 
+                    onAddGeneratedQuiz={handleAddGeneratedQuiz} 
+                    classId={classId}
+                  />
               </div>
             </motion.div>
 

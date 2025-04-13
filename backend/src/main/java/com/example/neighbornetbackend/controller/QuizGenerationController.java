@@ -1,10 +1,9 @@
 package com.example.neighbornetbackend.controller;
 
-import com.example.neighbornetbackend.dto.QuizGenerationRequest;
-import com.example.neighbornetbackend.dto.QuizRequest;
-import com.example.neighbornetbackend.dto.QuizResponse;
+import com.example.neighbornetbackend.dto.*;
 import com.example.neighbornetbackend.security.CurrentUser;
 import com.example.neighbornetbackend.security.UserPrincipal;
+import com.example.neighbornetbackend.service.ContentProcessingService;
 import com.example.neighbornetbackend.service.GeminiService;
 import com.example.neighbornetbackend.service.QuizService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,11 +19,16 @@ public class QuizGenerationController {
 
     private final GeminiService geminiService;
     private final QuizService quizService;
+    private final ContentProcessingService contentProcessingService;
 
     @Autowired
-    public QuizGenerationController(GeminiService geminiService, QuizService quizService) {
+    public QuizGenerationController(
+            GeminiService geminiService,
+            QuizService quizService,
+            ContentProcessingService contentProcessingService) {
         this.geminiService = geminiService;
         this.quizService = quizService;
+        this.contentProcessingService = contentProcessingService;
     }
 
     @PostMapping("/preview")
@@ -43,6 +47,27 @@ public class QuizGenerationController {
             @CurrentUser UserPrincipal currentUser) {
 
         QuizRequest generatedQuiz = geminiService.generateQuiz(request);
+        QuizResponse savedQuiz = quizService.createQuiz(classId, generatedQuiz, currentUser.getId());
+
+        return ResponseEntity.ok(savedQuiz);
+    }
+
+    @PostMapping("/from-content")
+    public ResponseEntity<QuizRequest> generateFromContent(
+            @PathVariable Long classId,
+            @Valid @RequestBody ContentImportRequest request) {
+
+        QuizRequest generatedQuiz = contentProcessingService.generateQuizFromContent(request);
+        return ResponseEntity.ok(generatedQuiz);
+    }
+
+    @PostMapping("/from-content/save")
+    public ResponseEntity<QuizResponse> generateFromContentAndSave(
+            @PathVariable Long classId,
+            @Valid @RequestBody ContentImportRequest request,
+            @CurrentUser UserPrincipal currentUser) {
+
+        QuizRequest generatedQuiz = contentProcessingService.generateQuizFromContent(request);
         QuizResponse savedQuiz = quizService.createQuiz(classId, generatedQuiz, currentUser.getId());
 
         return ResponseEntity.ok(savedQuiz);
