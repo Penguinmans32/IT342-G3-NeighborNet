@@ -76,6 +76,7 @@ import kotlinx.coroutines.delay
 fun LoginScreen(
     onLoginSuccess: () -> Unit,
     onSignUpClick: () -> Unit,
+    onForgotPasswordClick: () -> Unit,
     onGoogleLogin: () -> Unit = {},
     onGithubLogin: () -> Unit = {},
     onMicrosoftLogin: () -> Unit = {},
@@ -92,6 +93,11 @@ fun LoginScreen(
     val authState by authViewModel.authState.collectAsState()
     val context = LocalContext.current
     val activity = remember { context as Activity }
+
+    val scale by animateFloatAsState(
+        targetValue = if (isPasswordFocused) 1.05f else 1f,
+        label = "forgot password scale"
+    )
 
     LaunchedEffect(authState.isLoggedIn) {
         if (authState.isLoggedIn) {
@@ -430,9 +436,8 @@ fun LoginScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Enhanced Forgot Password Button
                 TextButton(
-                    onClick = { /* TODO: Implement forgot password */ },
+                    onClick = onForgotPasswordClick,
                     modifier = Modifier
                         .scale(
                             animateFloatAsState(
