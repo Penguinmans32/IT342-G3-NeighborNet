@@ -49,7 +49,7 @@ function App() {
           <HMSRoomProvider>
           <TitleManager /> 
           <Toaster
-              position="top-center"
+              position="top-right"
               reverseOrder={false}
               toastOptions={{
                 style: {

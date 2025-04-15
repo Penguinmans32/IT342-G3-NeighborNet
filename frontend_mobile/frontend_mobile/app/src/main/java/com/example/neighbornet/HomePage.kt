@@ -3,9 +3,11 @@ package com.example.neighbornet
 import android.app.Activity
 import android.net.Uri
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.DrawableRes
+import androidx.biometric.BiometricManager
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -54,6 +56,7 @@ import androidx.compose.material.icons.filled.Close
 import kotlin.math.*
 import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.School
@@ -98,6 +101,7 @@ import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
 import com.example.neighbornet.auth.AuthViewModel
+import com.example.neighbornet.auth.BiometricAuthManager
 import com.example.neighbornet.auth.ChatViewModel
 import com.example.neighbornet.auth.ClassListViewModel
 import com.example.neighbornet.auth.ProfileViewModel
@@ -2555,8 +2559,13 @@ fun LogoutDialog(
 fun ProfileTabContent(
     profileData: ProfileData?,
     userStats: UserStats,
-    savedClasses: List<ClassItem>
+    savedClasses: List<ClassItem>,
+    viewModel: ProfileViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
+    val isBiometricEnabled by viewModel.isBiometricEnabled.collectAsState()
+    val canUseBiometric by viewModel.canUseBiometric.collectAsState()
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -2622,6 +2631,81 @@ fun ProfileTabContent(
                 items(savedClasses) { classItem ->
                     SavedClassCard(classItem = classItem)
                 }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Text(
+            text = "Security Settings",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(vertical = 12.dp)
+        )
+
+
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Fingerprint,
+                        contentDescription = "Biometric Login",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column {
+                        Text(
+                            text = "Fingerprint Login",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            text = "Use your fingerprint to sign in",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                        )
+                    }
+                }
+
+                Switch(
+                    checked = isBiometricEnabled,
+                    onCheckedChange = { enabled ->
+                        if (!canUseBiometric && enabled) {
+                            Toast.makeText(
+                                context,
+                                "Biometric authentication is not available on this device",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                            return@Switch
+                        }
+
+                        viewModel.setBiometricEnabled(enabled)
+
+                        val message = if (enabled)
+                            "Fingerprint login enabled"
+                        else
+                            "Fingerprint login disabled"
+
+                        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                    },
+                    enabled = canUseBiometric
+                )
             }
         }
 

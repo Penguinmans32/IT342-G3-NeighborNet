@@ -40,6 +40,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -89,6 +90,10 @@ fun BorrowingAgreementDialog(
         viewModel.fetchUserItems(receiverId)
     }
 
+    val itemsList = remember(items) { items }
+    val loadingState = remember(isLoading) { isLoading }
+    val errorState = remember(error) { error }
+
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -116,7 +121,11 @@ fun BorrowingAgreementDialog(
                 // Item Selection with improved dropdown
                 ExposedDropdownMenuBox(
                     expanded = isDropDownExpanded,
-                    onExpandedChange = { isDropDownExpanded = it },
+                    onExpandedChange = {
+                        if (!loadingState && itemsList.isNotEmpty()) {
+                            isDropDownExpanded = it
+                        }
+                    },
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     OutlinedTextField(
@@ -140,37 +149,51 @@ fun BorrowingAgreementDialog(
                             .fillMaxWidth()
                     )
 
-                    if (!isLoading && error == null) {
+                    if (!loadingState && itemsList.isNotEmpty() && isDropDownExpanded) {
                         ExposedDropdownMenu(
                             expanded = isDropDownExpanded,
                             onDismissRequest = { isDropDownExpanded = false }
                         ) {
-                            if (items.isEmpty()) {
+                            itemsList.forEach { item ->
                                 DropdownMenuItem(
-                                    text = { Text("No items available") },
-                                    onClick = { }
-                                )
-                            } else {
-                                items.forEach { item ->
-                                    DropdownMenuItem(
-                                        text = {
-                                            Column {
-                                                Text(item.name)
+                                    text = {
+                                        Column {
+                                            Text(item.name)
+                                            if (!item.availableFrom.isNullOrBlank() && !item.availableUntil.isNullOrBlank()) {
+                                                val from = try {
+                                                    item.availableFrom.substring(0, 10)
+                                                } catch (e: Exception) {
+                                                    item.availableFrom
+                                                }
+                                                val to = try {
+                                                    item.availableUntil.substring(0, 10)
+                                                } catch (e: Exception) {
+                                                    item.availableUntil
+                                                }
                                                 Text(
-                                                    "Available: ${item.availableFrom.substring(0, 10)} - ${item.availableUntil.substring(0, 10)}",
+                                                    "Available: $from - $to",
                                                     style = MaterialTheme.typography.bodySmall
                                                 )
                                             }
-                                        },
-                                        onClick = {
-                                            selectedItem = item
-                                            isDropDownExpanded = false
                                         }
-                                    )
-                                }
+                                    },
+                                    onClick = {
+                                        selectedItem = item
+                                        isDropDownExpanded = false
+                                        Log.d("BorrowingDialog", "Selected item: ${item.name}")
+                                    }
+                                )
                             }
                         }
                     }
+                }
+
+                if (items.isEmpty() && !isLoading) {
+                    Text(
+                        "No items available for borrowing",
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    )
                 }
 
                 // Date Selection with improved pickers
@@ -218,7 +241,9 @@ fun BorrowingAgreementDialog(
                 // Selected Item Preview
                 if (selectedItem != null) {
                     Spacer(modifier = Modifier.height(16.dp))
-                    ItemPreview(item = selectedItem!!)
+                    key(selectedItem?.id) {
+                        ItemPreview(item = selectedItem!!)
+                    }
                 }
 
                 // Terms Input
@@ -372,6 +397,16 @@ fun DatePickerDialog(
 
 @Composable
 fun ItemPreview(item: Item) {
+    val imageUrl = remember(item.imageUrls) {
+        item.imageUrls.firstOrNull()?.let { url ->
+            if (url.contains("localhost")) {
+                url.replace("http://localhost:8080", "http://10.0.191.212:8080")
+            } else {
+                url
+            }
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -383,28 +418,43 @@ fun ItemPreview(item: Item) {
             modifier = Modifier.padding(bottom = 8.dp)
         )
 
-        if (item.imageUrls.isNotEmpty()) {
+        if (!item.imageUrls.isNullOrEmpty()) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(200.dp)
                     .clip(RoundedCornerShape(8.dp))
             ) {
-                AuthenticatedThumbnailImage(
-                    url = item.imageUrls.firstOrNull(),
-                    modifier = Modifier.fillMaxSize(),
-                    contentDescription = item.name,
-                    contentScale = ContentScale.Crop
-                )
+                if (imageUrl != null) {
+                    // Use a key to prevent unnecessary recomposition
+                    key(imageUrl) {
+                        AuthenticatedThumbnailImage(
+                            url = imageUrl,
+                            modifier = Modifier.fillMaxSize(),
+                            contentDescription = item.name,
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .align(Alignment.Center)
+                    ) {
+                        Text("No image available",
+                            modifier = Modifier.align(Alignment.Center))
+                    }
+                }
             }
         }
 
         Spacer(modifier = Modifier.height(8.dp))
 
+        // Use stable text values
         Text("Name: ${item.name}")
         Text("Category: ${item.category}")
         Text("Location: ${item.location}")
-        if (item.description != null) {
+        if (!item.description.isNullOrBlank()) {
             Text("Description: ${item.description}")
         }
     }

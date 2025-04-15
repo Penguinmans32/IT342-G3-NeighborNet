@@ -7,6 +7,7 @@ import com.example.neighbornet.network.ProfileState
 import com.example.neighbornet.network.UserActivity
 import com.example.neighbornet.network.UserStats
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -31,6 +32,9 @@ class ProfileStateManager @Inject constructor() {
     private val _followData = MutableStateFlow(FollowData())
     val followData = _followData.asStateFlow()
 
+    private val _refreshTrigger = MutableStateFlow(0L)
+    val refreshTrigger: StateFlow<Long> = _refreshTrigger
+
     fun clearAll() {
         _profileState.value = ProfileState()
         _userStats.value = UserStats()
@@ -38,5 +42,10 @@ class ProfileStateManager @Inject constructor() {
         _achievements.value = emptyList()
         _savedClasses.value = emptyList()
         _followData.value = FollowData()
+        _refreshTrigger.value = 0L
+    }
+
+    fun refreshAll() {
+        _refreshTrigger.value = System.currentTimeMillis()
     }
 }

@@ -99,7 +99,7 @@ fun ChatInputArea(
                 )
             }
 
-            IconButton(onClick = onAgreementClick) {
+            IconButton(onClick = onAgreementClick) { // maybe remove this
                 Icon(
                     imageVector = Icons.Default.Description,
                     contentDescription = "Send agreement"
