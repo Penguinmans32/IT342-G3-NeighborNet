@@ -120,6 +120,11 @@ const MessagesPage = () => {
     if (stompClient && stompReady) {
       const subscription = stompClient.subscribe(`/user/${user?.data?.id}/queue/messages`, (message) => {
         const newMessage = JSON.parse(message.body);
+
+        if (newMessage.senderId === user.data.id && newMessage.clientId) {
+          console.log("Skipping own message with clientId:", newMessage.clientId);
+          return;
+        }
         
         // Update conversations when receiving a new message
         setConversations(prevConversations => {
@@ -351,10 +356,12 @@ const handleSendMessage = (message) => {
   if (stompClient && stompClient.connected) {
     const now = new Date();
     const timestamp = now.toISOString().substring(0, 23);
+    const clientId = `client-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 
     const messageToSend = {
       ...message,
-      timestamp: timestamp
+      timestamp: timestamp,
+      clientId: clientId
     };
 
     // Update conversations immediately when sending a message

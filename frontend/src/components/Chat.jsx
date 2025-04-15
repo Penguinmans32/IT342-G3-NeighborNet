@@ -260,45 +260,63 @@ const Chat = ({ senderId, receiverId, receiverName = '?', onMessageSent, stompCl
   }
 
   const handleSendImage = async () => {
-    if (!selectedImage) return
-
-    const formData = new FormData()
-    formData.append("image", selectedImage)
-
+    if (!selectedImage) return;
+    
+    console.log("Starting image upload...");
+    
+    const formData = new FormData();
+    formData.append("image", selectedImage);
+    
     try {
       const response = await fetch("http://localhost:8080/chat/upload-image", {
         method: "POST",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
         body: formData,
-      })
-      const imageUrl = await response.text()
-
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Upload failed: ${response.status}`);
+      }
+      
+      const imageUrl = await response.text();
+      console.log("Image uploaded successfully, URL:", imageUrl);
+      
+      const now = new Date();
+      const timestamp = now.toISOString().substring(0, 23);
+      
       const imageMessage = {
         senderId,
         receiverId,
         messageType: "IMAGE",
         content: "Sent an image",
         imageUrl,
-        timestamp: new Date().toISOString(),
-      }
-
-      const tempMessage = { ...imageMessage, id: `temp-${Date.now()}` }
-      setMessages((prev) => [...prev, tempMessage])
-
+        timestamp: timestamp 
+      };
+      
+      const tempMessage = { ...imageMessage, id: `temp-${Date.now()}` };
+      setMessages(prev => [...prev, tempMessage]);
+      
       if (stompClient && stompClient.connected) {
         stompClient.publish({
           destination: "/app/chat",
-          body: JSON.stringify(imageMessage),
-        })
+          body: JSON.stringify(imageMessage)
+        });
       }
-
-      onMessageSent(imageMessage)
-      setImagePreview(null)
-      setSelectedImage(null)
-      scrollToBottom()
+      
+      onMessageSent(imageMessage);
+      
+      setImagePreview(null);
+      setSelectedImage(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      
+      scrollToBottom();
     } catch (error) {
-      console.error("Error uploading image:", error)
+      console.error("Error uploading image:", error);
+      alert("Failed to upload image. Please try again.");
     }
-  }
+  };
 
   const clearImagePreview = () => {
     setImagePreview(null)
@@ -400,6 +418,11 @@ const Chat = ({ senderId, receiverId, receiverName = '?', onMessageSent, stompCl
         subscription = stompClient.subscribe(`/user/${senderId}/queue/messages`, (message) => {
           const newMessage = JSON.parse(message.body);
           console.log("Received websocket message:", newMessage);
+
+          if (newMessage.senderId === senderId && newMessage.clientId) {
+            console.log("Skipping message with clientId as it was sent by this client", newMessage.clientId);
+            return;
+          }
 
           // Handle Agreement Updates
           if (newMessage.messageType === "AGREEMENT_UPDATE") {

@@ -2,6 +2,7 @@ package com.example.neighbornet.auth
 
 import android.net.Uri
 import android.util.Log
+import androidx.biometric.BiometricManager
 import androidx.core.net.toFile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -16,6 +17,7 @@ import com.example.neighbornet.network.update
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -28,8 +30,17 @@ class ProfileViewModel @Inject constructor(
     private val apiService: ProfileApiService,
     private val sessionManager: SessionManager,
     private val tokenManager: TokenManager,
+    private val biometricAuthManager: BiometricAuthManager,
     private val profileStateManager: ProfileStateManager
 ) : ViewModel() {
+
+    private val _isBiometricEnabled = MutableStateFlow(biometricAuthManager.isBiometricEnabled())
+    val isBiometricEnabled: StateFlow<Boolean> = _isBiometricEnabled
+
+    private val _canUseBiometric = MutableStateFlow(
+        biometricAuthManager.canAuthenticate() == BiometricManager.BIOMETRIC_SUCCESS
+    )
+    val canUseBiometric: StateFlow<Boolean> = _canUseBiometric
 
     private val _profileState = MutableStateFlow(ProfileState())
     val profileState = _profileState.asStateFlow()
@@ -56,6 +67,14 @@ class ProfileViewModel @Inject constructor(
         fetchAchievements()
         fetchSavedClasses()
         fetchFollowData()
+        viewModelScope.launch {
+            profileStateManager.refreshTrigger.collect { timestamp ->
+                if (timestamp > 0) {
+                    Log.d("ProfileViewModel", "Profile refresh triggered at: $timestamp")
+                    refreshAllProfileData()
+                }
+            }
+        }
     }
 
     fun refreshAllProfileData() {
@@ -65,6 +84,11 @@ class ProfileViewModel @Inject constructor(
         fetchAchievements()
         fetchSavedClasses()
         fetchFollowData()
+    }
+
+    fun setBiometricEnabled(enabled: Boolean) {
+        biometricAuthManager.setBiometricEnabled(enabled)
+        _isBiometricEnabled.value = enabled
     }
 
     private fun fetchUserStats() {

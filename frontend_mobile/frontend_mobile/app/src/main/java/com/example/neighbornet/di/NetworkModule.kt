@@ -8,6 +8,7 @@ import com.example.neighbornet.api.ClassApiService
 import com.example.neighbornet.api.FCMApi
 import com.example.neighbornet.api.ForgotPasswordApi
 import com.example.neighbornet.api.ProfileApiService
+import com.example.neighbornet.auth.BiometricAuthManager
 import com.example.neighbornet.auth.ChatStateManager
 import com.example.neighbornet.auth.ProfileStateManager
 import com.example.neighbornet.auth.TokenManager
@@ -40,6 +41,7 @@ import java.lang.reflect.Type
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.concurrent.TimeUnit
+import dagger.Lazy
 import javax.inject.Singleton
 
 @Module
@@ -53,8 +55,11 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideAuthInterceptor(tokenManager: TokenManager): AuthInterceptor {
-        return AuthInterceptor(tokenManager)
+    fun provideAuthInterceptor(
+        tokenManager: TokenManager,
+        authService: Lazy<AuthService>
+    ): AuthInterceptor {
+        return AuthInterceptor(tokenManager, authService)
     }
 
     @Provides
@@ -265,5 +270,14 @@ object NetworkModule {
     @Singleton
     fun provideAuthRepository(forgotPasswordApi: ForgotPasswordApi): AuthRepository {
         return AuthRepository(forgotPasswordApi)
+    }
+
+    @Provides
+    @Singleton
+    fun provideBiometricAuthManager(
+        @ApplicationContext context: Context,
+        tokenManager: TokenManager
+    ): BiometricAuthManager {
+        return BiometricAuthManager(context, tokenManager)
     }
 }

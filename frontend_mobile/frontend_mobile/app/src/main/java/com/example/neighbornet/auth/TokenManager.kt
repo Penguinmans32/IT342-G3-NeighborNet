@@ -5,6 +5,8 @@ import android.content.SharedPreferences
 import android.util.Log
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import com.example.neighbornet.network.AuthService
+import com.example.neighbornet.network.TokenRefreshRequest
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -71,5 +73,38 @@ class TokenManager @Inject constructor(@ApplicationContext context: Context) {
             .remove("auth_token")
             .remove("current_user")
             .apply()
+    }
+
+    suspend fun refreshAndGetValidToken(authService: AuthService): String? {
+        val currentToken = getToken() ?: return null
+
+        try {
+            Log.d("TokenManager", "Attempting to refresh expired token")
+            val response = authService.refreshToken(TokenRefreshRequest(currentToken))
+
+            if (response.isSuccessful && response.body() != null) {
+                val newToken = response.body()!!.accessToken
+                Log.d("TokenManager", "Token refreshed successfully")
+                saveToken(newToken)
+                return newToken
+            } else {
+                Log.e("TokenManager", "Failed to refresh token: ${response.errorBody()?.string()}")
+                return null
+            }
+        } catch (e: Exception) {
+            Log.e("TokenManager", "Error refreshing token", e)
+            return null
+        }
+    }
+
+    fun saveRefreshToken(refreshToken: String?) {
+        if (refreshToken != null) {
+            Log.d("TokenManager", "Saving refresh token: ${refreshToken.take(10)}...")
+            prefs.edit().putString("refresh_token", refreshToken).apply()
+        }
+    }
+
+    fun getRefreshToken(): String? {
+        return prefs.getString("refresh_token", null)
     }
 }

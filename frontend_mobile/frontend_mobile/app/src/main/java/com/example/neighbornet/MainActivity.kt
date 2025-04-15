@@ -28,8 +28,10 @@ import com.example.neighbornet.auth.AuthViewModel
 import kotlinx.coroutines.launch
 import androidx.compose.ui.res.painterResource
 import android.util.Log
+import androidx.biometric.BiometricManager
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.fragment.app.FragmentActivity
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.navigation.compose.NavHost
@@ -41,18 +43,23 @@ import dagger.hilt.android.AndroidEntryPoint
 import androidx.navigation.compose.composable
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
+import com.example.neighbornet.auth.BiometricAuthManager
 import com.example.neighbornet.auth.ChatViewModel
 import com.example.neighbornet.utils.ChatListScreen
 import com.example.neighbornet.utils.ForgotPasswordScreen
 import com.example.neighbornet.utils.ItemDetailsScreen
 import com.example.neighbornet.utils.PreferencesManager
 import com.example.neighbornet.utils.chatGraph
+import javax.inject.Inject
 
 @AndroidEntryPoint
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
     private var verificationState by mutableStateOf<VerificationState>(VerificationState.Idle)
     private val authViewModel: AuthViewModel by viewModels()
     private lateinit var preferencesManager: PreferencesManager
+
+    @Inject
+    lateinit var biometricAuthManager: BiometricAuthManager
 
     sealed class VerificationState {
         object Idle : VerificationState()
@@ -64,6 +71,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         preferencesManager = PreferencesManager(this)
+
+        Log.d("MainActivity", "Biometric enabled: ${biometricAuthManager.isBiometricEnabled()}")
+        Log.d("MainActivity", "Biometric can authenticate: ${biometricAuthManager.canAuthenticate() == BiometricManager.BIOMETRIC_SUCCESS}")
 
         if (!authViewModel.hasValidToken()) {
             preferencesManager.clearAllPreferences()
@@ -144,7 +154,8 @@ class MainActivity : ComponentActivity() {
                                 onForgotPasswordClick = { currentScreen = "forgotpassword" },
                                 onGoogleLogin = { /* TODO */ },
                                 onGithubLogin = { /* TODO */ },
-                                onMicrosoftLogin = { /* TODO */ }
+                                onMicrosoftLogin = { /* TODO */ },
+                                biometricAuthManager = biometricAuthManager
                             )
                             "signup" -> SignUpScreen(
                                 onSignUpSuccess = { }, // Let LaunchedEffect handle navigation

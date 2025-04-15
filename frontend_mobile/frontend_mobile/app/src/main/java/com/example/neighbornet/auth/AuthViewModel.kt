@@ -26,9 +26,11 @@ import android.webkit.WebStorage
 import android.webkit.WebView
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import com.example.neighbornet.api.ProfileApiService
 import com.example.neighbornet.utils.PreferencesManager
 import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
 import javax.inject.Inject
 
 data class AuthState(
@@ -49,14 +51,19 @@ class AuthViewModel @Inject constructor(
     private val tokenManager: TokenManager,
     private val firebaseAuthService: FirebaseAuthService,
     private val authService: AuthService,
+    private val profileApiService: ProfileApiService,
     private val profileStateManager: ProfileStateManager,
     private val chatStateManager: ChatStateManager,
-    private val classStateManager: ClassStateManager
+    private val classStateManager: ClassStateManager,
+    private val sessionManager: SessionManager,
+    private val biometricAuthManager: BiometricAuthManager
 ): AndroidViewModel(application) {
-    private val sessionManager = SessionManager(application)
     private val _authState = MutableStateFlow(AuthState())
     val authState: StateFlow<AuthState> = _authState
     private lateinit var googleSignInClient: GoogleSignInClient
+
+    @Inject
+    lateinit var fcmTokenManager: FCMTokenManager
 
     companion object {
         const val RC_SIGN_IN = 9001
@@ -110,6 +117,16 @@ class AuthViewModel @Inject constructor(
             }
 
             tokenManager.saveToken(authResponse.accessToken)
+            fcmTokenManager.registerFCMToken()
+
+
+            if (!authResponse.refreshToken.isNullOrBlank()) {
+                Log.d("AuthViewModel", "Saving refresh token: ${authResponse.refreshToken.take(10)}...")
+                tokenManager.saveRefreshToken(authResponse.refreshToken)
+            } else {
+                Log.w("AuthViewModel", "No refresh token provided in auth response")
+            }
+
             authResponse.username?.let { username ->
                 tokenManager.saveCurrentUser(username)
             }
@@ -288,21 +305,35 @@ class AuthViewModel @Inject constructor(
                     Log.e("AuthViewModel", "Error signing out from Google", e)
                 }
 
-                // Clear ALL shared preferences
+                // Clear ALL shared preferences EXCEPT biometric settings
                 activity.getApplicationContext().let { context ->
                     // Clear encrypted preferences
                     val masterKey = MasterKey.Builder(context)
                         .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
                         .build()
 
-                    // Clear auth prefs
-                    EncryptedSharedPreferences.create(
-                        context,
-                        "auth_prefs",
-                        masterKey,
-                        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-                    ).edit().clear().commit()
+                    // Get current biometric setting before clearing
+                    val biometricEnabled = context.getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
+                        .getBoolean("biometric_login_enabled", false)
+                    val secureEmail = context.getSharedPreferences("secure_auth_prefs", Context.MODE_PRIVATE)
+                        .getString("secure_email", null)
+                    val secureToken = context.getSharedPreferences("secure_auth_prefs", Context.MODE_PRIVATE)
+                        .getString("secure_token", null)
+
+                    // Clear auth prefs except biometric settings
+                    context.getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
+                        .edit()
+                        .putBoolean("biometric_login_enabled", biometricEnabled)
+                        .apply()
+
+                    // Preserve secure credentials if biometric is enabled
+                    if (biometricEnabled && secureEmail != null && secureToken != null) {
+                        context.getSharedPreferences("secure_auth_prefs", Context.MODE_PRIVATE)
+                            .edit()
+                            .putString("secure_email", secureEmail)
+                            .putString("secure_token", secureToken)
+                            .apply()
+                    }
 
                     // Clear token prefs
                     EncryptedSharedPreferences.create(
@@ -327,7 +358,7 @@ class AuthViewModel @Inject constructor(
                 CookieManager.getInstance().flush()
                 WebStorage.getInstance().deleteAllData()
 
-                // Force clear all databases
+                // Force clear databases except biometric settings
                 activity.applicationContext.let { context ->
                     context.deleteDatabase("webview.db")
                     context.deleteDatabase("webviewCache.db")
@@ -339,20 +370,7 @@ class AuthViewModel @Inject constructor(
                 System.exit(0)
             } catch (e: Exception) {
                 Log.e("AuthViewModel", "Error during logout", e)
-                // Fallback: force clear everything and exit
-                try {
-                    FirebaseAuth.getInstance().signOut()
-                    activity.getApplicationContext().let { context ->
-                        context.getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
-                            .edit().clear().commit()
-                        context.getSharedPreferences("token_prefs", Context.MODE_PRIVATE)
-                            .edit().clear().commit()
-                        context.getSharedPreferences("app_preferences", Context.MODE_PRIVATE)
-                            .edit().clear().commit()
-                    }
-                } catch (e: Exception) {
-                    Log.e("AuthViewModel", "Final cleanup failed", e)
-                }
+                // Fallback exit
                 activity.finishAffinity()
                 System.exit(0)
             }
@@ -676,6 +694,89 @@ class AuthViewModel @Inject constructor(
                     error = e.message ?: "Network error occurred"
                 )
             }
+        }
+    }
+
+    fun loginWithToken(email: String, token: String, refreshToken: String? = null) {
+        viewModelScope.launch {
+            try {
+                _authState.value = _authState.value.copy(isLoading = true)
+
+                Log.d("AuthViewModel", "Using stored biometric credentials")
+                Log.d("AuthViewModel", "Email: $email")
+                Log.d("AuthViewModel", "Access token: ${token.take(10)}...")
+                Log.d("AuthViewModel", "Refresh token: ${refreshToken?.take(10) ?: "null"}...")
+
+                if (refreshToken.isNullOrBlank()) {
+                    // If we don't have a refresh token, we can't refresh the session
+                    // Force a new login
+                    _authState.value = _authState.value.copy(
+                        isLoading = false,
+                        error = "Your login session has expired. Please log in again."
+                    )
+                    return@launch
+                }
+
+                try {
+                    // Try to get a new access token using the refresh token
+                    val response = authService.refreshToken(TokenRefreshRequest(refreshToken))
+
+                    if (response.isSuccessful && response.body() != null) {
+                        val newToken = response.body()!!.accessToken
+                        val newRefreshToken = response.body()!!.refreshToken
+
+                        Log.d("AuthViewModel", "Token refreshed successfully")
+                        Log.d("AuthViewModel", "New access token: ${newToken.take(10)}...")
+                        Log.d("AuthViewModel", "New refresh token: ${newRefreshToken.take(10)}...")
+
+                        // Create auth response with the new tokens
+                        val authResponse = AuthResponse(
+                            accessToken = newToken,
+                            refreshToken = newRefreshToken,
+                            username = email
+                        )
+
+                        // Handle login with the new tokens
+                        handleLoginSuccess(authResponse)
+
+                        // Update stored credentials
+                        storeCredentialsSecurely(email, newToken, newRefreshToken)
+
+                        profileStateManager.refreshAll()
+                        Log.d("AuthViewModel", "Biometric login successful with refreshed token")
+                    } else {
+                        // Token refresh failed
+                        Log.e("AuthViewModel", "Failed to refresh token: ${response.errorBody()?.string()}")
+                        _authState.value = _authState.value.copy(
+                            isLoading = false,
+                            error = "Your session has expired. Please log in again."
+                        )
+                    }
+                } catch (e: Exception) {
+                    Log.e("AuthViewModel", "Error refreshing token", e)
+                    _authState.value = _authState.value.copy(
+                        isLoading = false,
+                        error = "Authentication failed: ${e.message}"
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e("AuthViewModel", "Biometric login failed", e)
+                _authState.value = _authState.value.copy(
+                    isLoading = false,
+                    error = "Biometric login failed: ${e.message}"
+                )
+            }
+        }
+    }
+
+    private fun storeCredentialsSecurely(email: String, token: String, refreshToken: String) {
+        val biometricAuthManager = BiometricAuthManager(
+            getApplication<Application>().applicationContext,
+            tokenManager
+        )
+
+        if (biometricAuthManager.isBiometricEnabled()) {
+            biometricAuthManager.storeCredentials(email, token, refreshToken)
         }
     }
 }

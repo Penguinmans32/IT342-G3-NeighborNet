@@ -110,6 +110,8 @@ dependencies {
     implementation("androidx.compose.material3:material3-window-size-class:1.2.0")
     implementation("com.google.firebase:firebase-messaging-ktx")
 
+    implementation("androidx.biometric:biometric:1.2.0-alpha05")
+
     // OpenStreetMap
     implementation("org.osmdroid:osmdroid-android:6.1.16")
 }

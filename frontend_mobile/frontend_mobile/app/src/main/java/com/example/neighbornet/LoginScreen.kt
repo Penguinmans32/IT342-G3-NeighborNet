@@ -1,7 +1,9 @@
 package com.example.neighbornet
 
 import android.app.Activity
+import android.util.Log
 import androidx.annotation.DrawableRes
+import androidx.biometric.BiometricManager
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
@@ -63,12 +65,17 @@ import androidx.compose.ui.text.withStyle
 import androidx.media3.common.BuildConfig
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
+import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.Dp
+import androidx.fragment.app.FragmentActivity
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.neighbornet.auth.BiometricAuthManager
+import com.example.neighbornet.auth.BiometricResult
 import com.example.neighbornet.utils.shimmerEffect
 import kotlinx.coroutines.delay
 
@@ -80,7 +87,8 @@ fun LoginScreen(
     onGoogleLogin: () -> Unit = {},
     onGithubLogin: () -> Unit = {},
     onMicrosoftLogin: () -> Unit = {},
-    authViewModel: AuthViewModel = viewModel()
+    authViewModel: AuthViewModel = viewModel(),
+    biometricAuthManager: BiometricAuthManager
 ) {
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -93,6 +101,13 @@ fun LoginScreen(
     val authState by authViewModel.authState.collectAsState()
     val context = LocalContext.current
     val activity = remember { context as Activity }
+
+    val canUseBiometric = biometricAuthManager.canAuthenticate() == BiometricManager.BIOMETRIC_SUCCESS
+    val isBiometricEnabled = biometricAuthManager.isBiometricEnabled()
+
+    LaunchedEffect(Unit) {
+        Log.d("LoginScreen", "canUseBiometric: $canUseBiometric, isBiometricEnabled: $isBiometricEnabled")
+    }
 
     val scale by animateFloatAsState(
         targetValue = if (isPasswordFocused) 1.05f else 1f,
@@ -325,6 +340,78 @@ fun LoginScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                if (biometricAuthManager.canAuthenticate() == BiometricManager.BIOMETRIC_SUCCESS &&
+                    biometricAuthManager.isBiometricEnabled()) {
+                    Log.d("LoginScreen", "Showing biometric button")
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    OutlinedButton(
+                        onClick = {
+                            if (activity is FragmentActivity) {
+                                scope.launch {
+                                    biometricAuthManager.authenticate(activity).collect { result ->
+                                        when (result) {
+                                            is BiometricResult.Success -> {
+                                                authViewModel.loginWithToken(
+                                                    result.email,
+                                                    result.token,
+                                                    result.refreshToken
+                                                )
+                                            }
+                                            is BiometricResult.Error -> {
+                                                scope.launch {
+                                                    snackbarHostState.showSnackbar(
+                                                        message = "Authentication error: ${result.message}",
+                                                        duration = SnackbarDuration.Short
+                                                    )
+                                                }
+                                            }
+                                            is BiometricResult.Failed -> {
+                                                scope.launch {
+                                                    snackbarHostState.showSnackbar(
+                                                        message = "Authentication failed. Try again.",
+                                                        duration = SnackbarDuration.Short
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            } else {
+                                scope.launch {
+                                    snackbarHostState.showSnackbar(
+                                        message = "Biometric authentication is not supported in this context",
+                                        duration = SnackbarDuration.Short
+                                    )
+                                    Log.d("LoginScreen", "Not showing biometric button: canUse=$canUseBiometric, isEnabled=$isBiometricEnabled")
+                                }
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp)
+                            .shadow(8.dp, RoundedCornerShape(16.dp)),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Row(
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Fingerprint,
+                                contentDescription = "Login with fingerprint",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                "Sign in with fingerprint",
+                                fontSize = 16.sp,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                }
                 // Development Mode Button with Warning Style
                 if (BuildConfig.DEBUG) {
                     Button(
