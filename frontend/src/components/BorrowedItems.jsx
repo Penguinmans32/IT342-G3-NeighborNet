@@ -92,6 +92,7 @@ const BorrowedItems = () => {
   
       setSelectedItem(null);
   
+      const uniqueTimestamp = Date.now();
       const returnRequest = {
         itemId: item.id,
         itemName: item.name,
@@ -108,14 +109,14 @@ const BorrowedItems = () => {
         [item.id]: 'RETURN_REQUESTED'
       }));
   
-      navigate(`/chat/${item.owner.id}`, {
+      navigate(`/messages`, {
         state: {
           contactId: item.owner.id,
           contactName: item.owner.username,
           returnRequest,
-          timestamp: new Date().toISOString()
+          timestamp: uniqueTimestamp.toString() 
         },
-        replace: true
+        replace: true 
       });
   
     } catch (error) {
