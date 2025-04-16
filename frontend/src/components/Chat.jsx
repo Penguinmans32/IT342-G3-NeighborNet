@@ -54,6 +54,8 @@ const Chat = ({ senderId, receiverId, receiverName = '?', onMessageSent, stompCl
   const [isGalleryOpen, setIsGalleryOpen] = useState(false)
   const [galleryStartIndex, setGalleryStartIndex] = useState(0)
   const [showItemDetails, setShowItemDetails] = useState(false)
+  const processedReturnRequests = useRef(new Set());
+  const processedMessageIds = useRef(new Set());
   const chatContainerRef = useRef(null)
   const location = useLocation();
   const navigate = useNavigate(); 
@@ -207,11 +209,23 @@ const Chat = ({ senderId, receiverId, receiverName = '?', onMessageSent, stompCl
     const handleReturnRequest = async (returnRequest) => {
       if (!returnRequest || !stompClient?.connected) return;
   
+      const requestKey = `${returnRequest.itemId}-${returnRequest.agreementId || 'unknown'}-${returnRequest.borrowerId}-${returnRequest.lenderId}`;
+      
+      if (processedReturnRequests.current.has(requestKey)) {
+        console.log("Skipping already processed return request:", requestKey);
+        return;
+      }
+  
       try {
+        console.log("Processing new return request:", requestKey);
+        processedReturnRequests.current.add(requestKey);
+        
         await handleSendReturnRequest(returnRequest);
+        
         navigate(location.pathname, { replace: true, state: {} });
       } catch (error) {
         console.error("Error sending return request:", error);
+        processedReturnRequests.current.delete(requestKey);
       }
     };
   
@@ -419,9 +433,35 @@ const Chat = ({ senderId, receiverId, receiverName = '?', onMessageSent, stompCl
           const newMessage = JSON.parse(message.body);
           console.log("Received websocket message:", newMessage);
 
+          if (newMessage.id && processedMessageIds.current.has(newMessage.id.toString())) {
+            console.log("Skipping duplicate message with ID:", newMessage.id);
+            return;
+          }
+
           if (newMessage.senderId === senderId && newMessage.clientId) {
             console.log("Skipping message with clientId as it was sent by this client", newMessage.clientId);
             return;
+          }
+
+          if (newMessage.messageType === "RETURN_REQUEST") {
+            try {
+              const returnData = JSON.parse(newMessage.formData);
+              const returnKey = `${returnData.itemId}-${returnData.agreementId || 'unknown'}-${returnData.borrowerId}-${returnData.lenderId}`;
+              
+              if (processedReturnRequests.current.has(returnKey)) {
+                console.log("Skipping duplicate RETURN_REQUEST based on content:", returnKey);
+                return;
+              }
+              
+              // Mark this return request as processed
+              processedReturnRequests.current.add(returnKey);
+            } catch (error) {
+              console.error("Error parsing return request data for deduplication:", error);
+            }
+          }
+
+          if (newMessage.id) {
+            processedMessageIds.current.add(newMessage.id.toString());
           }
 
           // Handle Agreement Updates
