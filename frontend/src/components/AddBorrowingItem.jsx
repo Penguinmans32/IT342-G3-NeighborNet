@@ -20,6 +20,7 @@ import {
 import axios from 'axios';
 import LocationInput from './LocationInput';
 import DateRangeCalendar from './DateRangeCalendar';
+import { showSimpleNotification } from './SimpleNotification';
 
 const AddBorrowingItem = () => {
   const navigate = useNavigate();
@@ -57,7 +58,10 @@ const AddBorrowingItem = () => {
     const files = e.target.files;
     if (files && files.length > 0) {
       if (itemData.images.length + files.length > maxImages) {
-        alert(`You can only upload up to ${maxImages} images. You currently have ${itemData.images.length}.`);
+        showSimpleNotification(
+          `You can only upload up to ${maxImages} images. You currently have ${itemData.images.length}.`,
+          'warning'
+        );
       }
       handleFiles(files);
     }
@@ -123,7 +127,7 @@ const AddBorrowingItem = () => {
     const droppedFiles = e.dataTransfer.files;
     if (droppedFiles && droppedFiles.length > 0) {
       if (itemData.images.length + droppedFiles.length > maxImages) {
-        alert(`You can only upload up to ${maxImages} images. You currently have ${itemData.images.length}.`);
+        showSimpleNotification(`You can only upload up to ${maxImages} images. You currently have ${itemData.images.length}.`, 'warning');
       }
       handleFiles(droppedFiles);
     }
@@ -154,12 +158,12 @@ const AddBorrowingItem = () => {
     const endDate = new Date(itemData.availableUntil);
 
     if (startDate < today) {
-      alert('Start date cannot be before today');
+      showSimpleNotification('Start date cannot be before today', 'error');
       return;
     }
   
     if (endDate < startDate) {
-      alert('End date cannot be before start date');
+      showSimpleNotification('End date cannot be before start date', 'error');
       return;
     }
 
@@ -212,7 +216,7 @@ const AddBorrowingItem = () => {
       navigate('/borrowing');
     } catch (error) {
       console.error('Error adding item:', error);
-      alert('Error adding item. Please ensure all fields are filled correctly.');
+      showSimpleNotification('Error adding item. Please ensure all fields are filled correctly.', 'error');
     } finally {
       setLoading(false);
     }
@@ -234,7 +238,7 @@ const AddBorrowingItem = () => {
           [name]: value
         }));
       } else {
-        alert('End date cannot be before start date');
+        showSimpleNotification('End date cannot be before start date', 'error');
         return;
       }
     } else if (name === 'category') {

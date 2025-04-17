@@ -4,15 +4,18 @@ import com.example.neighbornetbackend.dto.ErrorResponse;
 import com.example.neighbornetbackend.dto.ItemDTO;
 import com.example.neighbornetbackend.dto.ItemUpdateRequest;
 import com.example.neighbornetbackend.dto.RatingRequest;
+import com.example.neighbornetbackend.exception.ResourceNotFoundException;
 import com.example.neighbornetbackend.model.BorrowingAgreement;
 import com.example.neighbornetbackend.model.Item;
 import com.example.neighbornetbackend.model.ItemRating;
+import com.example.neighbornetbackend.repository.ItemRepository;
 import com.example.neighbornetbackend.service.*;
 import com.example.neighbornetbackend.security.CurrentUser;
 import com.example.neighbornetbackend.security.UserPrincipal;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.UrlResource;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.MediaTypeFactory;
 import org.springframework.http.ResponseEntity;
@@ -36,13 +39,15 @@ public class ItemController {
     private final ItemRatingService itemRatingService;
     private final BorrowingAgreementService borrowingAgreementService;
     private final AchievementService achievementService;
+    private final ItemRepository itemRepository;
 
-    public ItemController(ItemService itemService, ItemImageStorageService itemImageStorageService, ItemRatingService itemRatingService, BorrowingAgreementService borrowingAgreementService, AchievementService achievementService) {
+    public ItemController(ItemService itemService, ItemImageStorageService itemImageStorageService, ItemRatingService itemRatingService, BorrowingAgreementService borrowingAgreementService, AchievementService achievementService, ItemRepository itemRepository) {
         this.itemService = itemService;
         this.itemImageStorageService = itemImageStorageService;
         this.itemRatingService = itemRatingService;
         this.borrowingAgreementService = borrowingAgreementService;
         this.achievementService = achievementService;
+        this.itemRepository = itemRepository;
     }
 
     @PostMapping
@@ -120,12 +125,21 @@ public class ItemController {
         }
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteItem(@PathVariable Long id, @CurrentUser UserPrincipal currentUser) {
+    @DeleteMapping("/user/{id}")
+    public ResponseEntity<?> deleteUserItem(@PathVariable Long id, @CurrentUser UserPrincipal currentUser) {
         try {
-            itemService.deleteItem(id, currentUser.getId());
+            Item item = itemRepository.findById(id)
+                    .orElseThrow(() -> new ResourceNotFoundException("Item not found"));
+
+            if (!item.getOwner().getId().equals(currentUser.getId())) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new ErrorResponse("You don't have permission to delete this item"));
+            }
+
+            itemService.deleteItemAdmin(id);
+
             return ResponseEntity.ok().build();
-        } catch (RuntimeException e) {
+        } catch (Exception e) {
+            e.printStackTrace();
             return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
         }
     }

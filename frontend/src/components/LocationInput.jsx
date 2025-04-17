@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { GoogleMap, useLoadScript, Marker } from '@react-google-maps/api';
 import { MdMyLocation, MdLocationOn } from 'react-icons/md';
+import { showSimpleNotification } from './SimpleNotification';
 
 const LocationInput = ({ value, onChange }) => {
   const { isLoaded, loadError } = useLoadScript({
@@ -77,11 +78,11 @@ const LocationInput = ({ value, onChange }) => {
           map.setZoom(15);
         }
       } else {
-        alert('Location not found. Please try a more specific address.');
+        showSimpleNotification('Location not found. Please try a more specific address.', 'error');
       }
     } catch (error) {
       console.error('Error geocoding address:', error);
-      alert('Error finding location. Please try a different address.');
+      showSimpleNotification('Error finding location. Please try a different address.', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -116,14 +117,14 @@ const LocationInput = ({ value, onChange }) => {
             }
           } catch (error) {
             console.error('Error getting address:', error);
-            alert('Error getting current location. Please try entering address manually.');
+            showSimpleNotification('Error getting current location. Please try entering address manually.', 'error');
           } finally {
             setIsLoading(false);
           }
         },
         (error) => {
           console.error('Error getting location:', error);
-          alert('Error getting current location. Please try entering address manually.');
+          showSimpleNotification('Error getting current location. Please try entering address manually.', 'error');
           setIsLoading(false);
         }
       );

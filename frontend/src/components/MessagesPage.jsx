@@ -8,6 +8,7 @@ import { motion } from "framer-motion"
 import { useLocation } from "react-router-dom"
 import { RefreshCw, Info, Check, XCircle } from "lucide-react"
 import { AnimatePresence } from "framer-motion"
+import { showSimpleNotification } from "./SimpleNotification"
 
 const MessagesPage = () => {
   const location = useLocation();
@@ -59,7 +60,7 @@ const MessagesPage = () => {
   
     if (!stompClient?.connected) {
       console.error("WebSocket not connected");
-      alert("Connection lost. Please refresh the page.");
+      showSimpleNotification("Connection lost. Please refresh the page.", 'error');
       return;
     }
   
@@ -93,7 +94,7 @@ const MessagesPage = () => {
   
     } catch (error) {
       console.error("Error sending return request:", error);
-      alert("Failed to send return request. Please try again.");
+      showSimpleNotification("Failed to send return request. Please try again.", 'error');
       hasProcessedReturnRequest.current = false;
     }
   };

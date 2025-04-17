@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { MdClose, MdImage, MdCalendarToday } from 'react-icons/md';
 import DateRangeCalendar from './DateRangeCalendar';
+import { showSimpleNotification } from './SimpleNotification';
 
 const BorrowingAgreementForm = ({ onSubmit, onClose, senderId, receiverId, stompClient }) => {
   const [items, setItems] = useState([]);
@@ -169,7 +170,7 @@ const BorrowingAgreementForm = ({ onSubmit, onClose, senderId, receiverId, stomp
         );
   
         if (error) {
-          alert(error);
+          showSimpleNotification(error);
           return;
         }
       }
@@ -194,7 +195,7 @@ const BorrowingAgreementForm = ({ onSubmit, onClose, senderId, receiverId, stomp
       );
 
       if (error) {
-        alert(error);
+        showSimpleNotification(error);
         return;
       }
     }

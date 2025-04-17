@@ -2,6 +2,7 @@ import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import { useAuth } from "../backendApi/AuthContext"
+import { showSimpleNotification } from "./SimpleNotification"
 
 const BorrowedItems = () => {
   const { user } = useAuth();
@@ -121,7 +122,7 @@ const BorrowedItems = () => {
   
     } catch (error) {
       console.error('Error initiating return request:', error);
-      alert('Failed to initiate return request. Please try again.');
+      showSimpleNotification('Failed to initiate return request. Please try again.', 'error');
     }
   };
 
