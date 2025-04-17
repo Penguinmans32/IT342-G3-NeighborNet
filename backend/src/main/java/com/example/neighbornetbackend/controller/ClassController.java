@@ -11,15 +11,20 @@ import com.example.neighbornetbackend.security.CurrentUser;
 import com.example.neighbornetbackend.security.UserPrincipal;
 import com.example.neighbornetbackend.service.*;
 import io.swagger.v3.oas.annotations.Operation;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.interceptor.TransactionAspectSupport;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
@@ -31,6 +36,10 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/classes")
 @CrossOrigin
 public class ClassController {
+
+    @PersistenceContext
+    private EntityManager entityManager;
+
     private final ClassService classService;
     private final ClassRepository classRepository;
     private final RatingService ratingService;
@@ -150,22 +159,123 @@ public class ClassController {
             @PathVariable Long classId,
             @CurrentUser UserPrincipal currentUser) {
         try {
-            // First fetch the class with its creator
             CourseClass classToDelete = classRepository.findByIdWithCreator(classId)
                     .orElseThrow(() -> new ResourceNotFoundException("Class not found"));
 
-            // Check if the current user is the creator
             if (!classToDelete.getCreator().getId().equals(currentUser.getId())) {
                 return ResponseEntity.status(403).body("Not authorized to delete this class");
             }
 
-            classService.deleteClass(classId);
-            return ResponseEntity.ok().build();
+            if (classToDelete.getThumbnailUrl() != null) {
+                try {
+                    Path thumbnailPath = Paths.get("uploads/thumbnails")
+                            .resolve(Paths.get(classToDelete.getThumbnailUrl()).getFileName());
+                    Files.deleteIfExists(thumbnailPath);
+                } catch (IOException e) {
+                    System.err.println("Could not delete thumbnail file: " + e.getMessage());
+                }
+            }
+
+            entityManager.clear();
+
+            try {
+
+                int savedClassesDeleted = entityManager.createNativeQuery(
+                                "DELETE FROM saved_classes WHERE class_id = ?")
+                        .setParameter(1, classId)
+                        .executeUpdate();
+                System.out.println("Deleted " + savedClassesDeleted + " saved classes references");
+
+                int quizAttemptsDeleted = entityManager.createNativeQuery(
+                                "DELETE FROM quiz_attempts WHERE quiz_id IN " +
+                                        "(SELECT id FROM quizzes WHERE class_id = ?)")
+                        .setParameter(1, classId)
+                        .executeUpdate();
+                System.out.println("Deleted " + quizAttemptsDeleted + " quiz attempts");
+
+                int questionsDeleted = entityManager.createNativeQuery(
+                                "DELETE FROM questions WHERE quiz_id IN " +
+                                        "(SELECT id FROM quizzes WHERE class_id = ?)")
+                        .setParameter(1, classId)
+                        .executeUpdate();
+                System.out.println("Deleted " + questionsDeleted + " questions");
+
+                int quizzesDeleted = entityManager.createNativeQuery(
+                                "DELETE FROM quizzes WHERE class_id = ?")
+                        .setParameter(1, classId)
+                        .executeUpdate();
+                System.out.println("Deleted " + quizzesDeleted + " quizzes");
+
+                int feedbackReactionsDeleted = entityManager.createNativeQuery(
+                                "DELETE FROM feedback_reactions WHERE feedback_id IN " +
+                                        "(SELECT id FROM feedbacks WHERE class_id = ?)")
+                        .setParameter(1, classId)
+                        .executeUpdate();
+                System.out.println("Deleted " + feedbackReactionsDeleted + " feedback reactions");
+
+                int feedbacksDeleted = entityManager.createNativeQuery(
+                                "DELETE FROM feedbacks WHERE class_id = ?")
+                        .setParameter(1, classId)
+                        .executeUpdate();
+                System.out.println("Deleted " + feedbacksDeleted + " feedbacks");
+
+                int classRatingsDeleted = entityManager.createNativeQuery(
+                                "DELETE FROM class_ratings WHERE class_id = ?")
+                        .setParameter(1, classId)
+                        .executeUpdate();
+                System.out.println("Deleted " + classRatingsDeleted + " class ratings");
+
+                int lessonRatingsDeleted = entityManager.createNativeQuery(
+                                "DELETE FROM lesson_ratings WHERE lesson_id IN " +
+                                        "(SELECT id FROM lessons WHERE class_id = ?)")
+                        .setParameter(1, classId)
+                        .executeUpdate();
+                System.out.println("Deleted " + lessonRatingsDeleted + " lesson ratings");
+
+                int lessonProgressDeleted = entityManager.createNativeQuery(
+                                "DELETE FROM lesson_progress WHERE lesson_id IN " +
+                                        "(SELECT id FROM lessons WHERE class_id = ?)")
+                        .setParameter(1, classId)
+                        .executeUpdate();
+                System.out.println("Deleted " + lessonProgressDeleted + " lesson progress records");
+
+                int lessonsDeleted = entityManager.createNativeQuery(
+                                "DELETE FROM lessons WHERE class_id = ?")
+                        .setParameter(1, classId)
+                        .executeUpdate();
+                System.out.println("Deleted " + lessonsDeleted + " lessons");
+
+                int enrollmentsDeleted = entityManager.createNativeQuery(
+                                "DELETE FROM class_enrollments WHERE course_class_id = ?")
+                        .setParameter(1, classId)
+                        .executeUpdate();
+                System.out.println("Deleted " + enrollmentsDeleted + " enrollments");
+
+                int classDeleted = entityManager.createNativeQuery(
+                                "DELETE FROM classes WHERE id = ?")
+                        .setParameter(1, classId)
+                        .executeUpdate();
+                System.out.println("Deleted class with ID: " + classId);
+
+                entityManager.flush();
+
+                return ResponseEntity.ok().body(Map.of(
+                        "message", "Class successfully deleted",
+                        "classId", classId
+                ));
+            } catch (Exception e) {
+                TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+                e.printStackTrace();
+                throw e;
+            }
         } catch (ResourceNotFoundException e) {
             return ResponseEntity.notFound().build();
         } catch (Exception e) {
             e.printStackTrace();
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.status(500).body(Map.of(
+                    "error", "Failed to delete class",
+                    "message", e.getMessage()
+            ));
         }
     }
 

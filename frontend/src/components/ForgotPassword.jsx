@@ -17,6 +17,7 @@ import {
   import { HiExternalLink } from 'react-icons/hi';
   import { FcGoogle } from 'react-icons/fc';
   import { FaGithub, FaMicrosoft } from 'react-icons/fa';
+  import { showSimpleNotification } from './SimpleNotification';
 
 const ForgotPassword = () => {
   const [stage, setStage] = useState(1); 
@@ -243,7 +244,7 @@ const ForgotPassword = () => {
         throw new Error(data.message || 'Failed to reset password');
       }
       
-      alert('Password reset successful! Please login with your new password.');
+      showSimpleNotification('Password reset successful! Please login with your new password.', 'success');
       navigate('/');
       
     } catch (error) {

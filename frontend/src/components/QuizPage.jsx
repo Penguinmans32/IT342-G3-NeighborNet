@@ -21,10 +21,127 @@ const QuizPage = () => {
     const [showConfetti, setShowConfetti] = useState(false)
     const [animateScore, setAnimateScore] = useState(false)
     const [selectedOption, setSelectedOption] = useState(null)
+    const [showTimeExpiredModal, setShowTimeExpiredModal] = useState(false);
     const [windowSize, setWindowSize] = useState({
       width: window.innerWidth,
       height: window.innerHeight,
     })
+
+    const formatTime = (seconds) => {
+      const mins = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    };
+
+    const TimerDisplay = () => {
+      const minutes = Math.floor(timeLeft / 60);
+      const seconds = timeLeft % 60;
+      const timerClass = timeLeft < 60 
+        ? 'text-red-600 animate-pulse' 
+        : timeLeft < 180 
+          ? 'text-amber-600' 
+          : 'text-blue-600';
+      
+      return (
+        <div className={`flex items-center gap-2 px-4 py-2 bg-white rounded-xl shadow-sm border border-gray-200`}>
+          <Clock className={`w-5 h-5 ${timerClass}`} />
+          <div>
+            <div className="text-xs text-gray-500">Time Remaining</div>
+            <div className={`font-mono font-bold ${timerClass}`}>
+              {formatTime(timeLeft)}
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    const TimeExpiredModal = () => {
+      const handleTimeUp = async () => {
+        // Auto-submit with current answers
+        await submitQuiz();
+        setShowTimeExpiredModal(false);
+      };
+      
+      return (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="fixed inset-0 flex items-center justify-center z-50 bg-gray-900/70 backdrop-blur-sm p-4"
+        >
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: "spring", damping: 20, stiffness: 300 }}
+            className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full relative overflow-hidden"
+          >
+            <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-red-500 to-orange-500"></div>
+            
+            <div className="text-center mb-6">
+              <div className="w-20 h-20 mx-auto bg-red-100 rounded-full flex items-center justify-center mb-4">
+                <Clock className="w-10 h-10 text-red-500" />
+              </div>
+              <h3 className="text-2xl font-bold text-gray-800">Time's Up!</h3>
+              <p className="text-gray-600 mt-2">
+                Your allocated time for this quiz has expired.
+              </p>
+            </div>
+            
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-1" />
+                <p className="text-amber-800 text-sm">
+                  Your quiz will be automatically submitted with your current answers. Questions you haven't answered will be marked as unanswered.
+                </p>
+              </div>
+            </div>
+            
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={handleTimeUp}
+              className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl 
+                       font-medium shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2"
+            >
+              {submitting ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>Submitting...</span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="w-5 h-5" />
+                  <span>Submit My Answers</span>
+                </>
+              )}
+            </motion.button>
+          </motion.div>
+        </motion.div>
+      );
+    };
+
+    useEffect(() => {
+      let timer;
+      
+      if (currentAttempt && timeLeft > 0) {
+        timer = setInterval(() => {
+          setTimeLeft((prevTime) => {
+            const newTime = prevTime - 1;
+            
+            if (newTime <= 0) {
+              clearInterval(timer);
+              setShowTimeExpiredModal(true);
+              return 0;
+            }
+            
+            return newTime;
+          });
+        }, 1000);
+      }
+      
+      return () => {
+        if (timer) clearInterval(timer);
+      };
+    }, [currentAttempt, timeLeft]);
 
     useEffect(() => {
         const handleResize = () => {
@@ -471,7 +588,13 @@ const QuizPage = () => {
                     <span className="font-medium">{quiz.timeLimit} minutes</span>
                   </div>
                 )}
-                
+
+                {currentAttempt && !quizResult && (
+                  <div className="flex items-center gap-2 text-gray-600 bg-white/80 backdrop-blur-sm px-4 py-2 rounded-lg inline-block border border-blue-100 shadow-sm">
+                    <TimerDisplay />
+                  </div>
+                )}
+                                
                 <div className="flex items-center gap-2 text-gray-600 bg-white/80 backdrop-blur-sm px-4 py-2 rounded-lg inline-block border border-blue-100 shadow-sm">
                   <MdSchool className="w-4 h-4 text-amber-500" />
                   <span className="font-medium">Passing: {quiz?.passingScore}%</span>
@@ -639,7 +762,7 @@ const QuizPage = () => {
               </div>
             </motion.div>
   
-            <AnimatePresence mode="wait">
+            <AnimatePresence mode="sync">
               {quiz?.questions?.map((question, index) => (
                 <motion.div
                   key={question.id}
@@ -877,6 +1000,10 @@ const QuizPage = () => {
                   </div>
                 </motion.div>
               ))}
+            </AnimatePresence>
+
+            <AnimatePresence>
+              {showTimeExpiredModal && <TimeExpiredModal />}
             </AnimatePresence>
           </div>
         )}

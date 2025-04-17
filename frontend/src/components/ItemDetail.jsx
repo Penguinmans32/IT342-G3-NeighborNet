@@ -7,6 +7,7 @@ import axios from "axios"
 import { useNotification } from "../backendApi/NotificationContext"
 import webSocketService from "../backendApi/websocketService"
 import Footer from './SplashScreen/Footer';
+import DateRangeCalendar from "./DateRangeCalendar"
 import toast from 'react-hot-toast';
 import {
   MdArrowBack,
@@ -582,6 +583,12 @@ const ItemDetail = () => {
   const { showNotification } = useNotification()
   const [isEditing, setIsEditing] = useState(false);
   const [editedItem, setEditedItem] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const openDeleteConfirmation = () => {
+    setShowDeleteConfirm(true);
+  };
 
   useEffect(() => {
     if (item) {
@@ -629,29 +636,29 @@ const ItemDetail = () => {
   }, [user, showNotification])
 
   const [borrowRequest, setBorrowRequest] = useState({
-    startDate: "",
-    endDate: "",
+    dateRange: { start: "", end: "" },
     message: "",
-  })
+  });
 
   const formatDateForInput = (dateString) => {
     const date = new Date(dateString)
     return date.toISOString().split("T")[0]
   }
 
-  const handleDelete = async () => {
-    if (window.confirm('Are you sure you want to delete this item? This will also delete all associated borrow requests.')) {
-      try {
-        await axios.delete(`http://localhost:8080/api/borrowing/items/${id}`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
-        });
-        
-        toast.success('The item and all associated borrow requests have been successfully deleted.');
-        navigate('/borrowing');
-      } catch (error) {
-        console.error("Error deleting item:", error);
-        toast.error(error.response?.data?.message || "Failed to delete the item. Please try again.");
-      }
+  const confirmDelete = async () => {
+    setIsDeleting(true);
+    try {
+      await axios.delete(`http://localhost:8080/api/borrowing/items/user/${id}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+      });
+      
+      setShowDeleteConfirm(false);
+      toast.success('The item and all associated borrow requests have been successfully deleted.');
+      navigate('/borrowing');
+    } catch (error) {
+      console.error("Error deleting item:", error);
+      toast.error(error.response?.data?.message || "Failed to delete the item. Please try again.");
+      setIsDeleting(false);
     }
   };
 
@@ -729,11 +736,11 @@ const ItemDetail = () => {
     try {
       const formattedRequest = {
         itemId: Number.parseInt(id),
-        startDate: new Date(borrowRequest.startDate).toISOString().split("T")[0],
-        endDate: new Date(borrowRequest.endDate).toISOString().split("T")[0],
+        startDate: borrowRequest.dateRange.start,
+        endDate: borrowRequest.dateRange.end,
         message: borrowRequest.message,
         itemName: item.name,
-      }
+      };
   
       const response = await axios.post(`http://localhost:8080/api/borrowing/requests`, formattedRequest, {
         headers: {
@@ -928,7 +935,7 @@ const ItemDetail = () => {
                   )}
 
                   <ActionButtons>
-                    {item.owner?.id !== user?.id ? (
+                    {item.owner?.id !== user?.data?.id ? (
                       <>
                         <Button
                           $variant="primary"
@@ -961,7 +968,7 @@ const ItemDetail = () => {
                           $variant="delete"
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
-                          onClick={handleDelete}
+                          onClick={openDeleteConfirmation}
                         >
                           Delete Item
                         </Button>
@@ -1108,105 +1115,85 @@ const ItemDetail = () => {
       </MainContent>
 
       <AnimatePresence>
-        {showBorrowForm && (
-          <Modal initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <ModalContent
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-            >
-              <ModalHeader>
-                <h3>Request to Borrow</h3>
-                <CloseButton onClick={() => setShowBorrowForm(false)}>
-                  <MdClose />
-                </CloseButton>
-              </ModalHeader>
+      {showBorrowForm && (
+        <Modal initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+          <ModalContent
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+          >
+            <ModalHeader>
+              <h3>Request to Borrow</h3>
+              <CloseButton onClick={() => setShowBorrowForm(false)}>
+                <MdClose />
+              </CloseButton>
+            </ModalHeader>
 
-              <Form onSubmit={handleBorrowSubmit}>
-                <FormGroup>
-                  <Label>
-                    Start Date
-                    <DateRange>
-                      (Available: {new Date(item.availableFrom).toLocaleDateString()} -
-                      {new Date(item.availableUntil).toLocaleDateString()})
-                    </DateRange>
-                  </Label>
-                  <Input
-                    type="date"
-                    value={borrowRequest.startDate}
-                    onChange={(e) =>
-                      setBorrowRequest({
-                        ...borrowRequest,
-                        startDate: e.target.value,
-                        endDate:
-                          new Date(e.target.value) > new Date(borrowRequest.endDate)
-                            ? e.target.value
-                            : borrowRequest.endDate,
-                      })
-                    }
-                    min={formatDateForInput(item.availableFrom)}
-                    max={formatDateForInput(item.availableUntil)}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
-                </FormGroup>
+            <Form onSubmit={handleBorrowSubmit}>
+              <FormGroup>
+                <Label>
+                  Select Dates
+                  <DateRange>
+                    (Available: {new Date(item.availableFrom).toLocaleDateString()} -
+                    {new Date(item.availableUntil).toLocaleDateString()})
+                  </DateRange>
+                </Label>
+                <DateRangeCalendar
+                  startDate={borrowRequest.dateRange.start}
+                  endDate={borrowRequest.dateRange.end}
+                  onChange={(dateRange) => 
+                    setBorrowRequest({
+                      ...borrowRequest,
+                      dateRange: dateRange
+                    })
+                  }
+                  minDate={item.availableFrom}
+                  maxDate={item.availableUntil}
+                />
+              </FormGroup>
 
-                <FormGroup>
-                  <Label>End Date</Label>
-                  <Input
-                    type="date"
-                    value={borrowRequest.endDate}
-                    onChange={(e) =>
-                      setBorrowRequest({
-                        ...borrowRequest,
-                        endDate: e.target.value,
-                      })
-                    }
-                    min={borrowRequest.startDate || formatDateForInput(item.availableFrom)}
-                    max={formatDateForInput(item.availableUntil)}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
-                </FormGroup>
+              <FormGroup>
+                <Label>This will just notify the owner. Chat with them for better communication.</Label>
+                <SuggestedMessages>
+                  {suggestedMessages.map((msg, index) => (
+                    <SuggestedMessageButton
+                      key={index}
+                      type="button"
+                      onClick={() =>
+                        setBorrowRequest((prev) => ({
+                          ...prev,
+                          message: msg,
+                        }))
+                      }
+                    >
+                      {msg}
+                    </SuggestedMessageButton>
+                  ))}
+                </SuggestedMessages>
+                <Textarea
+                  value={borrowRequest.message}
+                  onChange={(e) =>
+                    setBorrowRequest({
+                      ...borrowRequest,
+                      message: e.target.value,
+                    })
+                  }
+                  placeholder="Explain why you'd like to borrow this item..."
+                  required
+                />
+              </FormGroup>
 
-                <FormGroup>
-                  <Label>Message to Owner</Label>
-                  <SuggestedMessages>
-                    {suggestedMessages.map((msg, index) => (
-                      <SuggestedMessageButton
-                        key={index}
-                        type="button"
-                        onClick={() =>
-                          setBorrowRequest((prev) => ({
-                            ...prev,
-                            message: msg,
-                          }))
-                        }
-                      >
-                        {msg}
-                      </SuggestedMessageButton>
-                    ))}
-                  </SuggestedMessages>
-                  <Textarea
-                    value={borrowRequest.message}
-                    onChange={(e) =>
-                      setBorrowRequest({
-                        ...borrowRequest,
-                        message: e.target.value,
-                      })
-                    }
-                    placeholder="Explain why you'd like to borrow this item..."
-                    required
-                  />
-                </FormGroup>
-
-                <Button type="submit" variant="primary">
-                  Submit Request
-                </Button>
-              </Form>
-            </ModalContent>
-          </Modal>
-        )}
+              <Button 
+                type="submit" 
+                $variant="primary"
+                disabled={!borrowRequest.dateRange.start || !borrowRequest.dateRange.end || !borrowRequest.message}
+              >
+                Submit Request
+              </Button>
+            </Form>
+          </ModalContent>
+        </Modal>
+      )}
 
         {showContactInfo && (
           <Modal initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
@@ -1264,6 +1251,57 @@ const ItemDetail = () => {
             </ModalContent>
           </Modal>
         )}
+
+        {showDeleteConfirm && (
+              <Modal initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <ModalContent
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.9, opacity: 0 }}
+                >
+                  <ModalHeader>
+                    <h3>Delete Item</h3>
+                    <CloseButton onClick={() => setShowDeleteConfirm(false)}>
+                      <MdClose />
+                    </CloseButton>
+                  </ModalHeader>
+                  
+                  <div className="p-5 flex flex-col items-center">
+                    <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mb-4">
+                      <MdClose className="text-red-500 text-2xl" />
+                    </div>
+                    
+                    <h3 className="text-xl font-medium text-gray-900 mb-2">Delete {item.name}?</h3>
+                    
+                    <p className="text-gray-500 text-center mb-6">
+                      This will permanently remove this item and all associated borrow requests. This action cannot be undone.
+                    </p>
+                    
+                    <div className="flex gap-4 w-full">
+                      <Button
+                        $variant="secondary"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => setShowDeleteConfirm(false)}
+                        style={{ flex: 1 }}
+                      >
+                        Cancel
+                      </Button>
+                      
+                      <Button
+                        $variant="delete"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={confirmDelete}
+                        style={{ flex: 1 }}
+                      >
+                        Delete Item
+                      </Button>
+                    </div>
+                  </div>
+                </ModalContent>
+              </Modal>
+            )}
         <Footer />
       </AnimatePresence>
     </Container>

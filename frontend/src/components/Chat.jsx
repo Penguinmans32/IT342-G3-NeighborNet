@@ -4,6 +4,7 @@ import BorrowingAgreementForm from "./BorrowingAgreementForm"
 import { MdImage } from "react-icons/md"
 import ImageGalleryModal from "./ImageGalleryModal"
 import { useLocation, useNavigate } from "react-router-dom"
+import { showSimpleNotification } from "./SimpleNotification"
 
 const formatMessageTime = (timestamp) => {
   try {
@@ -149,7 +150,7 @@ const Chat = ({ senderId, receiverId, receiverName = '?', onMessageSent, stompCl
   
     } catch (error) {
       console.error("Error updating return request status:", error);
-      alert("Failed to update return request status. Please try again.");
+      showSimpleNotification("Failed to update return request status. Please try again.", 'error');
     }
   };
 
@@ -196,7 +197,7 @@ const Chat = ({ senderId, receiverId, receiverName = '?', onMessageSent, stompCl
       scrollToBottom();
     } catch (error) {
       console.error("Error sending return request:", error);
-      alert("An unexpected error occurred. Please try again.");
+      showSimpleNotification("An unexpected error occurred. Please try again.", 'error');
     }
   };
 
@@ -252,7 +253,7 @@ const Chat = ({ senderId, receiverId, receiverName = '?', onMessageSent, stompCl
   
     } catch (error) {
       console.error("Error updating agreement status:", error);
-      alert("Failed to update agreement status. Please try again.");
+      showSimpleNotification("Failed to update agreement status. Please try again.", 'error');
     }
   };
 
@@ -328,7 +329,7 @@ const Chat = ({ senderId, receiverId, receiverName = '?', onMessageSent, stompCl
       scrollToBottom();
     } catch (error) {
       console.error("Error uploading image:", error);
-      alert("Failed to upload image. Please try again.");
+      showSimpleNotification("Failed to upload image. Please try again.", 'warning');
     }
   };
 
@@ -380,11 +381,11 @@ const Chat = ({ senderId, receiverId, receiverName = '?', onMessageSent, stompCl
 
         if (!response.ok) {
             if (responseData === "A pending agreement already exists for this item") {
-                alert(
-                    "You already have a pending agreement for this item. Please wait for the lender's response or check your existing agreements."
+              showSimpleNotification(
+                    "You already have a pending agreement for this item. Please wait for the lender's response or check your existing agreements.", 'warning'
                 );
             } else {
-                alert(`Failed to send agreement: ${responseData}`);
+              showSimpleNotification(`Failed to send agreement: ${responseData}`, 'error');
             }
             return;
         }
@@ -407,7 +408,7 @@ const Chat = ({ senderId, receiverId, receiverName = '?', onMessageSent, stompCl
         scrollToBottom();
     } catch (error) {
         console.error("Error sending agreement:", error);
-        alert("An unexpected error occurred. Please try again.");
+        showSimpleNotification("An unexpected error occurred. Please try again.", 'error');
     }
 };
 
@@ -680,7 +681,7 @@ const Chat = ({ senderId, receiverId, receiverName = '?', onMessageSent, stompCl
         scrollToBottom()
       } catch (error) {
         console.error("Error sending message:", error)
-        alert("Failed to send message. Please try again.")
+        showSimpleNotification("Failed to send message. Please try again.", 'error')
       }
     }
 }

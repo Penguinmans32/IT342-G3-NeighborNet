@@ -20,6 +20,7 @@ import { useNavigate } from "react-router-dom"
 import { useAuth } from "../backendApi/AuthContext"
 import { createGlobalStyle } from "styled-components"
 import '../styles/dashboard-styles.css'
+import { showSimpleNotification } from "./SimpleNotification"
 
 const GlobalStyle = createGlobalStyle`
   .floating-elements {
@@ -391,7 +392,7 @@ const Dashboard = () => {
         navigate("/login")
       }
       if (error.response?.status === 400) {
-        alert("You cannot share your own post")
+        showSimpleNotification("You cannot share your own post", 'error')
       }
     }
   }
