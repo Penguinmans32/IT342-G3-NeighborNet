@@ -1,8 +1,0 @@
-[phases.setup]
-nixPkgs = ["maven", "jdk", "jre_minimal"]
-
-[variables]
-NIXPACKS_JDK_VERSION = "21"
-
-[start]
-cmd = "cd backend && java -jar target/NeighborNet-Backend-0.0.1-SNAPSHOT.jar"
