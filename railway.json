@@ -2,17 +2,12 @@
   "$schema": "https://railway.app/railway.schema.json",
   "build": {
     "builder": "NIXPACKS",
-    "nixpacks": {
-      "providers": ["java"]
-    },
-    "buildCommand": "cd backend && ./mvnw clean package -DskipTests || cd backend && apt-get update && apt-get install -y maven && cd backend && mvn clean package -DskipTests"
+    "nixpacksConfigPath": "nixpacks.toml",
+    "buildCommand": "apt-get update && apt-get install -y maven && ls -la && cd /app/backend && ls -la && mvn clean package -DskipTests"
   },
   "deploy": {
-    "startCommand": "cd backend && java -jar target/NeighborNet-Backend-0.0.1-SNAPSHOT.jar",
+    "startCommand": "cd /app/backend && java -jar target/NeighborNet-Backend-0.0.1-SNAPSHOT.jar",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10
-  },
-  "variables": {
-    "NIXPACKS_JDK_VERSION": "21"
   }
 }
