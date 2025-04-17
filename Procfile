@@ -1,0 +1,1 @@
+web: cd backend && java -jar target/NeighborNet-Backend-0.0.1-SNAPSHOT.jar
