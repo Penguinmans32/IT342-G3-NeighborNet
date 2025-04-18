@@ -1,30 +1,29 @@
-import { memo, useCallback, useEffect } from 'react';
+import { memo, useCallback } from 'react';
 import { MdBookmark, MdBookmarkBorder, MdStar, MdAccessTime} from "react-icons/md";
-import { FileText, BookOpen, AlignLeft } from 'lucide-react';
+import { FileText, BookOpen } from 'lucide-react';
 import { motion } from "framer-motion";
 
 const getCorrectImageUrl = (imageUrl) => {
-  console.log('Original image URL:', imageUrl);
+  if (!imageUrl) return "/default-class-image.jpg";
   
-  if (!imageUrl) {
-    console.log('No image URL provided, using default');
-    return "/default-class-image.jpg";
+  if (imageUrl.includes('localhost:8080')) {
+    const path = imageUrl.split('localhost:8080')[1];
+    return `https://neighbornet-back-production.up.railway.app${path}`;
   }
   
-  if (imageUrl.startsWith("http")) {
-    console.log('URL already has http/https, using as is:', imageUrl);
+  if (imageUrl.startsWith("http") && !imageUrl.includes('localhost')) {
     return imageUrl;
   }
   
-  const isApiPath = imageUrl.startsWith("/api/");
-  console.log('Is API path?', isApiPath);
+  if (imageUrl.startsWith("/api/")) {
+    return `https://neighbornet-back-production.up.railway.app${imageUrl}`;
+  }
   
-  const finalUrl = isApiPath 
-    ? `https://neighbornet-back-production.up.railway.app${imageUrl}`
-    : imageUrl;
+  if (imageUrl.startsWith("/")) {
+    return `https://neighbornet-back-production.up.railway.app${imageUrl}`;
+  }
   
-  console.log('Final image URL:', finalUrl);
-  return finalUrl;
+  return `https://neighbornet-back-production.up.railway.app/${imageUrl}`;
 };
 
 const ClassCard = memo(({ 
@@ -35,12 +34,7 @@ const ClassCard = memo(({
     navigate,
     user
 }) => {
-    useEffect(() => {
-      console.log('ClassItem data:', classItem);
-      console.log('ThumbnailUrl:', classItem.thumbnailUrl);
-      console.log('CreatorImageUrl:', classItem.creator?.imageUrl);
-    }, [classItem]);
-    
+    // Use useCallback for event handlers
     const handleCardClick = useCallback(() => {
         navigate(`/class/${classItem.id}`);
     }, [classItem.id, navigate]);
@@ -62,24 +56,11 @@ const ClassCard = memo(({
 
     const isSaved = Array.isArray(savedClasses) && savedClasses.includes(classItem.id);
 
+    // Get correct image URLs with localhost fix
     const thumbnailUrl = getCorrectImageUrl(classItem.thumbnailUrl);
     const profileImageUrl = classItem.creator?.imageUrl 
       ? getCorrectImageUrl(classItem.creator.imageUrl)
       : "/images/defaultProfile.png";
-
-    useEffect(() => {
-      console.log('Calculated thumbnail URL:', thumbnailUrl);
-      console.log('Calculated profile image URL:', profileImageUrl);
-    }, [thumbnailUrl, profileImageUrl]);
-    
-    const handleImageError = (e, type) => {
-      console.error(`Error loading ${type} image:`, e.target.src);
-      console.log(`Fallback to default ${type} image`);
-      e.target.onerror = null;
-      e.target.src = type === 'thumbnail' 
-        ? "/default-class-image.jpg" 
-        : "/images/defaultProfile.png";
-    };
 
     return (
         <motion.div
@@ -98,7 +79,11 @@ const ClassCard = memo(({
                 src={thumbnailUrl}
                 alt={classItem.title || "Class thumbnail"}
                 className="object-cover w-full h-full group-hover:scale-110 transition-transform duration-300"
-                onError={(e) => handleImageError(e, 'thumbnail')}
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = "/default-class-image.jpg";
+                  console.log("Image failed to load:", e.target.src);
+                }}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
@@ -157,7 +142,11 @@ const ClassCard = memo(({
                 alt={classItem.creator?.username || "Creator"}
                 className="w-6 h-6 rounded-full object-cover cursor-pointer"
                 onClick={(e) => navigateToProfile(e, classItem.creatorId)}
-                onError={(e) => handleImageError(e, 'profile')}
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = "/images/defaultProfile.png";
+                  console.log("Profile image failed to load:", e.target.src);
+                }}
               />
                 <div>
                   <h4 className={`text-sm font-medium ${isDarkMode ? "text-white" : "text-gray-900"}`}>
