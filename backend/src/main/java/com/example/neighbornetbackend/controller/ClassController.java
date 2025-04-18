@@ -13,6 +13,7 @@ import com.example.neighbornetbackend.service.*;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
@@ -47,6 +48,9 @@ public class ClassController {
     private final LessonProgressService progressService;
     private final FeedbackRepository feedbackRepository;
     private final AchievementService achievementService;
+
+    private static final String CLASSES_CACHE = "classes";
+    private static final String POPULAR_CACHE = "popularClasses";
 
     public ClassController(ClassService classService, ClassRepository classRepository, RatingService ratingService, FeedbackService feedbackService, LessonProgressService progressService, FeedbackRepository feedbackRepository, AchievementService achievementService) {
         this.classService = classService;
@@ -121,34 +125,30 @@ public class ClassController {
     }
 
     @GetMapping("/{classId}")
+    @Cacheable(value = CLASSES_CACHE, key = "#classId")
     public ResponseEntity<ClassResponse> getClass(
             @PathVariable Long classId,
             @CurrentUser UserPrincipal currentUser) {
         try {
             ClassResponse classResponse = classService.getClassById(classId);
-
-            // If user is not authenticated, remove sensitive/protected data
             if (currentUser == null) {
                 classResponse.setLessons(null);
-                // Add other restrictions as needed
             }
-
             return ResponseEntity.ok(classResponse);
         } catch (ResourceNotFoundException e) {
             return ResponseEntity.notFound().build();
         } catch (Exception e) {
-            e.printStackTrace();
             return ResponseEntity.badRequest().build();
         }
     }
 
     @GetMapping("/all")
+    @Cacheable(value = CLASSES_CACHE, key = "'all'")
     public ResponseEntity<List<ClassResponse>> getAllClasses() {
         try {
             List<ClassResponse> classes = classService.getAllClasses();
             return ResponseEntity.ok(classes);
         } catch (Exception e) {
-            e.printStackTrace();
             return ResponseEntity.badRequest().build();
         }
     }
@@ -425,26 +425,22 @@ public class ClassController {
     }
 
     @GetMapping("/{classId}/feedbacks")
+    @Cacheable(value = "classFeedbacks", key = "#classId")
     public ResponseEntity<List<FeedbackResponse>> getClassFeedbacks(
             @PathVariable Long classId,
             @CurrentUser UserPrincipal currentUser) {
         try {
             List<FeedbackResponse> feedbacks = feedbackService.getClassFeedbacks(classId);
             if (currentUser != null) {
-                Long userId = currentUser.getId();
-                feedbacks = feedbacks.stream()
+                feedbacks = feedbacks.parallelStream()
                         .map(feedback -> {
-                            Feedback entity = feedbackRepository.findById(feedback.getId())
-                                    .orElse(null);
-                            return entity != null ? FeedbackResponse.fromEntity(entity, userId) : feedback;
+                            Feedback entity = feedbackRepository.findById(feedback.getId()).orElse(null);
+                            return entity != null ? FeedbackResponse.fromEntity(entity, currentUser.getId()) : feedback;
                         })
                         .collect(Collectors.toList());
             }
             return ResponseEntity.ok(feedbacks);
-        } catch (ResourceNotFoundException e) {
-            return ResponseEntity.notFound().build();
         } catch (Exception e) {
-            e.printStackTrace();
             return ResponseEntity.badRequest().build();
         }
     }
@@ -654,6 +650,7 @@ public class ClassController {
     }
 
     @GetMapping("/popular")
+    @Cacheable(value = POPULAR_CACHE, key = "'popular'")
     public ResponseEntity<List<ClassResponse>> getPopularClasses() {
         try {
             List<ClassResponse> popularClasses = classRepository.findTop3ByOrderByEnrolledCountDesc()
@@ -662,7 +659,6 @@ public class ClassController {
                     .collect(Collectors.toList());
             return ResponseEntity.ok(popularClasses);
         } catch (Exception e) {
-            e.printStackTrace();
             return ResponseEntity.badRequest().build();
         }
     }
