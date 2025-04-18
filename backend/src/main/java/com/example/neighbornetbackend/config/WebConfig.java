@@ -13,8 +13,9 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/api/**")
+        registry.addMapping("/**")
                 .allowedOrigins(
+                        "https://it-342-g3-neighbor-net.vercel.app",
                         "http://localhost:5173",
                         "http://10.0.2.2:8080",
                         "http://10.0.2.2",
@@ -23,9 +24,11 @@ public class WebConfig implements WebMvcConfigurer {
                         "http://10.0.191.212:8080",
                         "http://10.0.191.212"
                 )
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
                 .allowedHeaders("*")
-                .allowCredentials(true);
+                .exposedHeaders("Authorization")
+                .allowCredentials(true)
+                .maxAge(3600);
     }
 
     @Override

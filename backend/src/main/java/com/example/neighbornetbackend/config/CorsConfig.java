@@ -14,6 +14,7 @@ public class CorsConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         CorsConfiguration config = new CorsConfiguration();
 
+        config.addAllowedOrigin("https://it-342-g3-neighbor-net.vercel.app");
         config.addAllowedOrigin("http://localhost:5173");
         config.addAllowedOrigin("http://10.0.2.2:8080");
         config.addAllowedOrigin("http://10.0.191.212:8080");
