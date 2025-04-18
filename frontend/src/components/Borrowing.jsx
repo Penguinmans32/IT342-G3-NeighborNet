@@ -403,12 +403,12 @@ const Borrowing = () => {
     }
     return imageUrl.startsWith('http') 
       ? imageUrl 
-      : `http://localhost:8080${imageUrl}`;
+      : `https://neighbornet-back-production.up.railway.app${imageUrl}`;
   };
 
   const fetchBorrowedItemsStatus = async () => {
     try {
-      const response = await axios.get('http://localhost:8080/api/borrowing/items/all-borrowed', {
+      const response = await axios.get('https://neighbornet-back-production.up.railway.app/api/borrowing/items/all-borrowed', {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       console.log("Full borrowed items response:", response.data);
@@ -431,7 +431,7 @@ const Borrowing = () => {
 
   useEffect(() => {
     if (user?.data?.id) {
-      const socket = new SockJS('http://localhost:8080/ws');
+      const socket = new SockJS('https://neighbornet-back-production.up.railway.app/ws');
       const stomp = new Client({
         webSocketFactory: () => socket,
         debug: (str) => {
@@ -468,7 +468,7 @@ const Borrowing = () => {
     try {
       setRatingLoading(prev => ({ ...prev, [itemId]: true }));
       const response = await axios.post(
-        `http://localhost:8080/api/borrowing/items/${itemId}/rate`,
+        `https://neighbornet-back-production.up.railway.app/api/borrowing/items/${itemId}/rate`,
         { rating },
         {
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
@@ -492,7 +492,7 @@ const Borrowing = () => {
       for (const item of items) {
         try {
           const response = await axios.get(
-            `http://localhost:8080/api/borrowing/items/${item.id}/rating`,
+            `https://neighbornet-back-production.up.railway.app/api/borrowing/items/${item.id}/rating`,
             {
               headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
             }
@@ -642,7 +642,7 @@ const Borrowing = () => {
   useEffect(() => {
     const fetchItems = async () => {
       try {
-        const response = await axios.get('http://localhost:8080/api/borrowing/items', {
+        const response = await axios.get('https://neighbornet-back-production.up.railway.app/api/borrowing/items', {
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
         });
         

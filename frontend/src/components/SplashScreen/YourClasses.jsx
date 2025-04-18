@@ -419,7 +419,7 @@ const TreeNode = ({ classItem, index, onExpand, isExpanded, onDelete, onEdit, th
   useEffect(() => {
     const fetchLessons = async () => {
       try {
-        const response = await axios.get(`http://localhost:8080/api/classes/${classItem.id}/lessons`, {
+        const response = await axios.get(`https://neighbornet-back-production.up.railway.app/api/classes/${classItem.id}/lessons`, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
@@ -438,7 +438,7 @@ const TreeNode = ({ classItem, index, onExpand, isExpanded, onDelete, onEdit, th
 
   const handleAddLesson = async (formData) => {
     try {
-      const response = await axios.post(`http://localhost:8080/api/classes/${classItem.id}/lessons`, formData, {
+      const response = await axios.post(`https://neighbornet-back-production.up.railway.app/api/classes/${classItem.id}/lessons`, formData, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
           "Content-Type": "multipart/form-data",
@@ -1099,7 +1099,7 @@ const YourClasses = () => {
             // Make sure to handle both absolute and relative URLs
             urls[classItem.id] = classItem.thumbnailUrl.startsWith("http")
               ? classItem.thumbnailUrl
-              : `http://localhost:8080${classItem.thumbnailUrl}`
+              : `https://neighbornet-back-production.up.railway.app${classItem.thumbnailUrl}`
           } else {
             urls[classItem.id] = "/default-class-image.jpg"
           }
@@ -1163,7 +1163,7 @@ const YourClasses = () => {
 
     if (await confirmDelete()) {
       try {
-        const response = await axios.delete(`http://localhost:8080/api/classes/${classId}`, {
+        const response = await axios.delete(`https://neighbornet-back-production.up.railway.app/api/classes/${classId}`, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
@@ -1228,7 +1228,7 @@ const YourClasses = () => {
   useEffect(() => {
     const fetchClasses = async () => {
       try {
-        const response = await axios.get("http://localhost:8080/api/classes/my-classes", {
+        const response = await axios.get("https://neighbornet-back-production.up.railway.app/api/classes/my-classes", {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },

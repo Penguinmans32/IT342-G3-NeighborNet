@@ -10,7 +10,7 @@ class NotificationService {
     }
 
     connect(userId, token) {
-        const socket = new SockJS('http://localhost:8080/ws');
+        const socket = new SockJS('https://neighbornet-back-production.up.railway.app/ws');
         this.client = new Client({
             webSocketFactory: () => socket,
             connectHeaders: {

@@ -45,7 +45,7 @@ export default function UsersView() {
   const handleAddUser = async (userData) => {
     try {
       await axios.post(
-        'http://localhost:8080/api/admin/users',
+        'https://neighbornet-back-production.up.railway.app/api/admin/users',
         userData,
         {
           headers: {
@@ -63,7 +63,7 @@ export default function UsersView() {
 
   const handlePermanentDelete = async () => {
     try {
-      await axios.delete(`http://localhost:8080/api/admin/users/${selectedUser.id}/permanent`, {
+      await axios.delete(`https://neighbornet-back-production.up.railway.app/api/admin/users/${selectedUser.id}/permanent`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -79,7 +79,7 @@ export default function UsersView() {
   const handleUpdateUser = async (formData) => {
     try {
       await axios.patch(
-        `http://localhost:8080/api/admin/users/${selectedUser.id}`,
+        `https://neighbornet-back-production.up.railway.app/api/admin/users/${selectedUser.id}`,
         formData,
         {
           headers: {
@@ -97,7 +97,7 @@ export default function UsersView() {
   const handleRestoreUser = async (userId) => {
     try {
       await axios.post(
-        `http://localhost:8080/api/admin/users/${userId}/restore`,
+        `https://neighbornet-back-production.up.railway.app/api/admin/users/${userId}/restore`,
         {},
         {
           headers: {
@@ -114,7 +114,7 @@ export default function UsersView() {
 
   const fetchStats = async () => {
     try {
-      const response = await axios.get('http://localhost:8080/api/admin/users/stats', {
+      const response = await axios.get('https://neighbornet-back-production.up.railway.app/api/admin/users/stats', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -131,7 +131,7 @@ export default function UsersView() {
         ? '/api/admin/users/deleted'
         : '/api/admin/users';
       
-      const response = await axios.get(`http://localhost:8080${endpoint}`, {
+      const response = await axios.get(`https://neighbornet-back-production.up.railway.app${endpoint}`, {
         params: { search, page, size: 10 },
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
@@ -154,7 +154,7 @@ export default function UsersView() {
 
   const deleteUser = async () => {
     try {
-      await axios.delete(`http://localhost:8080/api/admin/users/${selectedUser.id}`, {
+      await axios.delete(`https://neighbornet-back-production.up.railway.app/api/admin/users/${selectedUser.id}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }

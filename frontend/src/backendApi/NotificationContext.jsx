@@ -52,7 +52,7 @@ export const NotificationProvider = ({ children }) => {
         if (!user) return [];
 
         try {
-            const response = await axios.get('http://localhost:8080/api/notifications', {
+            const response = await axios.get('https://neighbornet-back-production.up.railway.app/api/notifications', {
                 headers: {
                     Authorization: `Bearer ${localStorage.getItem('token')}`
                 }
@@ -151,7 +151,7 @@ export const NotificationProvider = ({ children }) => {
 
     const markAsRead = useCallback(async (notificationId) => {
         try {
-            await axios.put(`http://localhost:8080/api/notifications/${notificationId}/read`, null, {
+            await axios.put(`https://neighbornet-back-production.up.railway.app/api/notifications/${notificationId}/read`, null, {
                 headers: {
                     Authorization: `Bearer ${localStorage.getItem('token')}`
                 }
@@ -172,7 +172,7 @@ export const NotificationProvider = ({ children }) => {
 
     const deleteAllNotifications = useCallback(async () => {
         try {
-            await axios.delete('http://localhost:8080/api/notifications', {
+            await axios.delete('https://neighbornet-back-production.up.railway.app/api/notifications', {
                 headers: {
                     Authorization: `Bearer ${localStorage.getItem('token')}`
                 }
@@ -187,7 +187,7 @@ export const NotificationProvider = ({ children }) => {
 
     const markAllAsRead = useCallback(async () => {
         try {
-            await axios.put('http://localhost:8080/api/notifications/mark-all-read', null, {
+            await axios.put('https://neighbornet-back-production.up.railway.app/api/notifications/mark-all-read', null, {
                 headers: {
                     Authorization: `Bearer ${localStorage.getItem('token')}`
                 }

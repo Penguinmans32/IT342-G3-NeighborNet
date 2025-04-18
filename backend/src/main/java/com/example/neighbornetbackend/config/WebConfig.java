@@ -1,5 +1,7 @@
 package com.example.neighbornetbackend.config;
 
+import org.springframework.boot.web.servlet.ServletContextInitializer;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.MediaType;
 import org.springframework.web.servlet.config.annotation.ContentNegotiationConfigurer;
@@ -36,5 +38,12 @@ public class WebConfig implements WebMvcConfigurer {
                 .useRegisteredExtensionsOnly(false)
                 .mediaType("json", MediaType.APPLICATION_JSON)
                 .mediaType("plain", MediaType.TEXT_PLAIN);
+    }
+
+    @Bean
+    public ServletContextInitializer servletContextInitializer() {
+        return servletContext -> {
+            servletContext.setInitParameter("spring.profiles.active", "prod");
+        };
     }
 }

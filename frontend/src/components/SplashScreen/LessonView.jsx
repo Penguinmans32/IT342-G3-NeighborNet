@@ -204,7 +204,7 @@ const LessonView = () => {
   const markLessonAsComplete = async () => {
     try {
       const response = await axios.post(
-        `http://localhost:8080/api/classes/${classId}/progress/lessons/${lessonId}`,
+        `https://neighbornet-back-production.up.railway.app/api/classes/${classId}/progress/lessons/${lessonId}`,
         {
           completed: true,
           lastWatchedPosition: Math.floor(videoRef.current?.currentTime || 0),
@@ -256,7 +256,7 @@ const LessonView = () => {
       // Get user's rating if they're authenticated
       if (isAuthenticated) {
         const userRatingResponse = await axios.get(
-          `http://localhost:8080/api/classes/${classId}/lessons/${lessonId}/rating`,
+          `https://neighbornet-back-production.up.railway.app/api/classes/${classId}/lessons/${lessonId}/rating`,
           { headers }
         );
         if (userRatingResponse.data && userRatingResponse.data.rating) {
@@ -280,13 +280,13 @@ const LessonView = () => {
       const headers = { Authorization: `Bearer ${token}` };
       
       await axios.post(
-        `http://localhost:8080/api/classes/${classId}/lessons/${lessonId}/rate`,
+        `https://neighbornet-back-production.up.railway.app/api/classes/${classId}/lessons/${lessonId}/rate`,
         { rating: newRating },
         { headers }
       );
       
       const lessonResponse = await axios.get(
-        `http://localhost:8080/api/classes/${classId}/lessons/${lessonId}`,
+        `https://neighbornet-back-production.up.railway.app/api/classes/${classId}/lessons/${lessonId}`,
         { headers }
       );
       
@@ -358,9 +358,9 @@ const LessonView = () => {
         const headers = { Authorization: `Bearer ${token}` };
 
         const [lessonResponse, allLessonsResponse, progressResponse] = await Promise.all([
-          axios.get(`http://localhost:8080/api/classes/${classId}/lessons/${lessonId}`, { headers }),
-          axios.get(`http://localhost:8080/api/classes/${classId}/lessons`, { headers }),
-          axios.get(`http://localhost:8080/api/classes/${classId}/progress`, { headers })
+          axios.get(`https://neighbornet-back-production.up.railway.app/api/classes/${classId}/lessons/${lessonId}`, { headers }),
+          axios.get(`https://neighbornet-back-production.up.railway.app/api/classes/${classId}/lessons`, { headers }),
+          axios.get(`https://neighbornet-back-production.up.railway.app/api/classes/${classId}/progress`, { headers })
         ]);
 
         setLesson(lessonResponse.data);
@@ -373,7 +373,7 @@ const LessonView = () => {
         if (isAuthenticated) {
           try {
             const userRatingResponse = await axios.get(
-              `http://localhost:8080/api/classes/${classId}/lessons/${lessonId}/rating`,
+              `https://neighbornet-back-production.up.railway.app/api/classes/${classId}/lessons/${lessonId}/rating`,
               { headers }
             );
             if (userRatingResponse.data && userRatingResponse.data.rating) {
@@ -423,7 +423,7 @@ const LessonView = () => {
           const nextIndex = allLessons.findIndex(l => l.id === lessonResponse.data.nextLessonId);
           if (nextIndex !== -1 && unlockedSet.has(nextIndex)) {
             const nextResponse = await axios.get(
-              `http://localhost:8080/api/classes/${classId}/lessons/${lessonResponse.data.nextLessonId}`,
+              `https://neighbornet-back-production.up.railway.app/api/classes/${classId}/lessons/${lessonResponse.data.nextLessonId}`,
               { headers }
             );
             setNextLesson(nextResponse.data);
@@ -438,7 +438,7 @@ const LessonView = () => {
           const prevIndex = allLessons.findIndex(l => l.id === lessonResponse.data.prevLessonId);
           if (prevIndex !== -1 && currentIndex > 0) {
             const prevResponse = await axios.get(
-              `http://localhost:8080/api/classes/${classId}/lessons/${lessonResponse.data.prevLessonId}`,
+              `https://neighbornet-back-production.up.railway.app/api/classes/${classId}/lessons/${lessonResponse.data.prevLessonId}`,
               { headers }
             );
             setPrevLesson(prevResponse.data);

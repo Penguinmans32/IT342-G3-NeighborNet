@@ -34,7 +34,7 @@ export default function DashboardView() {
 
   const fetchDashboardData = async () => {
     try {
-      const response = await axios.get('http://localhost:8080/api/admin/dashboard', {
+      const response = await axios.get('https://neighbornet-back-production.up.railway.app/api/admin/dashboard', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -49,7 +49,7 @@ export default function DashboardView() {
 
   const fetchTasks = async () => {
     try {
-      const response = await axios.get('http://localhost:8080/api/admin/tasks', {
+      const response = await axios.get('https://neighbornet-back-production.up.railway.app/api/admin/tasks', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -72,7 +72,7 @@ export default function DashboardView() {
 
       console.log('Request payload:', JSON.stringify(taskRequest));
   
-      await axios.post('http://localhost:8080/api/admin/tasks', 
+      await axios.post('https://neighbornet-back-production.up.railway.app/api/admin/tasks', 
         taskRequest,
         {
           headers: {
@@ -92,7 +92,7 @@ export default function DashboardView() {
 
   const toggleTask = async (taskId) => {
     try {
-      await axios.put(`http://localhost:8080/api/admin/tasks/${taskId}/toggle`, null, {
+      await axios.put(`https://neighbornet-back-production.up.railway.app/api/admin/tasks/${taskId}/toggle`, null, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -105,7 +105,7 @@ export default function DashboardView() {
 
   const fetchGrowthData = async (selectedTimeframe) => {
     try {
-      const response = await axios.get(`http://localhost:8080/api/admin/dashboard/growth/${selectedTimeframe}`, {
+      const response = await axios.get(`https://neighbornet-back-production.up.railway.app/api/admin/dashboard/growth/${selectedTimeframe}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
