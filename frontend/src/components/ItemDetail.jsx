@@ -648,7 +648,7 @@ const ItemDetail = () => {
   const confirmDelete = async () => {
     setIsDeleting(true);
     try {
-      await axios.delete(`http://localhost:8080/api/borrowing/items/user/${id}`, {
+      await axios.delete(`https://neighbornet-back-production.up.railway.app/api/borrowing/items/user/${id}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
       });
       
@@ -679,7 +679,7 @@ const ItemDetail = () => {
         };
 
         const response = await axios.put(
-            `http://localhost:8080/api/borrowing/items/${id}`,
+            `https://neighbornet-back-production.up.railway.app/api/borrowing/items/${id}`,
             updateRequest,
             {
                 headers: {
@@ -716,7 +716,7 @@ const ItemDetail = () => {
   useEffect(() => {
     const fetchItemDetails = async () => {
       try {
-        const response = await axios.get(`http://localhost:8080/api/borrowing/items/${id}`, {
+        const response = await axios.get(`https://neighbornet-back-production.up.railway.app/api/borrowing/items/${id}`, {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         })
         setItem(response.data)
@@ -742,7 +742,7 @@ const ItemDetail = () => {
         itemName: item.name,
       };
   
-      const response = await axios.post(`http://localhost:8080/api/borrowing/requests`, formattedRequest, {
+      const response = await axios.post(`https://neighbornet-back-production.up.railway.app/api/borrowing/requests`, formattedRequest, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
           "Content-Type": "application/json",

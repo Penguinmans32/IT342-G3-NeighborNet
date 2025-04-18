@@ -140,7 +140,7 @@ const Dashboard = () => {
 
   const getFullThumbnailUrl = (thumbnailUrl) => {
     if (!thumbnailUrl) return "/default-class-image.jpg"
-    return thumbnailUrl.startsWith("http") ? thumbnailUrl : `http://localhost:8080${thumbnailUrl}`
+    return thumbnailUrl.startsWith("http") ? thumbnailUrl : `https://neighbornet-back-production.up.railway.app${thumbnailUrl}`
   }
 
   const navigateToProfile = (userId) => {
@@ -157,7 +157,7 @@ const Dashboard = () => {
         const token = localStorage.getItem("token");
         if (!token) return;
   
-        const response = await axios.get(`http://localhost:8080/api/users/profile`, {
+        const response = await axios.get(`https://neighbornet-back-production.up.railway.app/api/users/profile`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -183,7 +183,7 @@ const Dashboard = () => {
           return
         }
 
-        const response = await axios.get("http://localhost:8080/api/activities/recent", {
+        const response = await axios.get("https://neighbornet-back-production.up.railway.app/api/activities/recent", {
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
@@ -208,7 +208,7 @@ const Dashboard = () => {
           return
         }
 
-        const response = await axios.get("http://localhost:8080/api/classes/all", {
+        const response = await axios.get("https://neighbornet-back-production.up.railway.app/api/classes/all", {
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
@@ -236,7 +236,7 @@ const Dashboard = () => {
           return
         }
 
-        const response = await axios.get("http://localhost:8080/api/posts", {
+        const response = await axios.get("https://neighbornet-back-production.up.railway.app/api/posts", {
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
@@ -268,7 +268,7 @@ const Dashboard = () => {
       const headers = { Authorization: `Bearer ${token}` };
       
       await axios.put(
-        `http://localhost:8080/api/posts/${postId}/comments/${commentId}`,
+        `https://neighbornet-back-production.up.railway.app/api/posts/${postId}/comments/${commentId}`,
         { content: editedCommentContent },
         { headers }
       );
@@ -309,7 +309,7 @@ const Dashboard = () => {
         return
       }
 
-      await axios.delete(`http://localhost:8080/api/posts/${postId}`, {
+      await axios.delete(`https://neighbornet-back-production.up.railway.app/api/posts/${postId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -343,7 +343,7 @@ const Dashboard = () => {
       }
 
       const response = await axios.put(
-        `http://localhost:8080/api/posts/${postId}`,
+        `https://neighbornet-back-production.up.railway.app/api/posts/${postId}`,
         { content: editedContent },
         {
           headers: {
@@ -375,7 +375,7 @@ const Dashboard = () => {
       const shareMessage = prompt("Add a message to your share (optional):")
 
       const response = await axios.post(
-        `http://localhost:8080/api/posts/${postId}/share`,
+        `https://neighbornet-back-production.up.railway.app/api/posts/${postId}/share`,
         { content: shareMessage },
         {
           headers: {
@@ -416,7 +416,7 @@ const Dashboard = () => {
       }
 
       const response = await axios.post(
-        `http://localhost:8080/api/posts/${postId}/comments`,
+        `https://neighbornet-back-production.up.railway.app/api/posts/${postId}/comments`,
         { content: newComments[postId] },
         {
           headers: {
@@ -447,7 +447,7 @@ const Dashboard = () => {
       }
 
       const response = await axios.post(
-        `http://localhost:8080/api/posts/${postId}/comments/${commentId}/like`,
+        `https://neighbornet-back-production.up.railway.app/api/posts/${postId}/comments/${commentId}/like`,
         {},
         {
           headers: {
@@ -474,7 +474,7 @@ const Dashboard = () => {
         return
       }
 
-      const response = await axios.delete(`http://localhost:8080/api/posts/${postId}/comments/${commentId}`, {
+      const response = await axios.delete(`https://neighbornet-back-production.up.railway.app/api/posts/${postId}/comments/${commentId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -558,7 +558,7 @@ const Dashboard = () => {
         formData.append("image", selectedImage)
       }
 
-      const response = await axios.post("http://localhost:8080/api/posts", formData, {
+      const response = await axios.post("https://neighbornet-back-production.up.railway.app/api/posts", formData, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "multipart/form-data",
@@ -597,7 +597,7 @@ const Dashboard = () => {
       }
 
       const response = await axios.post(
-        `http://localhost:8080/api/posts/${postId}/like`,
+        `https://neighbornet-back-production.up.railway.app/api/posts/${postId}/like`,
         {},
         {
           headers: {
@@ -632,7 +632,7 @@ const Dashboard = () => {
     const fetchDashboardStats = async () => {
       try {
         setLoading(true)
-        const response = await axios.get("http://localhost:8080/api/dashboard/stats", {
+        const response = await axios.get("https://neighbornet-back-production.up.railway.app/api/dashboard/stats", {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
             "Content-Type": "application/json",

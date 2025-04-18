@@ -75,7 +75,7 @@ export default function ClassesView() {
 
   const fetchStats = async () => {
     try {
-      const response = await axios.get('http://localhost:8080/api/admin/classes/stats', {
+      const response = await axios.get('https://neighbornet-back-production.up.railway.app/api/admin/classes/stats', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -94,7 +94,7 @@ export default function ClassesView() {
 
   const fetchClasses = async () => {
     try {
-      const response = await axios.get(`http://localhost:8080/api/admin/classes`, {
+      const response = await axios.get(`https://neighbornet-back-production.up.railway.app/api/admin/classes`, {
         params: { search },
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -116,7 +116,7 @@ export default function ClassesView() {
 
   const deleteClass = async () => {
     try {
-      await axios.delete(`http://localhost:8080/api/admin/classes/${selectedClass.id}`, {
+      await axios.delete(`https://neighbornet-back-production.up.railway.app/api/admin/classes/${selectedClass.id}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -238,7 +238,7 @@ export default function ClassesView() {
             >
               <div className="relative h-48">
                 <img
-                  src={`http://localhost:8080${classItem?.thumbnailUrl}`}
+                  src={`https://neighbornet-back-production.up.railway.app${classItem?.thumbnailUrl}`}
                   alt={classItem.name}
                   className="w-full h-full object-cover"
                 />
@@ -350,7 +350,7 @@ export default function ClassesView() {
                 {/* Header Section */}
                 <div className="flex items-start gap-6">
                   <img
-                    src={`http://localhost:8080${selectedClass?.thumbnailUrl}`}
+                    src={`https://neighbornet-back-production.up.railway.app${selectedClass?.thumbnailUrl}`}
                     alt={selectedClass?.title}
                     className="w-48 h-48 object-cover rounded-lg"
                   />
