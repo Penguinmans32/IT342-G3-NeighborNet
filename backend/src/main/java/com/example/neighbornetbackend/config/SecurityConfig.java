@@ -122,7 +122,10 @@ public class SecurityConfig {
         http
                 .cors(cors -> cors.configurationSource(request -> {
                     CorsConfiguration config = new CorsConfiguration();
-                    config.setAllowedOrigins(Arrays.asList("http://localhost:5173"));
+                    config.setAllowedOrigins(Arrays.asList(
+                            "https://it-342-g3-neighbor-net.vercel.app",
+                            "http://localhost:5173"
+                    ));
                     config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
                     config.setAllowCredentials(true);
                     config.setAllowedHeaders(Arrays.asList("*"));
