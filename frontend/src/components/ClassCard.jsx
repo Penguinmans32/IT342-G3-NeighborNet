@@ -1,18 +1,30 @@
-import { memo, useCallback } from 'react';
+import { memo, useCallback, useEffect } from 'react';
 import { MdBookmark, MdBookmarkBorder, MdStar, MdAccessTime} from "react-icons/md";
 import { FileText, BookOpen, AlignLeft } from 'lucide-react';
 import { motion } from "framer-motion";
 
 const getCorrectImageUrl = (imageUrl) => {
-  if (!imageUrl) return "/default-class-image.jpg";
+  console.log('Original image URL:', imageUrl);
   
-  if (imageUrl.startsWith("http")) return imageUrl;
+  if (!imageUrl) {
+    console.log('No image URL provided, using default');
+    return "/default-class-image.jpg";
+  }
+  
+  if (imageUrl.startsWith("http")) {
+    console.log('URL already has http/https, using as is:', imageUrl);
+    return imageUrl;
+  }
   
   const isApiPath = imageUrl.startsWith("/api/");
+  console.log('Is API path?', isApiPath);
   
-  return isApiPath 
+  const finalUrl = isApiPath 
     ? `https://neighbornet-back-production.up.railway.app${imageUrl}`
     : imageUrl;
+  
+  console.log('Final image URL:', finalUrl);
+  return finalUrl;
 };
 
 const ClassCard = memo(({ 
@@ -23,7 +35,12 @@ const ClassCard = memo(({
     navigate,
     user
 }) => {
-    // Use useCallback for event handlers
+    useEffect(() => {
+      console.log('ClassItem data:', classItem);
+      console.log('ThumbnailUrl:', classItem.thumbnailUrl);
+      console.log('CreatorImageUrl:', classItem.creator?.imageUrl);
+    }, [classItem]);
+    
     const handleCardClick = useCallback(() => {
         navigate(`/class/${classItem.id}`);
     }, [classItem.id, navigate]);
@@ -45,11 +62,24 @@ const ClassCard = memo(({
 
     const isSaved = Array.isArray(savedClasses) && savedClasses.includes(classItem.id);
 
-    // Get correct image URLs
     const thumbnailUrl = getCorrectImageUrl(classItem.thumbnailUrl);
     const profileImageUrl = classItem.creator?.imageUrl 
       ? getCorrectImageUrl(classItem.creator.imageUrl)
       : "/images/defaultProfile.png";
+
+    useEffect(() => {
+      console.log('Calculated thumbnail URL:', thumbnailUrl);
+      console.log('Calculated profile image URL:', profileImageUrl);
+    }, [thumbnailUrl, profileImageUrl]);
+    
+    const handleImageError = (e, type) => {
+      console.error(`Error loading ${type} image:`, e.target.src);
+      console.log(`Fallback to default ${type} image`);
+      e.target.onerror = null;
+      e.target.src = type === 'thumbnail' 
+        ? "/default-class-image.jpg" 
+        : "/images/defaultProfile.png";
+    };
 
     return (
         <motion.div
@@ -68,10 +98,7 @@ const ClassCard = memo(({
                 src={thumbnailUrl}
                 alt={classItem.title || "Class thumbnail"}
                 className="object-cover w-full h-full group-hover:scale-110 transition-transform duration-300"
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = "/default-class-image.jpg";
-                }}
+                onError={(e) => handleImageError(e, 'thumbnail')}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
@@ -130,10 +157,7 @@ const ClassCard = memo(({
                 alt={classItem.creator?.username || "Creator"}
                 className="w-6 h-6 rounded-full object-cover cursor-pointer"
                 onClick={(e) => navigateToProfile(e, classItem.creatorId)}
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = "/images/defaultProfile.png";
-                }}
+                onError={(e) => handleImageError(e, 'profile')}
               />
                 <div>
                   <h4 className={`text-sm font-medium ${isDarkMode ? "text-white" : "text-gray-900"}`}>
