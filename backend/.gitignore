@@ -36,3 +36,5 @@ build/
 # Environment variables
 .env
 
+src/main/resources/data.sql
+

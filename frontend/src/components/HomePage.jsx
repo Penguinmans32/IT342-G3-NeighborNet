@@ -944,8 +944,6 @@ const Homepage = () => {
                                     savedClasses={Array.from(savedClassesSet)}
                                     toggleSaveClass={toggleSaveClass}
                                     navigate={navigate}
-                                    getFullThumbnailUrl={getFullThumbnailUrl}
-                                    getFullProfileImageUrl={getFullProfileImageUrl}
                                     user={user}
                                   />
                                 ))
