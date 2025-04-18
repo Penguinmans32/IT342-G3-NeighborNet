@@ -941,7 +941,7 @@ const Homepage = () => {
                                     key={classItem.id} 
                                     classItem={classItem} 
                                     isDarkMode={isDarkMode}
-                                    savedClasses={Array.from(savedClassesSet)}
+                                    savedClasses={savedClassesSet ? Array.from(savedClassesSet) : []}
                                     toggleSaveClass={toggleSaveClass}
                                     navigate={navigate}
                                     user={user}
