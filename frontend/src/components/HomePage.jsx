@@ -410,7 +410,7 @@ const Homepage = () => {
 
   const getFullThumbnailUrl = (thumbnailUrl) => {
     if (!thumbnailUrl) return "/default-class-image.jpg"
-    return thumbnailUrl.startsWith("http") ? thumbnailUrl : `https://neighbornet-back-production.up.railway.app${thumbnailUrl}`
+    return thumbnailUrl.startsWith("http") ? thumbnailUrl : `http://localhost:8080${thumbnailUrl}`
   }
 
   const getFullProfileImageUrl = (imageUrl) => {
@@ -418,7 +418,7 @@ const Homepage = () => {
     if (!imageUrl) {
       return "/images/defaultProfile.png"
     }
-    const fullUrl = imageUrl.startsWith("http") ? imageUrl : `https://neighbornet-back-production.up.railway.app${imageUrl}`
+    const fullUrl = imageUrl.startsWith("http") ? imageUrl : `http://localhost:8080${imageUrl}`
     return fullUrl
   }
 
