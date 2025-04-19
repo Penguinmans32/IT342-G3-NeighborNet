@@ -159,7 +159,7 @@ const QuizPage = () => {
           try {
             const token = localStorage.getItem('token')
             const response = await axios.get(
-              `http://localhost:8080/api/classes/${classId}/quizzes/${quizId}`,
+              `https://it342-g3-neighbornet.onrender.com/api/classes/${classId}/quizzes/${quizId}`,
               {
                 headers: { Authorization: `Bearer ${token}` }
               }
@@ -182,7 +182,7 @@ const QuizPage = () => {
     try {
       const token = localStorage.getItem('token')
       const response = await axios.post(
-        `http://localhost:8080/api/classes/${classId}/quizzes/${quizId}/start`,
+        `https://it342-g3-neighbornet.onrender.com/api/classes/${classId}/quizzes/${quizId}/start`,
         {},
         {
           headers: { Authorization: `Bearer ${token}` }
@@ -212,7 +212,7 @@ const QuizPage = () => {
     try {
       const token = localStorage.getItem('token')
       const response = await axios.post(
-        `http://localhost:8080/api/classes/${classId}/quizzes/${quizId}/attempts/${currentAttempt.id}/submit`,
+        `https://it342-g3-neighbornet.onrender.com/api/classes/${classId}/quizzes/${quizId}/attempts/${currentAttempt.id}/submit`,
         { answers },
         {
           headers: { Authorization: `Bearer ${token}` }

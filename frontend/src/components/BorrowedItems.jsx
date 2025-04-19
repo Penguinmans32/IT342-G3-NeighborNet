@@ -19,7 +19,7 @@ const BorrowedItems = () => {
   const fetchBorrowedItems = async () => {
     try {
       setLoading(true)
-      const response = await fetch("http://localhost:8080/api/borrowing/items/borrowed", {
+      const response = await fetch("https://it342-g3-neighbornet.onrender.com/api/borrowing/items/borrowed", {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
@@ -38,7 +38,7 @@ const BorrowedItems = () => {
       try {
         const statuses = {};
         for (const item of borrowedItems) {
-          const response = await fetch(`http://localhost:8080/api/borrowing/returns/status/${item.id}`, {
+          const response = await fetch(`https://it342-g3-neighbornet.onrender.com/api/borrowing/returns/status/${item.id}`, {
             headers: {
               Authorization: `Bearer ${localStorage.getItem("token")}`,
             },

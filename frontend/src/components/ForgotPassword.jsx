@@ -49,7 +49,7 @@ const ForgotPassword = () => {
     setOtpError('');
     
     try {
-      const response = await fetch('http://localhost:8080/api/auth/password/forgot?email=' + encodeURIComponent(email), {
+      const response = await fetch('https://it342-g3-neighbornet.onrender.com/api/auth/password/forgot?email=' + encodeURIComponent(email), {
         method: 'POST',
       });
       
@@ -100,7 +100,7 @@ const ForgotPassword = () => {
   
     setIsLoading(true);
     try {
-        const response = await fetch(`http://localhost:8080/api/auth/check-provider?email=${encodeURIComponent(email)}`, {
+        const response = await fetch(`https://it342-g3-neighbornet.onrender.com/api/auth/check-provider?email=${encodeURIComponent(email)}`, {
             method: 'GET',
         });
         const data = await response.json();
@@ -115,7 +115,7 @@ const ForgotPassword = () => {
         }
 
         // Continue with normal password reset flow for non-OAuth users
-        const resetResponse = await fetch('http://localhost:8080/api/auth/password/forgot?email=' + encodeURIComponent(email), {
+        const resetResponse = await fetch('https://it342-g3-neighbornet.onrender.com/api/auth/password/forgot?email=' + encodeURIComponent(email), {
             method: 'POST',
         });
         if (!resetResponse.ok) throw new Error('Failed to send reset email');
@@ -197,7 +197,7 @@ const ForgotPassword = () => {
     setIsLoading(true);
     try {
       const otpValue = otp.join('');
-      const response = await fetch(`http://localhost:8080/api/auth/password/verify-otp?email=${encodeURIComponent(email)}&otp=${otpValue}`, {
+      const response = await fetch(`https://it342-g3-neighbornet.onrender.com/api/auth/password/verify-otp?email=${encodeURIComponent(email)}&otp=${otpValue}`, {
         method: 'POST',
       });
       if (!response.ok) throw new Error('Invalid OTP');
@@ -225,7 +225,7 @@ const ForgotPassword = () => {
   
     setIsLoading(true);
     try {
-      const response = await fetch('http://localhost:8080/api/auth/password/reset', {
+      const response = await fetch('https://it342-g3-neighbornet.onrender.com/api/auth/password/reset', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

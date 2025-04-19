@@ -10,7 +10,7 @@ class NotificationService {
     }
 
     connect(userId, token) {
-        const socket = new SockJS('http://localhost:8080/ws');
+        const socket = new SockJS('https://it342-g3-neighbornet.onrender.com/ws');
         this.client = new Client({
             webSocketFactory: () => socket,
             connectHeaders: {

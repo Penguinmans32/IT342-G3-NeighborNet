@@ -33,7 +33,7 @@ export default function PostsView() {
 
   const fetchStats = async () => {
     try {
-      const response = await axios.get('http://localhost:8080/api/admin/posts/stats', {
+      const response = await axios.get('https://it342-g3-neighbornet.onrender.com/api/admin/posts/stats', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -46,7 +46,7 @@ export default function PostsView() {
 
   const fetchPosts = async () => {
     try {
-      const response = await axios.get(`http://localhost:8080/api/admin/posts`, {
+      const response = await axios.get(`https://it342-g3-neighbornet.onrender.com/api/admin/posts`, {
         params: { search },
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -68,7 +68,7 @@ export default function PostsView() {
 
   const deletePost = async () => {
     try {
-      await axios.delete(`http://localhost:8080/api/admin/posts/${selectedPost.id}`, {
+      await axios.delete(`https://it342-g3-neighbornet.onrender.com/api/admin/posts/${selectedPost.id}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }

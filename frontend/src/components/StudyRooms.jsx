@@ -116,7 +116,7 @@ const ReturnLinkModal = ({ isOpen, onClose, onContinue }) => {
           }
       
           // Increment participant count when joining
-          await fetch(`http://localhost:8080/api/rooms/${room.id}/join`, { 
+          await fetch(`https://it342-g3-neighbornet.onrender.com/api/rooms/${room.id}/join`, { 
             method: 'PUT',
             headers: {
               Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -127,7 +127,7 @@ const ReturnLinkModal = ({ isOpen, onClose, onContinue }) => {
           setShowReturnLink(true);
       
           window.addEventListener('beforeunload', async () => {
-            await fetch(`http://localhost:8080/api/rooms/${room.id}/leave`, { 
+            await fetch(`https://it342-g3-neighbornet.onrender.com/api/rooms/${room.id}/leave`, { 
               method: 'PUT',
               headers: {
                 Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -288,7 +288,7 @@ const StudyRooms = () => {
 
   const fetchRooms = async () => {
     try {
-      const response = await fetch("http://localhost:8080/api/rooms", {
+      const response = await fetch("https://it342-g3-neighbornet.onrender.com/api/rooms", {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
@@ -319,7 +319,7 @@ const StudyRooms = () => {
 
   const createRoom = async () => {
     try {
-      const response = await fetch("http://localhost:8080/api/rooms", {
+      const response = await fetch("https://it342-g3-neighbornet.onrender.com/api/rooms", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

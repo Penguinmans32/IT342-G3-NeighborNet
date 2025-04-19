@@ -56,7 +56,7 @@ const AIQuizGenerator = ({ onAddGeneratedQuiz, classId }) => {
     
     try {
       const response = await axios.post(
-        `http://localhost:8080/api/classes/${classId}/quizzes/generate/preview`,
+        `https://it342-g3-neighbornet.onrender.com/api/classes/${classId}/quizzes/generate/preview`,
         generationData,
         {
           headers: {

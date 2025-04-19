@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:8080/api';
+const API_BASE_URL = 'https://it342-g3-neighbornet.onrender.com/api';
 
 const classService = {
   async getMyClasses() {

@@ -100,7 +100,7 @@ const Chat = ({ senderId, receiverId, receiverName = '?', onMessageSent, stompCl
     }
   
     try {
-      const response = await fetch(`http://localhost:8080/api/borrowing/returns/return/${returnRequestId}/respond`, {
+      const response = await fetch(`https://it342-g3-neighbornet.onrender.com/api/borrowing/returns/return/${returnRequestId}/respond`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -166,7 +166,7 @@ const Chat = ({ senderId, receiverId, receiverName = '?', onMessageSent, stompCl
         createdAt: currentTimestamp,
       };
       
-      const response = await fetch("http://localhost:8080/api/borrowing/returns/send-return-request", {
+      const response = await fetch("https://it342-g3-neighbornet.onrender.com/api/borrowing/returns/send-return-request", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -237,7 +237,7 @@ const Chat = ({ senderId, receiverId, receiverName = '?', onMessageSent, stompCl
 
   const handleAgreementResponse = async (agreementId, status) => {
     try {
-      const response = await fetch(`http://localhost:8080/chat/agreement/${agreementId}/respond`, {
+      const response = await fetch(`https://it342-g3-neighbornet.onrender.com/chat/agreement/${agreementId}/respond`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -283,7 +283,7 @@ const Chat = ({ senderId, receiverId, receiverName = '?', onMessageSent, stompCl
     formData.append("image", selectedImage);
     
     try {
-      const response = await fetch("http://localhost:8080/chat/upload-image", {
+      const response = await fetch("https://it342-g3-neighbornet.onrender.com/chat/upload-image", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -361,7 +361,7 @@ const Chat = ({ senderId, receiverId, receiverName = '?', onMessageSent, stompCl
 
         console.log("Sending agreement data:", requestData);
 
-        const response = await fetch("http://localhost:8080/chat/send-agreement", {
+        const response = await fetch("https://it342-g3-neighbornet.onrender.com/chat/send-agreement", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -610,7 +610,7 @@ const Chat = ({ senderId, receiverId, receiverName = '?', onMessageSent, stompCl
     }
   
     try {
-      const response = await fetch(`http://localhost:8080/messages/${senderId}/${receiverId}`);
+      const response = await fetch(`https://it342-g3-neighbornet.onrender.com/messages/${senderId}/${receiverId}`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }

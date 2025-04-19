@@ -24,7 +24,7 @@ const SkillsMap = () => {
         const fetchEnrolledClasses = async () => {
             try {
                 const token = localStorage.getItem('token');
-                const response = await axios.get('http://localhost:8080/api/classes/enrolled', {
+                const response = await axios.get('https://it342-g3-neighbornet.onrender.com/api/classes/enrolled', {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     }
@@ -45,7 +45,7 @@ const SkillsMap = () => {
         if (!thumbnailUrl) return "/default-class-image.jpg";
         return thumbnailUrl.startsWith('http') 
           ? thumbnailUrl 
-          : `http://localhost:8080${thumbnailUrl}`;
+          : `https://it342-g3-neighbornet.onrender.com${thumbnailUrl}`;
     };
 
     const calculateOverallProgress = (classItem) => {

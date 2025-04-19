@@ -159,7 +159,7 @@ const LessonPlayer = ({
       <div className="aspect-video relative cursor-pointer" onClick={handlePlayPause}>
         <video
           ref={videoRef}
-          src={videoUrl ? `http://localhost:8080/api/classes/${classId}/lessons/video/${videoUrl.split('/').pop()}` : ''}
+          src={videoUrl ? `https://it342-g3-neighbornet.onrender.com/api/classes/${classId}/lessons/video/${videoUrl.split('/').pop()}` : ''}
           className="w-full h-full object-cover"
           onLoadedMetadata={handleLoadedMetadata}
           onLoadedData={() => setIsLoading(false)}

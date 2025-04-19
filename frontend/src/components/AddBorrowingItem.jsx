@@ -203,7 +203,7 @@ const AddBorrowingItem = () => {
         longitude: formData.get('longitude')
       });
   
-      const response = await axios.post('http://localhost:8080/api/borrowing/items', 
+      const response = await axios.post('https://it342-g3-neighbornet.onrender.com/api/borrowing/items', 
         formData,
         {
           headers: {

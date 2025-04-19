@@ -276,7 +276,7 @@ const Homepage = () => {
 
   const fetchSavedClasses = async () => {
     try {
-      const response = await axios.get("http://localhost:8080/api/classes/saved", {
+      const response = await axios.get("https://it342-g3-neighbornet.onrender.com/api/classes/saved", {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
@@ -422,7 +422,7 @@ const Homepage = () => {
     const fetchClasses = async () => {
       try {
         const response = await axios.get(
-          "http://localhost:8080/api/classes/all", 
+          "https://it342-g3-neighbornet.onrender.com/api/classes/all", 
           {
             params: {
               page: 0,          
@@ -451,7 +451,7 @@ const Homepage = () => {
         }
   
         const myClassesResponse = await axios.get(
-          "http://localhost:8080/api/classes/my-classes", 
+          "https://it342-g3-neighbornet.onrender.com/api/classes/my-classes", 
           {
             headers: {
               Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -494,7 +494,7 @@ const Homepage = () => {
   useEffect(() => {
     const fetchProfileData = async () => {
       try {
-        const response = await axios.get("http://localhost:8080/api/users/profile", {
+        const response = await axios.get("https://it342-g3-neighbornet.onrender.com/api/users/profile", {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
@@ -529,7 +529,7 @@ const Homepage = () => {
 
   const getFullThumbnailUrl = (thumbnailUrl) => {
     if (!thumbnailUrl) return "/default-class-image.jpg"
-    return thumbnailUrl.startsWith("http") ? thumbnailUrl : `http://localhost:8080${thumbnailUrl}`
+    return thumbnailUrl.startsWith("http") ? thumbnailUrl : `https://it342-g3-neighbornet.onrender.com${thumbnailUrl}`
   }
 
   const getFullProfileImageUrl = (imageUrl) => {
@@ -537,7 +537,7 @@ const Homepage = () => {
     if (!imageUrl) {
       return "/images/defaultProfile.png"
     }
-    const fullUrl = imageUrl.startsWith("http") ? imageUrl : `http://localhost:8080${imageUrl}`
+    const fullUrl = imageUrl.startsWith("http") ? imageUrl : `https://it342-g3-neighbornet.onrender.com${imageUrl}`
     return fullUrl
   }
 
@@ -545,8 +545,8 @@ const Homepage = () => {
     try {
       const isSaved = savedClassesSet.has(classId);
       const endpoint = isSaved ? 
-        `http://localhost:8080/api/classes/${classId}/unsave` : 
-        `http://localhost:8080/api/classes/${classId}/save`;
+        `https://it342-g3-neighbornet.onrender.com/api/classes/${classId}/unsave` : 
+        `https://it342-g3-neighbornet.onrender.com/api/classes/${classId}/save`;
       const method = isSaved ? 'DELETE' : 'POST';
   
       await axios({

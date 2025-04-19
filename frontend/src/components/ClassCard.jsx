@@ -11,7 +11,7 @@ const getCorrectImageUrl = (imageUrl) => {
   
   if (imageUrl.includes('localhost:8080')) {
     const path = imageUrl.split('localhost:8080')[1];
-    return `http://localhost:8080${path}`;
+    return `https://it342-g3-neighbornet.onrender.com${path}`;
   }
   
   if (imageUrl.startsWith("http")) {
@@ -19,7 +19,7 @@ const getCorrectImageUrl = (imageUrl) => {
   }
   
   if (imageUrl.startsWith("/api/")) {
-    return `http://localhost:8080${imageUrl}`;
+    return `https://it342-g3-neighbornet.onrender.com${imageUrl}`;
   }
   
   return imageUrl;
