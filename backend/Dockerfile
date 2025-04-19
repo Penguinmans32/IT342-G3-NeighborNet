@@ -1,4 +1,4 @@
-FROM maven:3.8.7-openjdk-21-slim AS build
+FROM maven:4.0.0-eclipse-temurin-21 AS build
 WORKDIR /app
 
 # Copy the Maven POM file
