@@ -630,15 +630,18 @@ const ClassDetails = () => {
     try {
       const token = localStorage.getItem("token")
       const headers = { Authorization: `Bearer ${token}` }
-
-      const response = await axios.get(`https://it342-g3-neighbornet.onrender.com/api/classes/${classId}/feedbacks`, { headers })
-
-      // Add userId from the user object in the feedback
+  
+      const cacheBuster = new Date().getTime()
+      const response = await axios.get(
+        `https://it342-g3-neighbornet.onrender.com/api/classes/${classId}/feedbacks?_=${cacheBuster}`,
+        { headers }
+      )
+  
       const feedbacksWithUserId = response.data.map((feedback) => ({
         ...feedback,
-        userId: feedback.user?.id || null, // Make sure to handle null case
+        userId: feedback.user?.id || null,
       }))
-
+  
       setClassFeedbacks(feedbacksWithUserId)
     } catch (error) {
       console.error("Error fetching class feedbacks:", error)
@@ -731,21 +734,21 @@ const ClassDetails = () => {
 
   const handleSubmitFeedback = async (e) => {
     e.preventDefault()
-
+  
     if (!feedbackText.trim()) {
       toast.error("Please enter your feedback")
       return
     }
-
+  
     setIsSubmittingFeedback(true)
-
+  
     try {
       const token = localStorage.getItem("token")
       const headers = { Authorization: `Bearer ${token}` }
-
+  
+      let response;
       if (editingFeedback) {
-        // Update existing feedback
-        await axios.put(
+        response = await axios.put(
           `https://it342-g3-neighbornet.onrender.com/api/classes/${classId}/feedback/${editingFeedback.id}`,
           {
             content: feedbackText,
@@ -756,7 +759,7 @@ const ClassDetails = () => {
         toast.success("Feedback updated successfully!")
       } else {
         // Create new feedback
-        await axios.post(
+        response = await axios.post(
           `https://it342-g3-neighbornet.onrender.com/api/classes/${classId}/feedback`,
           {
             content: feedbackText,
@@ -766,9 +769,26 @@ const ClassDetails = () => {
         )
         toast.success("Feedback submitted successfully!")
       }
-
-      // Reset states
+  
+      if (response.data) {
+        if (editingFeedback) {
+          setClassFeedbacks(prevFeedbacks => 
+            prevFeedbacks.map(feedback => 
+              feedback.id === editingFeedback.id 
+                ? { ...response.data, userId: user?.data?.id } 
+                : feedback
+            )
+          );
+        } else {
+          setClassFeedbacks(prevFeedbacks => [
+            ...prevFeedbacks,
+            { ...response.data, userId: user?.data?.id }
+          ]);
+        }
+      }
+  
       await fetchClassFeedbacks()
+      
       setFeedbackText("")
       setShowFeedbackForm(false)
       setEditingFeedback(null)
@@ -859,26 +879,30 @@ const ClassDetails = () => {
 
   const fetchLatestClassData = async () => {
     try {
-      const token = localStorage.getItem("token")
-      const headers = { Authorization: `Bearer ${token}` }
+        const token = localStorage.getItem("token")
+        const headers = { Authorization: `Bearer ${token}` }
+        
+        const timestamp = new Date().getTime()
+        const classResponse = await axios.get(
+            `https://it342-g3-neighbornet.onrender.com/api/classes/${classId}?_=${timestamp}`, 
+            { headers }
+        )
 
-      const classResponse = await axios.get(`https://it342-g3-neighbornet.onrender.com/api/classes/${classId}`, { headers })
+        const classData = classResponse.data
+        console.log("Class Response (freshly fetched):", classData)
 
-      const classData = classResponse.data
-      console.log("Class Response:", classData)
+        setClassData(classData)
+        setDisplayRating({
+            average: Number(classData.averageRating || 0),
+            count: Number(classData.ratingCount || 0),
+        })
 
-      setClassData(classData)
-      setDisplayRating({
-        average: Number(classData.averageRating || 0),
-        count: Number(classData.ratingCount || 0),
-      })
-
-      return classData
+        return classData
     } catch (error) {
-      console.error("Error fetching updated class data:", error)
-      return null
+        console.error("Error fetching updated class data:", error)
+        return null
     }
-  }
+}
 
   useEffect(() => {
     const handleScroll = () => {
@@ -895,11 +919,11 @@ const ClassDetails = () => {
         const headers = isAuthenticated ? { Authorization: `Bearer ${token}` } : {}
 
         const [classResponse, lessonsResponse] = await Promise.all([
-          axios.get(`https://it342-g3-neighbornet.onrender.com/api/classes/${classId}`, { headers }),
+          axios.get(`https://it342-g3-neighbornet.onrender.com/api/classes/${classId}?_=${new Date().getTime()}`, { headers }),
           isAuthenticated
-            ? axios.get(`https://it342-g3-neighbornet.onrender.com/api/classes/${classId}/lessons`, { headers })
-            : Promise.resolve({ data: [] }), // Empty lessons for unauthenticated users
-        ])
+              ? axios.get(`https://it342-g3-neighbornet.onrender.com/api/classes/${classId}/lessons`, { headers })
+              : Promise.resolve({ data: [] }),
+      ])
 
         const classResponseData = classResponse.data
         setClassData(classResponse.data)

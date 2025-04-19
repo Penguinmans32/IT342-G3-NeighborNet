@@ -12,6 +12,25 @@ const BorrowedItems = () => {
   const [returnStatus, setReturnStatus] = useState({})
   const navigate = useNavigate()
 
+  // Function to transform image URLs
+  const getItemImageUrl = (imageUrl) => {
+    if (!imageUrl) return "/images/no-image.png";
+    
+    if (imageUrl.startsWith('http')) return imageUrl;
+    
+    if (imageUrl.includes('/api/borrowing/items/images/')) {
+      try {
+        const filename = imageUrl.substring(imageUrl.lastIndexOf('/') + 1);
+        return `https://storage.googleapis.com/neighbornet-media/item-images/${filename}`;
+      } catch (error) {
+        console.error("Error parsing image URL:", error);
+        return "/images/no-image.png";
+      }
+    }
+    
+    return imageUrl;
+  };
+
   useEffect(() => {
     fetchBorrowedItems()
   }, [])
@@ -240,9 +259,13 @@ const BorrowedItems = () => {
                 >
                   <div className="relative group h-56">
                     <img
-                      src={item.imageUrls?.[0] || "/placeholder.svg?height=224&width=400"}
+                      src={item.imageUrls?.[0] ? getItemImageUrl(item.imageUrls[0]) : "/images/no-image.png"}
                       alt={item.name}
                       className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = "/images/no-image.png";
+                      }}
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end">
                       <div className="p-4 w-full">
@@ -460,9 +483,13 @@ const BorrowedItems = () => {
             >
               <div className="relative h-56">
                 <img
-                  src={selectedItem.imageUrls?.[0] || "/placeholder.svg?height=224&width=400"}
+                  src={selectedItem.imageUrls?.[0] ? getItemImageUrl(selectedItem.imageUrls[0]) : "/images/no-image.png"}
                   alt={selectedItem.name}
                   className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = "/images/no-image.png";
+                  }}
                 />
                 <button
                   onClick={() => setSelectedItem(null)}

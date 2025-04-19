@@ -234,286 +234,121 @@ const QuizPage = () => {
   }
 
   const ResultScreen = ({ result }) => {
-    const score = result.score
-    const maxScore = result.maxScore
-    const percentage = (score / maxScore) * 100
-    const passed = percentage >= (quiz?.passingScore || 60)
+    const score = result.score || 0;
+    const maxScore = result.maxScore || 1;
+    const percentage = Math.min(100, Math.round((score / maxScore) * 100));
+    const passed = percentage >= (quiz?.passingScore || 60);
   
+    // Simple function to format true/false answers
     const formatAnswer = (question, answer) => {
       if (question.type === 'TRUE_FALSE') {
-        return answer === "1" ? "True" : "False"
+        return answer === "1" ? "True" : "False";
       }
-      return answer
-    }
-
-    const getPerformanceMessage = () => {
-      if (percentage === 100) return 'Perfect Score! Excellent job! 🎉'
-      if (percentage >= 90) return 'Outstanding Performance! 🌟'
-      if (percentage >= 80) return 'Great Work! 👏'
-      if (percentage >= quiz?.passingScore) return 'Good Job! 👍'
-      return 'Keep Practicing! You can do better! 💪'
-    }
-  
-    const getGradeLevel = () => {
-      if (percentage === 100) return 'Perfect'
-      if (percentage >= 90) return 'A'
-      if (percentage >= 80) return 'B'
-      if (percentage >= 70) return 'C'
-      if (percentage >= 60) return 'D'
-      return 'F'
-    }
-    
-    const getEmoji = () => {
-      if (percentage === 100) return '🏆'
-      if (percentage >= 90) return '🌟'
-      if (percentage >= 80) return '🎯'
-      if (percentage >= quiz?.passingScore) return '👍'
-      return '💪'
-    }
-    
-    const getGradeColor = () => {
-      if (percentage >= 90) return 'from-emerald-500 to-green-500'
-      if (percentage >= 80) return 'from-green-500 to-teal-500'
-      if (percentage >= 70) return 'from-teal-500 to-cyan-500'
-      if (percentage >= quiz?.passingScore) return 'from-cyan-500 to-blue-500'
-      return 'from-amber-500 to-orange-500'
-    }
+      return answer;
+    };
   
     return (
-      <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="bg-white rounded-2xl shadow-xl p-8 relative overflow-hidden"
-      >
-        {passed && showConfetti && (
-          <ReactConfetti
-            width={windowSize.width}
-            height={windowSize.height}
-            recycle={false}
-            numberOfPieces={300}
-            gravity={0.15}
-            colors={['#10B981', '#3B82F6', '#6366F1', '#8B5CF6', '#EC4899', '#F59E0B']}
-          />
-        )}
-        
-        {/* Background decoration */}
-        <div className="absolute inset-0 opacity-5 pattern-grid z-0"></div>
-        <div className="absolute -top-20 -right-20 w-64 h-64 bg-gradient-to-br from-blue-300 to-purple-300 rounded-full blur-3xl opacity-20 z-0"></div>
-        <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-gradient-to-br from-green-300 to-teal-300 rounded-full blur-3xl opacity-20 z-0"></div>
-        
-        <div className="relative z-10 space-y-8">
-          <div className="text-center space-y-6">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.5, rotate: -10 }}
-              animate={{ opacity: 1, scale: 1, rotate: 0 }}
-              transition={{ 
-                type: "spring", 
-                stiffness: 300, 
-                damping: 15,
-                delay: 0.2
-              }}
-              className={`w-28 h-28 rounded-full mx-auto flex items-center justify-center shadow-lg ${
-                passed 
-                  ? 'bg-gradient-to-br from-green-100 to-emerald-100 border border-green-200' 
-                  : 'bg-gradient-to-br from-amber-100 to-orange-100 border border-amber-200'
-              }`}
-            >
-              {passed ? (
-                <motion.div
-                  animate={animateScore ? { 
-                    scale: [1, 1.2, 1],
-                    rotate: [0, 10, -10, 0]
-                  } : {}}
-                  transition={{ duration: 0.6 }}
-                >
-                  <Trophy className="text-6xl text-green-500" />
-                </motion.div>
-              ) : (
-                <motion.div
-                  animate={animateScore ? { scale: [1, 1.2, 1] } : {}}
-                  transition={{ duration: 0.6 }}
-                >
-                  <Medal className="text-6xl text-amber-500" />
-                </motion.div>
-              )}
-            </motion.div>
-            
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-            >
-              <h2 className={`text-3xl font-bold ${
-                passed ? 'text-gradient-green' : 'text-gradient-amber'
-              }`}>
-                {getPerformanceMessage()}
-              </h2>
-              <div className="mt-2 inline-flex items-center gap-2 px-4 py-2 bg-gray-50 rounded-full">
-                <span className="text-gray-500">Grade:</span>
-                <motion.span 
-                  className={`text-lg font-bold bg-gradient-to-r ${getGradeColor()} text-transparent bg-clip-text`}
-                  animate={animateScore ? { 
-                    scale: [1, 1.3, 1],
-                  } : {}}
-                  transition={{ duration: 0.5, delay: 0.6 }}
-                >
-                  {getGradeLevel()} {getEmoji()}
-                </motion.span>
-              </div>
-            </motion.div>
-            
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
-              className="bg-gradient-to-br from-gray-50 to-blue-50 rounded-xl p-6 shadow-md border border-blue-100"
-            >
-              <div className="text-xl text-gray-700 font-medium flex items-center justify-center gap-2">
-                <span>Your Score:</span> 
-                <motion.span
-                  className="font-bold text-blue-600"
-                  animate={animateScore ? { 
-                    scale: [1, 1.2, 1],
-                    color: ['#1d4ed8', '#10b981', '#1d4ed8'] 
-                  } : {}}
-                  transition={{ duration: 0.5, delay: 0.8 }}
-                >
-                  {score}/{maxScore} ({Math.round(percentage)}%)
-                </motion.span>
-              </div>
-              <div className="text-sm text-gray-500 mt-1 text-center">
-                Passing Score: {quiz?.passingScore}%
-              </div>
-              
-              {/* Progress bar */}
-              <div className="mt-4 h-4 bg-gray-200 rounded-full overflow-hidden shadow-inner">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${percentage}%` }}
-                  transition={{ duration: 1, delay: 0.9 }}
-                  className={`h-full rounded-full ${
-                    passed 
-                      ? 'bg-gradient-to-r from-green-500 to-emerald-500'
-                      : 'bg-gradient-to-r from-amber-500 to-orange-500'
-                  }`}
-                >
-                  <div className="h-full w-full bg-shine animate-shine"></div>
-                </motion.div>
-              </div>
-            </motion.div>
+      <div className="bg-white rounded-2xl shadow-lg p-6">
+        {/* Simple header with result */}
+        <div className="text-center mb-8">
+          <div className={`w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-4 ${
+            passed ? 'bg-green-100 text-green-600' : 'bg-amber-100 text-amber-600'
+          }`}>
+            {passed ? (
+              <CheckCircle className="w-10 h-10" />
+            ) : (
+              <AlertCircle className="w-10 h-10" />
+            )}
           </div>
+          
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">
+            {passed ? 'Quiz Passed!' : 'Quiz Not Passed'}
+          </h2>
+          
+          <p className="text-lg text-gray-600">
+            Your Score: <span className="font-bold">{score}/{maxScore} ({percentage}%)</span>
+          </p>
+          
+          <p className="text-sm text-gray-500 mt-1">
+            Passing Score: {quiz?.passingScore || 60}%
+          </p>
+        </div>
   
-          {/* Question review */}
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 1 }}
-            className="space-y-4 mt-8"
-          >
-            <div className="flex items-center gap-2 mb-3">
-              <CheckCircle className={`w-5 h-5 ${passed ? 'text-green-500' : 'text-amber-500'}`} />
-              <h3 className="text-lg font-semibold text-gray-800">Question Review</h3>
-            </div>
+        {/* Simple progress bar */}
+        <div className="h-3 bg-gray-200 rounded-full mb-8">
+          <div 
+            className={`h-full rounded-full ${passed ? 'bg-green-500' : 'bg-amber-500'}`}
+            style={{ width: `${percentage}%` }}
+          ></div>
+        </div>
+  
+        {/* Question review - simplified */}
+        <div className="space-y-4 mb-8">
+          <h3 className="font-semibold text-lg text-gray-800 border-b pb-2">Question Review</h3>
+          
+          {result.correctAnswers && Object.entries(result.correctAnswers).map(([questionId, correctAnswer], index) => {
+            const question = quiz.questions.find(q => q.id.toString() === questionId);
+            const userAnswer = answers[questionId];
+            const isCorrect = userAnswer === correctAnswer;
             
-            {result.correctAnswers && Object.entries(result.correctAnswers).map(([questionId, correctAnswer], index) => {
-              const question = quiz.questions.find(q => q.id.toString() === questionId)
-              const userAnswer = answers[questionId]
-              const isCorrect = userAnswer === correctAnswer
-  
-              return (
-                <motion.div 
-                  key={questionId}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 1 + (index * 0.1) }}
-                  className={`p-5 rounded-xl ${
-                    isCorrect 
-                      ? 'bg-green-50 border border-green-200 shadow-sm' 
-                      : 'bg-amber-50 border border-amber-200 shadow-sm'
-                  }`}
-                >
-                  <div className="flex gap-3">
-                    <div className="flex-shrink-0 mt-1">
-                      {isCorrect ? (
-                        <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center">
-                          <CheckCircle className="w-4 h-4 text-green-600" />
-                        </div>
-                      ) : (
-                        <div className="w-6 h-6 bg-amber-100 rounded-full flex items-center justify-center">
-                          <AlertCircle className="w-4 h-4 text-amber-600" />
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-medium text-gray-800">Q{index + 1}: {question.content}</p>
-                      <div className="mt-2 space-y-1 text-sm bg-white/50 p-3 rounded-lg">
-                        <p>
-                          <span className="text-gray-600">Your answer: </span>
-                          <span className={isCorrect 
-                            ? 'text-green-600 font-medium' 
-                            : 'text-amber-600 font-medium'
-                          }>
-                            {formatAnswer(question, userAnswer)}
-                          </span>
-                        </p>
-                        {!isCorrect && (
-                          <p>
-                            <span className="text-gray-600">Correct answer: </span> 
-                            <span className="text-green-600 font-medium">
-                              {formatAnswer(question, correctAnswer)}
-                            </span>
-                          </p>
-                        )}
-                      </div>
+            if (!question) return null;
+            
+            return (
+              <div 
+                key={questionId}
+                className={`p-3 rounded-lg border ${isCorrect ? 'border-green-200 bg-green-50' : 'border-amber-200 bg-amber-50'}`}
+              >
+                <div className="flex gap-2">
+                  <div className={`rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 mt-1 ${
+                    isCorrect ? 'bg-green-100 text-green-600' : 'bg-amber-100 text-amber-600'
+                  }`}>
+                    {isCorrect ? '✓' : '✗'}
+                  </div>
+                  
+                  <div>
+                    <p className="font-medium text-gray-800">Q{index + 1}: {question.content}</p>
+                    
+                    <div className="mt-2 text-sm">
+                      <p>Your answer: <span className={isCorrect ? 'text-green-600 font-medium' : 'text-amber-600 font-medium'}>
+                        {formatAnswer(question, userAnswer)}
+                      </span></p>
                       
-                      {result.explanations?.[questionId] && (
-                        <div className="mt-3 bg-blue-50 p-3 rounded-lg border border-blue-100 flex items-start gap-2">
-                          <MdLightbulb className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
-                          <p className="text-gray-700 text-sm">
-                            {result.explanations[questionId]}
-                          </p>
-                        </div>
+                      {!isCorrect && (
+                        <p>Correct answer: <span className="text-green-600 font-medium">
+                          {formatAnswer(question, correctAnswer)}
+                        </span></p>
                       )}
                     </div>
                   </div>
-                </motion.div>
-              )
-            })}
-          </motion.div>
-  
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 1.5 }}
-            className="flex flex-wrap gap-4 justify-center mt-8"
-          >
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => navigate(`/class/${classId}`)}
-              className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-all flex items-center gap-2 shadow-sm"
-            >
-              <ChevronLeft className="w-4 h-4" />
-              Back to Class
-            </motion.button>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => {
-                setQuizResult(null)
-                setCurrentAttempt(null)
-                setAnswers({})
-              }}
-              className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:shadow-lg transition-all flex items-center gap-2"
-            >
-              <Zap className="w-4 h-4" />
-              Try Again
-            </motion.button>
-          </motion.div>
+                </div>
+              </div>
+            );
+          })}
         </div>
-      </motion.div>
-    )
-  }
+  
+        {/* Simple action buttons */}
+        <div className="flex justify-center gap-4">
+          <button
+            onClick={() => navigate(`/class/${classId}`)}
+            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+          >
+            Back to Class
+          </button>
+          
+          <button
+            onClick={() => {
+              setQuizResult(null);
+              setCurrentAttempt(null);
+              setAnswers({});
+            }}
+            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  };
 
   if (loading) {
     return (

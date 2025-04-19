@@ -99,6 +99,25 @@ const handlePasswordChange = async () => {
   }
 };
 
+const getProfileImageUrl = (imageUrl) => {
+  if (!imageUrl) return "/images/defaultProfile.png?height=160&width=160";
+  
+  if (imageUrl.startsWith('http')) return imageUrl;
+  
+  // Handle API profile image paths
+  if (imageUrl.includes('/api/users/profile-image/')) {
+    try {
+      const filename = imageUrl.substring(imageUrl.lastIndexOf('/') + 1);
+      return `https://storage.googleapis.com/neighbornet-media/profile-images/${filename}`;
+    } catch (error) {
+      console.error("Error parsing profile image URL:", error);
+      return "/images/defaultProfile.png?height=160&width=160";
+    }
+  }
+  
+  return imageUrl;
+};
+
 const handleDeleteAccount = async () => {
   setDeleting(true);
   try {
@@ -390,18 +409,18 @@ const handleDeleteAccount = async () => {
                 onDragOver={handleDrag}
                 onDrop={handleDrop}
               >
-               <img
-                  src={previewImage || profileData.imageUrl || "/images/defaultProfile.png?height=160&width=160"}
-                  alt="Profile"
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    e.currentTarget.onerror = null;
-                    if (e.currentTarget.src !== "/images/defaultProfile.png?height=160&width=160") {
-                      e.currentTarget.src = "/images/defaultProfile.png?height=160&width=160";
-                    }
-                  }}
-                  loading="lazy"
-                />
+             <img
+                src={previewImage || getProfileImageUrl(profileData.imageUrl)}
+                alt="Profile"
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  if (e.currentTarget.src !== "/images/defaultProfile.png?height=160&width=160") {
+                    e.currentTarget.src = "/images/defaultProfile.png?height=160&width=160";
+                  }
+                }}
+                loading="lazy"
+              />
 
                 <div
                   className="absolute inset-0 bg-gradient-to-t from-black/60 to-black/20 opacity-0 hover:opacity-100 transition-opacity flex flex-col items-center justify-center cursor-pointer"

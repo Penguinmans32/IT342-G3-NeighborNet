@@ -23,7 +23,14 @@ public class LessonResponse {
         response.setId(lesson.getId());
         response.setTitle(lesson.getTitle());
         response.setDescription(lesson.getDescription());
-        response.setVideoUrl(lesson.getVideoUrl());
+
+        if (lesson.getVideoUrl() != null && lesson.getVideoUrl().startsWith("/api/classes/lessons/video/")) {
+            String filename = lesson.getVideoUrl().substring("/api/classes/lessons/video/".length());
+            response.setVideoUrl("https://storage.googleapis.com/neighbornet-media/videos/" + filename);
+        } else {
+            response.setVideoUrl(lesson.getVideoUrl());
+        }
+
         response.setAverageRating(lesson.getAverageRating());
         response.setRatingCount(lesson.getRatingCount());
         response.setClassId(lesson.getClassEntity().getId());

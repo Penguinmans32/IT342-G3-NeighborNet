@@ -218,11 +218,7 @@ public class ItemService {
 
         if (item.getImageUrls() != null && !item.getImageUrls().isEmpty()) {
             for (String imageUrl : item.getImageUrls()) {
-                try {
-                    itemImageStorageService.deleteItemImage(imageUrl);
-                } catch (IOException e) {
-                    logger.error("Failed to delete image: " + imageUrl, e);
-                }
+                itemImageStorageService.deleteItemImage(imageUrl);
             }
         }
 
@@ -331,12 +327,8 @@ public class ItemService {
         // Delete physical image files first
         if (item.getImageUrls() != null && !item.getImageUrls().isEmpty()) {
             for (String imageUrl : item.getImageUrls()) {
-                try {
-                    String filename = imageUrl.substring(imageUrl.lastIndexOf('/') + 1);
-                    itemImageStorageService.deleteItemImage(filename);
-                } catch (IOException e) {
-                    logger.error("Failed to delete image: " + imageUrl, e);
-                }
+                String filename = imageUrl.substring(imageUrl.lastIndexOf('/') + 1);
+                itemImageStorageService.deleteItemImage(filename);
             }
         }
 

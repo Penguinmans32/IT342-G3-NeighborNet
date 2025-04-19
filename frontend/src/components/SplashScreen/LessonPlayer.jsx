@@ -157,21 +157,22 @@ const LessonPlayer = ({
   return (
     <div className="bg-black rounded-xl overflow-hidden shadow-lg">
       <div className="aspect-video relative cursor-pointer" onClick={handlePlayPause}>
-        <video
-          ref={videoRef}
-          src={videoUrl ? `https://it342-g3-neighbornet.onrender.com/api/classes/${classId}/lessons/video/${videoUrl.split('/').pop()}` : ''}
-          className="w-full h-full object-cover"
-          onLoadedMetadata={handleLoadedMetadata}
-          onLoadedData={() => setIsLoading(false)}
-          onPlay={() => setIsPlaying(true)}
-          onPause={() => setIsPlaying(false)}
-          onError={(e) => {
-            console.error("Video loading error:", e);
-            setError("Failed to load video");
-            setIsLoading(false);
-          }}
-          controls={false}
-        />
+      <video
+        ref={videoRef}
+        src={videoUrl || ''}
+        className="w-full h-full object-cover"
+        onLoadedMetadata={handleLoadedMetadata}
+        onLoadedData={() => setIsLoading(false)}
+        onPlay={() => setIsPlaying(true)}
+        onPause={() => setIsPlaying(false)}
+        onError={(e) => {
+          console.error("Video loading error:", e);
+          console.log("Video URL:", videoUrl);
+          setError("Failed to load video");
+          setIsLoading(false);
+        }}
+        controls={false}
+      />
 
         {/* Loading Overlay */}
         {isLoading && (

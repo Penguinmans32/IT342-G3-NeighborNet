@@ -1,31 +1,28 @@
 package com.example.neighbornetbackend.service;
 
-import jakarta.annotation.PostConstruct;
+import com.google.cloud.storage.BlobId;
+import com.google.cloud.storage.BlobInfo;
+import com.google.cloud.storage.Storage;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.util.UUID;
 
 @Service
 public class PostImageStorageService {
-    private final Path postImagesLocation;
+    private final Storage storage;
+    private final String bucketName;
 
-    @Value("${app.baseUrl:http://localhost:8080}")
-    private String baseUrl;
+    @Value("${gcp.storage.public-url:https://storage.googleapis.com}")
+    private String publicUrl;
 
-    public PostImageStorageService() {
-        this.postImagesLocation = Paths.get(System.getProperty("user.dir"), "post-images").toAbsolutePath();
-        try {
-            Files.createDirectories(this.postImagesLocation);
-            System.out.println("Post images directory created at: " + this.postImagesLocation);
-        } catch (IOException e) {
-            throw new RuntimeException("Could not create post images directory!", e);
-        }
+    @Autowired
+    public PostImageStorageService(Storage storage, @Value("${gcp.storage.bucket-name}") String bucketName) {
+        this.storage = storage;
+        this.bucketName = bucketName;
     }
 
     public String storePostImage(MultipartFile file) throws IOException {
@@ -37,25 +34,40 @@ public class PostImageStorageService {
         String fileExtension = originalFilename != null ?
                 originalFilename.substring(originalFilename.lastIndexOf(".")) : ".jpg";
         String filename = UUID.randomUUID().toString() + fileExtension;
+        String objectName = "post-images/" + filename;
 
-        Path targetLocation = this.postImagesLocation.resolve(filename);
-        Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
+        BlobId blobId = BlobId.of(bucketName, objectName);
+        BlobInfo blobInfo = BlobInfo.newBuilder(blobId)
+                .setContentType(file.getContentType())
+                .build();
 
-        return baseUrl + "/api/posts/images/" + filename;
+        storage.create(blobInfo, file.getBytes());
+
+        return "/api/posts/images/" + filename;
     }
 
-    public Path getPostImagePath(String filename) {
-        return postImagesLocation.resolve(filename);
+    public String getPostImageUrl(String filename) {
+        String objectName = "post-images/" + filename;
+        return publicUrl + "/" + bucketName + "/" + objectName;
     }
 
-    public void deletePostImage(String imageUrl) throws IOException {
-        if (imageUrl == null) return;
+    public void deletePostImage(String imageUrl) {
+        if (imageUrl == null || imageUrl.isEmpty()) return;
 
-        String filename = imageUrl.substring(imageUrl.lastIndexOf('/') + 1);
-        Path imagePath = postImagesLocation.resolve(filename);
+        try {
+            String filename = imageUrl.substring(imageUrl.lastIndexOf('/') + 1);
+            String objectName = "post-images/" + filename;
 
-        if (Files.exists(imagePath)) {
-            Files.delete(imagePath);
+            BlobId blobId = BlobId.of(bucketName, objectName);
+            boolean deleted = storage.delete(blobId);
+
+            if (deleted) {
+                System.out.println("Successfully deleted image: " + objectName);
+            } else {
+                System.out.println("Image not found or could not be deleted: " + objectName);
+            }
+        } catch (Exception e) {
+            System.err.println("Error deleting image: " + e.getMessage());
         }
     }
 }

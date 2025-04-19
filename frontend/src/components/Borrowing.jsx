@@ -1,4 +1,3 @@
-// Borrowing.jsx
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -23,6 +22,19 @@ import {
 import { ArrowLeft } from 'lucide-react';
 import axios from 'axios';
 
+// Add the getItemImageUrl function
+const getItemImageUrl = (imageUrl) => {
+  if (!imageUrl) return "/placeholder.svg";
+  
+  if (imageUrl.startsWith('http')) return imageUrl;
+  
+  if (imageUrl.includes('/api/borrowing/items/images/')) {
+    const filename = imageUrl.substring(imageUrl.lastIndexOf('/') + 1);
+    return `https://storage.googleapis.com/neighbornet-media/item-images/${filename}`;
+  }
+  
+  return imageUrl;
+};
 
 const Pagination = ({ currentPage, totalPages, onPageChange }) => {
   return (
@@ -120,7 +132,7 @@ const MessageModal = ({ isOpen, onClose, onSend, ownerName, item}) => {
             <div className="flex items-center gap-3">
               {item.imageUrls?.[0] && (
                 <img 
-                  src={item.imageUrls[0]} 
+                  src={getItemImageUrl(item.imageUrls[0])} 
                   alt={item.name}
                   className="w-16 h-16 object-cover rounded-lg"
                 />
@@ -285,6 +297,9 @@ const ImageGalleryModal = ({ images = [], isOpen, onClose, currentIndex = 0 }) =
     setActiveIndex((prev) => (prev < images.length - 1 ? prev + 1 : 0));
   };
 
+  // Transform the image URLs for the gallery
+  const transformedImages = images.map(image => getItemImageUrl(image));
+
   return (
     <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4">
       <div className="relative w-full max-w-4xl mx-auto">
@@ -325,7 +340,7 @@ const ImageGalleryModal = ({ images = [], isOpen, onClose, currentIndex = 0 }) =
         {/* Main image */}
         <div className="relative aspect-[4/3] bg-black rounded-lg overflow-hidden">
           <img
-            src={images[activeIndex]}
+            src={transformedImages[activeIndex]}
             alt={`Gallery item ${activeIndex + 1}`}
             className="w-full h-full object-contain"
             onError={(e) => {
@@ -337,14 +352,14 @@ const ImageGalleryModal = ({ images = [], isOpen, onClose, currentIndex = 0 }) =
           {/* Image counter */}
           <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 
                         bg-black/50 text-white px-3 py-1 rounded-full text-sm">
-            {activeIndex + 1} / {images.length}
+            {activeIndex + 1} / {transformedImages.length}
           </div>
         </div>
 
         {/* Thumbnails */}
-        {images.length > 1 && (
+        {transformedImages.length > 1 && (
           <div className="flex gap-2 mt-4 justify-center overflow-x-auto py-2">
-            {images.map((image, index) => (
+            {transformedImages.map((image, index) => (
               <button
                 key={index}
                 onClick={() => setActiveIndex(index)}
@@ -401,9 +416,17 @@ const Borrowing = () => {
     if (!imageUrl) {
       return "/images/defaultProfile.png";
     }
-    return imageUrl.startsWith('http') 
-      ? imageUrl 
-      : `https://it342-g3-neighbornet.onrender.com${imageUrl}`;
+    
+    if (imageUrl.startsWith('http')) {
+      return imageUrl;
+    }
+    
+    if (imageUrl.includes('/api/users/profile-pictures/')) {
+      const filename = imageUrl.substring(imageUrl.lastIndexOf('/') + 1);
+      return `https://storage.googleapis.com/neighbornet-media/profile-pictures/${filename}`;
+    }
+    
+    return `https://it342-g3-neighbornet.onrender.com${imageUrl}`;
   };
 
   const fetchBorrowedItemsStatus = async () => {
@@ -832,7 +855,7 @@ const Borrowing = () => {
                                       {/* Main Image */}
                                       <div className="col-span-2 h-48 relative rounded-lg overflow-hidden">
                                         <img
-                                          src={item.imageUrls[0]}
+                                          src={getItemImageUrl(item.imageUrls[0])}
                                           alt={`${item.name} - Main`}
                                           className="w-full h-full object-cover"
                                           onError={(e) => {
@@ -848,7 +871,7 @@ const Borrowing = () => {
                                           {item.imageUrls.slice(1, 4).map((url, index) => (
                                             <div key={index} className="aspect-square relative rounded-lg overflow-hidden">
                                               <img
-                                                src={url}
+                                                src={getItemImageUrl(url)}
                                                 alt={`${item.name} - ${index + 2}`}
                                                 className="w-full h-full object-cover"
                                                 onError={(e) => {

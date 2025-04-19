@@ -586,6 +586,19 @@ const ItemDetail = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  const getItemImageUrl = (imageUrl) => {
+    if (!imageUrl) return "/placeholder.svg";
+    
+    if (imageUrl.startsWith('http')) return imageUrl;
+    
+    if (imageUrl.includes('/api/borrowing/items/images/')) {
+      const filename = imageUrl.substring(imageUrl.lastIndexOf('/') + 1);
+      return `https://storage.googleapis.com/neighbornet-media/item-images/${filename}`;
+    }
+    
+    return imageUrl;
+  };
+
   const openDeleteConfirmation = () => {
     setShowDeleteConfirm(true);
   };
@@ -802,7 +815,10 @@ const ItemDetail = () => {
             <MainImageContainer>
               {item.imageUrls && item.imageUrls.length > 0 ? (
                 <>
-                  <MainImage src={item.imageUrls[currentImageIndex] || "/placeholder.svg"} alt={item.name} />
+                 <MainImage 
+                  src={getItemImageUrl(item.imageUrls[currentImageIndex]) || "/placeholder.svg"} 
+                  alt={item.name} 
+                />
                   {item.imageUrls.length > 1 && (
                     <>
                       <ImageNavButton
@@ -841,7 +857,10 @@ const ItemDetail = () => {
                     className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2
                               ${currentImageIndex === index ? 'border-blue-500' : 'border-transparent'}`}
                   >
-                    <ThumbnailImage src={url} alt={`${item.name} thumbnail ${index + 1}`} />
+                    <ThumbnailImage 
+                      src={getItemImageUrl(url)} 
+                      alt={`${item.name} thumbnail ${index + 1}`} 
+                    />
                   </ThumbnailButton>
                 ))}
               </ThumbnailsContainer>

@@ -16,10 +16,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.MediaTypeFactory;
-import org.springframework.http.ResponseEntity;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.*;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -29,6 +28,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import java.io.IOException;
+import java.net.URI;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -36,10 +36,13 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 @Controller
 public class ChatController {
+
+    private static final Logger logger = LoggerFactory.getLogger(ChatController.class);
 
     private final SimpMessagingTemplate messagingTemplate;
     private final ConversationService conversationService;
@@ -70,13 +73,16 @@ public class ChatController {
     @MessageMapping("/chat")
     public void processMessage(@Payload ChatMessage chatMessage) {
         try {
+            logger.debug("Processing message: senderId={}, receiverId={}, type={}",
+                    chatMessage.getSenderId(), chatMessage.getReceiverId(), chatMessage.getMessageType());
+
             // Skip saving if it's a borrowing agreement message since it's already saved
             if (chatMessage.getMessageType() != null &&
                     "FORM".equals(chatMessage.getMessageType()) &&
                     "Sent a borrowing agreement".equals(chatMessage.getContent())) {
-                // Just update item name if needed
-                ObjectMapper mapper = new ObjectMapper();
-                JsonNode formDataNode = mapper.readTree(chatMessage.getFormData());
+
+                // Cache the ObjectMapper to improve performance
+                JsonNode formDataNode = objectMapper.readTree(chatMessage.getFormData());
                 Long itemId = formDataNode.get("itemId").asLong();
 
                 // Get the item details
@@ -88,7 +94,12 @@ public class ChatController {
                 formDataObj.put("itemName", item.getName());
 
                 // Update the formData in the message without saving
-                chatMessage.setFormData(mapper.writeValueAsString(formDataObj));
+                chatMessage.setFormData(objectMapper.writeValueAsString(formDataObj));
+
+                // Ensure timestamp is set
+                if (chatMessage.getTimestamp() == null) {
+                    chatMessage.setTimestamp(LocalDateTime.now(ZoneOffset.UTC));
+                }
 
                 // Just send the WebSocket message without saving
                 messagingTemplate.convertAndSendToUser(
@@ -96,17 +107,38 @@ public class ChatController {
                         "/queue/messages",
                         chatMessage
                 );
+
+                // Also send a copy to the sender for UI consistency
+                messagingTemplate.convertAndSendToUser(
+                        String.valueOf(chatMessage.getSenderId()),
+                        "/queue/messages",
+                        chatMessage
+                );
             } else {
                 // For non-agreement messages, proceed with normal save and send
+                // Ensure timestamp is set
+                if (chatMessage.getTimestamp() == null) {
+                    chatMessage.setTimestamp(LocalDateTime.now(ZoneOffset.UTC));
+                }
+
                 ChatMessage saved = chatService.save(chatMessage);
+
+                // Send to receiver
                 messagingTemplate.convertAndSendToUser(
                         String.valueOf(chatMessage.getReceiverId()),
                         "/queue/messages",
                         saved
                 );
+
+                // Also send a copy to the sender for UI consistency
+                messagingTemplate.convertAndSendToUser(
+                        String.valueOf(chatMessage.getSenderId()),
+                        "/queue/messages",
+                        saved
+                );
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Error processing message", e);
         }
     }
 
@@ -115,20 +147,28 @@ public class ChatController {
     public ResponseEntity<ChatMessage> createMessage(@RequestBody ChatMessage message) {
         try {
             if (message.getTimestamp() == null) {
-                message.setTimestamp(LocalDateTime.now());
+                message.setTimestamp(LocalDateTime.now(ZoneOffset.UTC));
             }
 
             ChatMessage savedMessage = chatService.save(message);
 
+            // Send to receiver
             messagingTemplate.convertAndSendToUser(
                     String.valueOf(message.getReceiverId()),
                     "/queue/messages",
                     savedMessage
             );
 
+            // Also send to sender for UI consistency
+            messagingTemplate.convertAndSendToUser(
+                    String.valueOf(message.getSenderId()),
+                    "/queue/messages",
+                    savedMessage
+            );
+
             return ResponseEntity.ok(savedMessage);
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Error creating message", e);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
         }
     }
@@ -138,12 +178,17 @@ public class ChatController {
     public List<ChatMessage> findChatMessages(
             @PathVariable Long senderId,
             @PathVariable Long receiverId) {
+        // Optimize by using eager fetching
         List<ChatMessage> messages = chatService.findChatMessages(senderId, receiverId);
 
+        // Use bulk initialization to prevent N+1 queries
         messages.forEach(message -> {
             if (message.getItem() != null) {
                 Item item = message.getItem();
-                item.getImageUrls().size();
+                // Force initialization of lazy collection
+                if (item.getImageUrls() != null) {
+                    item.getImageUrls().size();
+                }
             }
         });
 
@@ -167,7 +212,8 @@ public class ChatController {
     @PostMapping("/chat/send-agreement")
     @ResponseBody
     public ResponseEntity<?> createBorrowingAgreement(@RequestBody BorrowingAgreementRequest request) {
-        System.out.println("Received request: " + request);
+        logger.debug("Received agreement request: {}", request);
+
         try {
             // Validate request
             if (request.getItemId() == null || request.getBorrowerId() == null ||
@@ -201,7 +247,7 @@ public class ChatController {
             agreement.setBorrowingEnd(request.getBorrowingEnd());
             agreement.setTerms(request.getTerms());
             agreement.setStatus("PENDING");
-            agreement.setCreatedAt(LocalDateTime.now());
+            agreement.setCreatedAt(LocalDateTime.now(ZoneOffset.UTC));
 
             BorrowingAgreement savedAgreement = borrowingAgreementService.create(agreement);
 
@@ -216,14 +262,22 @@ public class ChatController {
 
             ChatMessage savedMessage = chatService.save(chatMessage);
 
+            // Send to both parties
             messagingTemplate.convertAndSendToUser(
                     String.valueOf(request.getLenderId()),
                     "/queue/messages",
                     savedMessage
             );
 
+            messagingTemplate.convertAndSendToUser(
+                    String.valueOf(request.getBorrowerId()),
+                    "/queue/messages",
+                    savedMessage
+            );
+
             return ResponseEntity.ok(savedAgreement);
         } catch (Exception e) {
+            logger.error("Error creating agreement", e);
             return ResponseEntity
                     .badRequest()
                     .body(new ErrorResponse("Error creating agreement: " + e.getMessage()));
@@ -248,7 +302,7 @@ public class ChatController {
 
             return objectMapper.writeValueAsString(node);
         } catch (JsonProcessingException e) {
-            e.printStackTrace();
+            logger.error("Error serializing agreement to JSON", e);
             return "{}";
         }
     }
@@ -259,25 +313,22 @@ public class ChatController {
         try {
             return chatImageStorageService.store(image);
         } catch (IOException e) {
+            logger.error("Failed to upload image", e);
             throw new RuntimeException("Failed to upload image", e);
         }
     }
 
     @GetMapping("/chat/images/{filename:.+}")
     @ResponseBody
-    public ResponseEntity<Resource> getChatImage(@PathVariable String filename) {
+    public ResponseEntity<Object> getChatImage(@PathVariable String filename) {
         try {
-            Path imagePath = chatImageStorageService.getChatImagePath(filename);
-            Resource resource = new UrlResource(imagePath.toUri());
+            String imageUrl = chatImageStorageService.getChatImageUrl(filename);
 
-            if (resource.exists() && resource.isReadable()) {
-                return ResponseEntity.ok()
-                        .contentType(MediaTypeFactory.getMediaType(resource).orElse(MediaType.IMAGE_JPEG))
-                        .body(resource);
-            } else {
-                return ResponseEntity.notFound().build();
-            }
-        } catch (IOException e) {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setLocation(URI.create(imageUrl));
+            return new ResponseEntity<>(headers, HttpStatus.FOUND);
+        } catch (Exception e) {
+            logger.error("Error serving image", e);
             return ResponseEntity.internalServerError().build();
         }
     }
@@ -289,6 +340,7 @@ public class ChatController {
             @RequestBody Map<String, String> request) {
         try {
             String status = request.get("status");
+            logger.debug("Responding to agreement {}: status={}", id, status);
 
             // Get the agreement we're responding to
             BorrowingAgreement currentAgreement = borrowingAgreementRepository.findById(id)
@@ -333,16 +385,25 @@ public class ChatController {
 
                     String rejectedFormData = objectMapper.writeValueAsString(rejectedFormDataObj);
 
-                    // Update all chat messages containing this agreement
-                    updateChatMessagesForAgreement(agreement.getId(), rejectedFormData);
+                    // Update all chat messages containing this agreement in background
+                    CompletableFuture.runAsync(() -> {
+                        try {
+                            updateChatMessagesForAgreement(agreement.getId(), rejectedFormData);
+                        } catch (Exception e) {
+                            logger.error("Error updating chat messages", e);
+                        }
+                    });
 
-                    // Send websocket updates only
+                    // Send websocket updates to both parties
                     messagingTemplate.convertAndSendToUser(
                             String.valueOf(agreement.getBorrowerId()),
                             "/queue/messages",
                             new ChatMessage() {{
                                 setMessageType("AGREEMENT_UPDATE");
                                 setFormData(rejectedFormData);
+                                setSenderId(agreement.getLenderId());
+                                setReceiverId(agreement.getBorrowerId());
+                                setTimestamp(LocalDateTime.now(ZoneOffset.UTC));
                             }}
                     );
                     messagingTemplate.convertAndSendToUser(
@@ -351,6 +412,9 @@ public class ChatController {
                             new ChatMessage() {{
                                 setMessageType("AGREEMENT_UPDATE");
                                 setFormData(rejectedFormData);
+                                setSenderId(agreement.getBorrowerId());
+                                setReceiverId(agreement.getLenderId());
+                                setTimestamp(LocalDateTime.now(ZoneOffset.UTC));
                             }}
                     );
                 }
@@ -372,30 +436,45 @@ public class ChatController {
 
             String acceptedFormData = objectMapper.writeValueAsString(acceptedFormDataObj);
 
-            // Update the chat messages for the accepted agreement
-            updateChatMessagesForAgreement(id, acceptedFormData);
+            // Update the chat messages for the accepted agreement in background
+            CompletableFuture.runAsync(() -> {
+                try {
+                    updateChatMessagesForAgreement(id, acceptedFormData);
+                } catch (Exception e) {
+                    logger.error("Error updating chat messages", e);
+                }
+            });
 
-            // Send websocket updates only
+            // Send websocket updates with proper sender/receiver info
+            ChatMessage updateMsgToBorrower = new ChatMessage();
+            updateMsgToBorrower.setMessageType("AGREEMENT_UPDATE");
+            updateMsgToBorrower.setFormData(acceptedFormData);
+            updateMsgToBorrower.setSenderId(updatedAgreement.getLenderId());
+            updateMsgToBorrower.setReceiverId(updatedAgreement.getBorrowerId());
+            updateMsgToBorrower.setTimestamp(LocalDateTime.now(ZoneOffset.UTC));
+
+            ChatMessage updateMsgToLender = new ChatMessage();
+            updateMsgToLender.setMessageType("AGREEMENT_UPDATE");
+            updateMsgToLender.setFormData(acceptedFormData);
+            updateMsgToLender.setSenderId(updatedAgreement.getBorrowerId());
+            updateMsgToLender.setReceiverId(updatedAgreement.getLenderId());
+            updateMsgToLender.setTimestamp(LocalDateTime.now(ZoneOffset.UTC));
+
             messagingTemplate.convertAndSendToUser(
                     String.valueOf(updatedAgreement.getBorrowerId()),
                     "/queue/messages",
-                    new ChatMessage() {{
-                        setMessageType("AGREEMENT_UPDATE");
-                        setFormData(acceptedFormData);
-                    }}
+                    updateMsgToBorrower
             );
+
             messagingTemplate.convertAndSendToUser(
                     String.valueOf(updatedAgreement.getLenderId()),
                     "/queue/messages",
-                    new ChatMessage() {{
-                        setMessageType("AGREEMENT_UPDATE");
-                        setFormData(acceptedFormData);
-                    }}
+                    updateMsgToLender
             );
 
             return ResponseEntity.ok(updatedAgreement);
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Error responding to agreement", e);
             return ResponseEntity.badRequest().build();
         }
     }
@@ -425,6 +504,7 @@ public class ChatController {
             ConversationDTO conversation = conversationService.createOrGetConversation(userId1, userId2);
             return ResponseEntity.ok(conversation);
         } catch (Exception e) {
+            logger.error("Error creating conversation", e);
             return ResponseEntity.badRequest().body("Error creating conversation: " + e.getMessage());
         }
     }
@@ -445,6 +525,7 @@ public class ChatController {
 
             return ResponseEntity.ok(response);
         } catch (Exception e) {
+            logger.error("Error fetching item status", e);
             return ResponseEntity.badRequest().build();
         }
     }
@@ -456,6 +537,7 @@ public class ChatController {
             @RequestBody Map<String, String> request) {
         try {
             String status = request.get("status");
+            logger.debug("Responding to return request for agreement {}: status={}", id, status);
 
             BorrowingAgreement currentAgreement = borrowingAgreementRepository.findById(id)
                     .orElseThrow(() -> new RuntimeException("Agreement not found"));
@@ -483,34 +565,50 @@ public class ChatController {
 
             String returnUpdateData = objectMapper.writeValueAsString(returnUpdateObj);
 
-            List<ChatMessage> messages = chatService.findAllReturnMessages(id);
-            for (ChatMessage message : messages) {
-                if ("RETURN_REQUEST".equals(message.getMessageType())) {
-                    message.setFormData(returnUpdateData);
-                    chatService.save(message);
+            // Update messages in background
+            CompletableFuture.runAsync(() -> {
+                try {
+                    List<ChatMessage> messages = chatService.findAllReturnMessages(id);
+                    for (ChatMessage message : messages) {
+                        if ("RETURN_REQUEST".equals(message.getMessageType())) {
+                            message.setFormData(returnUpdateData);
+                            chatService.save(message);
+                        }
+                    }
+                } catch (Exception e) {
+                    logger.error("Error updating return messages", e);
                 }
-            }
+            });
+
+            // Send websocket updates to both parties with proper sender/receiver info
+            ChatMessage updateMsgToBorrower = new ChatMessage();
+            updateMsgToBorrower.setMessageType("RETURN_UPDATE");
+            updateMsgToBorrower.setFormData(returnUpdateData);
+            updateMsgToBorrower.setSenderId(updatedAgreement.getLenderId());
+            updateMsgToBorrower.setReceiverId(updatedAgreement.getBorrowerId());
+            updateMsgToBorrower.setTimestamp(LocalDateTime.now(ZoneOffset.UTC));
+
+            ChatMessage updateMsgToLender = new ChatMessage();
+            updateMsgToLender.setMessageType("RETURN_UPDATE");
+            updateMsgToLender.setFormData(returnUpdateData);
+            updateMsgToLender.setSenderId(updatedAgreement.getBorrowerId());
+            updateMsgToLender.setReceiverId(updatedAgreement.getLenderId());
+            updateMsgToLender.setTimestamp(LocalDateTime.now(ZoneOffset.UTC));
 
             messagingTemplate.convertAndSendToUser(
                     String.valueOf(updatedAgreement.getBorrowerId()),
                     "/queue/messages",
-                    new ChatMessage() {{
-                        setMessageType("RETURN_UPDATE");
-                        setFormData(returnUpdateData);
-                    }}
+                    updateMsgToBorrower
             );
             messagingTemplate.convertAndSendToUser(
                     String.valueOf(updatedAgreement.getLenderId()),
                     "/queue/messages",
-                    new ChatMessage() {{
-                        setMessageType("RETURN_UPDATE");
-                        setFormData(returnUpdateData);
-                    }}
+                    updateMsgToLender
             );
 
             return ResponseEntity.ok(updatedAgreement);
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Error responding to return request", e);
             return ResponseEntity.badRequest().build();
         }
     }
