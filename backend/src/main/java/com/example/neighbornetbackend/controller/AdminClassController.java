@@ -6,6 +6,11 @@ import com.example.neighbornetbackend.model.CourseClass;
 import com.example.neighbornetbackend.repository.ClassRepository;
 import com.example.neighbornetbackend.service.AdminClassService;
 import com.example.neighbornetbackend.service.ClassService;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -30,6 +35,7 @@ public class AdminClassController {
     }
 
     @GetMapping("/stats")
+    @Cacheable(value = "adminClassStats", key = "'stats'")
     public ResponseEntity<?> getClassStats() {
         try {
             Map<String, Object> stats = new HashMap<>();
@@ -37,21 +43,13 @@ public class AdminClassController {
             long totalClasses = classRepository.count();
             stats.put("totalClasses", totalClasses);
 
-            long totalStudents = classRepository.findAll().stream()
-                    .mapToInt(CourseClass::getEnrolledCount)
-                    .sum();
+            long totalStudents = classRepository.countTotalEnrolledStudents();
             stats.put("totalStudents", totalStudents);
 
-            double averageRating = classRepository.findAll().stream()
-                    .filter(c -> c.getAverageRating() != null && c.getAverageRating() > 0)
-                    .mapToDouble(CourseClass::getAverageRating)
-                    .average()
-                    .orElse(0.0);
+            double averageRating = classRepository.findAverageRatingAcrossAllClasses();
             stats.put("averageRating", averageRating);
 
-            long activeClasses = classRepository.findAll().stream()
-                    .filter(c -> c.getEnrolledCount() > 0)
-                    .count();
+            long activeClasses = classRepository.countClassesWithEnrollments();
             stats.put("activeClasses", activeClasses);
 
             return ResponseEntity.ok(ApiResponse.success(stats, "Class stats retrieved successfully"));
@@ -70,13 +68,27 @@ public class AdminClassController {
             @RequestParam(defaultValue = "desc") String sortDir
     ) {
         try {
-            List<ClassResponse> classes;
+            Pageable pageable = PageRequest.of(
+                    page,
+                    size,
+                    Sort.Direction.fromString(sortDir),
+                    sortBy
+            );
+
+            Page<ClassResponse> classesPage;
             if (search != null && !search.trim().isEmpty()) {
-                classes = classService.searchClasses(search.trim(), null);
+                classesPage = classService.searchClassesPaged(search.trim(), null, pageable);
             } else {
-                classes = classService.getAllClasses();
+                classesPage = classService.getAllClassesPaged(pageable);
             }
-            return ResponseEntity.ok(ApiResponse.success(classes, "Classes retrieved successfully"));
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("classes", classesPage.getContent());
+            response.put("currentPage", classesPage.getNumber());
+            response.put("totalItems", classesPage.getTotalElements());
+            response.put("totalPages", classesPage.getTotalPages());
+
+            return ResponseEntity.ok(ApiResponse.success(response, "Classes retrieved successfully"));
         } catch (Exception e) {
             return ResponseEntity.badRequest()
                     .body(ApiResponse.error("Error fetching classes: " + e.getMessage()));

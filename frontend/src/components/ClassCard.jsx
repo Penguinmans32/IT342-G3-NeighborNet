@@ -3,15 +3,18 @@ import { MdBookmark, MdBookmarkBorder, MdStar, MdAccessTime} from "react-icons/m
 import { FileText, BookOpen } from 'lucide-react';
 import { motion } from "framer-motion";
 
+const DEFAULT_CLASS_IMAGE = "/images/defaultProfile.png"; 
+const DEFAULT_PROFILE_IMAGE = "/images/defaultProfile.png";
+
 const getCorrectImageUrl = (imageUrl) => {
-  if (!imageUrl) return "/default-class-image.jpg";
+  if (!imageUrl) return DEFAULT_CLASS_IMAGE;
   
   if (imageUrl.includes('localhost:8080')) {
     const path = imageUrl.split('localhost:8080')[1];
     return `https://neighbornet-back-production.up.railway.app${path}`;
   }
   
-  if (imageUrl.startsWith("http") && !imageUrl.includes('localhost')) {
+  if (imageUrl.startsWith("http")) {
     return imageUrl;
   }
   
@@ -19,11 +22,7 @@ const getCorrectImageUrl = (imageUrl) => {
     return `https://neighbornet-back-production.up.railway.app${imageUrl}`;
   }
   
-  if (imageUrl.startsWith("/")) {
-    return `https://neighbornet-back-production.up.railway.app${imageUrl}`;
-  }
-  
-  return `https://neighbornet-back-production.up.railway.app/${imageUrl}`;
+  return imageUrl;
 };
 
 const ClassCard = memo(({ 
@@ -34,7 +33,6 @@ const ClassCard = memo(({
     navigate,
     user
 }) => {
-    // Use useCallback for event handlers
     const handleCardClick = useCallback(() => {
         navigate(`/class/${classItem.id}`);
     }, [classItem.id, navigate]);
@@ -56,11 +54,12 @@ const ClassCard = memo(({
 
     const isSaved = Array.isArray(savedClasses) && savedClasses.includes(classItem.id);
 
-    // Get correct image URLs with localhost fix
+    const placeholderImage = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23cccccc'/%3E%3Ctext x='50' y='50' font-family='Arial' font-size='12' text-anchor='middle' alignment-baseline='middle' fill='%23ffffff'%3ENo Image%3C/text%3E%3C/svg%3E";
+    
     const thumbnailUrl = getCorrectImageUrl(classItem.thumbnailUrl);
     const profileImageUrl = classItem.creator?.imageUrl 
       ? getCorrectImageUrl(classItem.creator.imageUrl)
-      : "/images/defaultProfile.png";
+      : DEFAULT_PROFILE_IMAGE;
 
     return (
         <motion.div
@@ -74,20 +73,22 @@ const ClassCard = memo(({
         onClick={handleCardClick}
     >
         <div className="aspect-video relative overflow-hidden">
+            <div className="absolute inset-0 bg-gray-300"></div>
             <img
                 loading="lazy"
                 src={thumbnailUrl}
-                alt={classItem.title || "Class thumbnail"}
-                className="object-cover w-full h-full group-hover:scale-110 transition-transform duration-300"
+                alt={classItem.title || "Class"}
+                className="object-cover w-full h-full group-hover:scale-110 transition-transform duration-300 relative z-10"
                 onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = "/default-class-image.jpg";
-                  console.log("Image failed to load:", e.target.src);
+                  if (e.target.src !== placeholderImage) {
+                    console.log("Using placeholder for image:", e.target.src);
+                    e.target.src = placeholderImage;
+                  }
                 }}
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20" />
 
-            <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+            <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-30">
                 <button
                     onClick={handleSaveClick}
                     className="w-9 h-9 rounded-full bg-white/80 flex items-center justify-center shadow-md hover:bg-white transition-colors"
@@ -136,18 +137,28 @@ const ClassCard = memo(({
   
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-              <img
-                loading="lazy"
-                src={profileImageUrl}
-                alt={classItem.creator?.username || "Creator"}
-                className="w-6 h-6 rounded-full object-cover cursor-pointer"
-                onClick={(e) => navigateToProfile(e, classItem.creatorId)}
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = "/images/defaultProfile.png";
-                  console.log("Profile image failed to load:", e.target.src);
-                }}
-              />
+                {/* User circle with initials as immediate fallback */}
+                <div className="relative w-6 h-6">
+                  {/* Colored circle with initials as immediate visual */}
+                  <div className="absolute inset-0 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-medium">
+                    {classItem.creatorName ? classItem.creatorName.charAt(0).toUpperCase() : 'U'}
+                  </div>
+                  
+                  {/* Profile image on top */}
+                  <img
+                    loading="lazy"
+                    src={profileImageUrl}
+                    alt={classItem.creator?.username || "Creator"}
+                    className="absolute inset-0 w-full h-full rounded-full object-cover cursor-pointer"
+                    onClick={(e) => navigateToProfile(e, classItem.creatorId)}
+                    onError={(e) => {
+                      // If the profile image fails, use a data URL as absolute fallback
+                      if (e.target.src !== placeholderImage) {
+                        e.target.src = placeholderImage;
+                      }
+                    }}
+                  />
+                </div>
                 <div>
                   <h4 className={`text-sm font-medium ${isDarkMode ? "text-white" : "text-gray-900"}`}>
                     {classItem.creatorName || "Unknown Creator"}

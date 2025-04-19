@@ -306,7 +306,6 @@ const Homepage = () => {
       photography: <MdCamera className="text-yellow-500" />,
       music: <MdMusicNote className="text-indigo-500" />,
       writing: <MdEdit className="text-cyan-500" />,
-      // Add more mappings as needed
       default: <MdSchool className="text-gray-500" />,
     }
 
@@ -316,28 +315,50 @@ const Homepage = () => {
   useEffect(() => {
     const fetchClasses = async () => {
       try {
-        const response = await axios.get("https://neighbornet-back-production.up.railway.app/api/classes/all", {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        });
-  
-        let classesData = [];
-        if (Array.isArray(response.data)) {
-          classesData = response.data;
-        } else if (response.data && typeof response.data === "object") {
-          classesData = Object.values(response.data);
+        const response = await axios.get(
+          "https://neighbornet-back-production.up.railway.app/api/classes/all", 
+          {
+            params: {
+              page: 0,          
+              size: 20,         
+              sortBy: "createdAt", 
+              direction: "desc" 
+            },
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }
+        );
+        
+        if (response.data && response.data.classes) {
+          setClasses(response.data.classes);
+          
+          setPaginationInfo({
+            currentPage: response.data.currentPage,
+            totalPages: response.data.totalPages,
+            totalItems: response.data.totalItems,
+            pageSize: response.data.size
+          });
+          
+          console.log("Fetched classes:", response.data.classes);
+          console.log("Pagination info:", {
+            currentPage: response.data.currentPage,
+            totalPages: response.data.totalPages,
+            totalItems: response.data.totalItems
+          });
+        } else {
+          console.error("Unexpected response format:", response.data);
+          setClasses([]);
         }
   
-        setClasses(classesData);
-        console.log("Fetched classes:", classesData);
-  
-        // Separately fetch user's own classes if needed
-        const myClassesResponse = await axios.get("https://neighbornet-back-production.up.railway.app/api/classes/my-classes", {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        });
+        const myClassesResponse = await axios.get(
+          "https://neighbornet-back-production.up.railway.app/api/classes/my-classes", 
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }
+        );
   
         let myClassesData = [];
         if (Array.isArray(myClassesResponse.data)) {
@@ -366,7 +387,6 @@ const Homepage = () => {
     if (notification.unread) {
       markAsRead(notification.id)
     }
-    // Handle notification click (e.g., navigate to relevant page)
   }
 
   const location = useLocation()

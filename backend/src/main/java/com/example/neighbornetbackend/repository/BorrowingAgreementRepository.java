@@ -1,6 +1,7 @@
 package com.example.neighbornetbackend.repository;
 
 import com.example.neighbornetbackend.model.BorrowingAgreement;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -65,7 +66,10 @@ public interface BorrowingAgreementRepository extends JpaRepository<BorrowingAgr
     @Query("SELECT COUNT(DISTINCT b.borrowerId) FROM BorrowingAgreement b WHERE b.status = :status")
     long countDistinctBorrowerIdByStatus(@Param("status") String status);
 
-    @Modifying
-    @Query("DELETE FROM BorrowingAgreement b WHERE b.itemId = :itemId")
-    void deleteByItemId(@Param("itemId") Long itemId);
+
+    @Query("SELECT b FROM BorrowingAgreement b " +
+            "JOIN User u ON b.borrowerId = u.id " +
+            "JOIN Item i ON b.itemId = i.id " +
+            "ORDER BY b.createdAt DESC")
+    List<BorrowingAgreement> findRecentBorrowsWithDetails(Pageable pageable);
 }

@@ -14,6 +14,11 @@ import io.swagger.v3.oas.annotations.Operation;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
@@ -94,15 +99,13 @@ public class ClassController {
     public ResponseEntity<Resource> getThumbnail(@PathVariable String filename) {
         try {
             Path file = Paths.get("thumbnails").resolve(filename).toAbsolutePath();
-
             Resource resource = new UrlResource(file.toUri());
-            System.out.println("Resource exists: " + resource.exists());
-            System.out.println("Resource is readable: " + resource.isReadable());
 
             if (resource.exists() && resource.isReadable()) {
-                // Determine content type based on file extension
                 String contentType = determineContentType(filename);
+
                 return ResponseEntity.ok()
+                        .header(HttpHeaders.CACHE_CONTROL, "public, max-age=86400")
                         .contentType(MediaType.parseMediaType(contentType))
                         .body(resource);
             } else {
@@ -110,7 +113,6 @@ public class ClassController {
             }
         } catch (Exception e) {
             System.err.println("Error serving thumbnail: " + e.getMessage());
-            e.printStackTrace();
             return ResponseEntity.notFound().build();
         }
     }
@@ -143,12 +145,30 @@ public class ClassController {
     }
 
     @GetMapping("/all")
-    @Cacheable(value = CLASSES_CACHE, key = "'all'")
-    public ResponseEntity<List<ClassResponse>> getAllClasses() {
+    public ResponseEntity<Map<String, Object>> getAllClasses(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String direction) {
         try {
-            List<ClassResponse> classes = classService.getAllClasses();
-            return ResponseEntity.ok(classes);
+            Sort sort = direction.equalsIgnoreCase("asc") ?
+                    Sort.by(sortBy).ascending() :
+                    Sort.by(sortBy).descending();
+
+            Pageable pageable = PageRequest.of(page, size, sort);
+
+            Page<ClassResponse> classPage = classService.getAllClassesPaged(pageable);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("classes", classPage.getContent());
+            response.put("currentPage", classPage.getNumber());
+            response.put("totalItems", classPage.getTotalElements());
+            response.put("totalPages", classPage.getTotalPages());
+            response.put("size", classPage.getSize());
+
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
+            e.printStackTrace();
             return ResponseEntity.badRequest().build();
         }
     }
@@ -166,6 +186,7 @@ public class ClassController {
                 return ResponseEntity.status(403).body("Not authorized to delete this class");
             }
 
+            // Delete file if exists
             if (classToDelete.getThumbnailUrl() != null) {
                 try {
                     Path thumbnailPath = Paths.get("uploads/thumbnails")
@@ -176,98 +197,12 @@ public class ClassController {
                 }
             }
 
-            entityManager.clear();
+            classService.deleteClassAndRelatedData(classId);
 
-            try {
-
-                int savedClassesDeleted = entityManager.createNativeQuery(
-                                "DELETE FROM saved_classes WHERE class_id = ?")
-                        .setParameter(1, classId)
-                        .executeUpdate();
-                System.out.println("Deleted " + savedClassesDeleted + " saved classes references");
-
-                int quizAttemptsDeleted = entityManager.createNativeQuery(
-                                "DELETE FROM quiz_attempts WHERE quiz_id IN " +
-                                        "(SELECT id FROM quizzes WHERE class_id = ?)")
-                        .setParameter(1, classId)
-                        .executeUpdate();
-                System.out.println("Deleted " + quizAttemptsDeleted + " quiz attempts");
-
-                int questionsDeleted = entityManager.createNativeQuery(
-                                "DELETE FROM questions WHERE quiz_id IN " +
-                                        "(SELECT id FROM quizzes WHERE class_id = ?)")
-                        .setParameter(1, classId)
-                        .executeUpdate();
-                System.out.println("Deleted " + questionsDeleted + " questions");
-
-                int quizzesDeleted = entityManager.createNativeQuery(
-                                "DELETE FROM quizzes WHERE class_id = ?")
-                        .setParameter(1, classId)
-                        .executeUpdate();
-                System.out.println("Deleted " + quizzesDeleted + " quizzes");
-
-                int feedbackReactionsDeleted = entityManager.createNativeQuery(
-                                "DELETE FROM feedback_reactions WHERE feedback_id IN " +
-                                        "(SELECT id FROM feedbacks WHERE class_id = ?)")
-                        .setParameter(1, classId)
-                        .executeUpdate();
-                System.out.println("Deleted " + feedbackReactionsDeleted + " feedback reactions");
-
-                int feedbacksDeleted = entityManager.createNativeQuery(
-                                "DELETE FROM feedbacks WHERE class_id = ?")
-                        .setParameter(1, classId)
-                        .executeUpdate();
-                System.out.println("Deleted " + feedbacksDeleted + " feedbacks");
-
-                int classRatingsDeleted = entityManager.createNativeQuery(
-                                "DELETE FROM class_ratings WHERE class_id = ?")
-                        .setParameter(1, classId)
-                        .executeUpdate();
-                System.out.println("Deleted " + classRatingsDeleted + " class ratings");
-
-                int lessonRatingsDeleted = entityManager.createNativeQuery(
-                                "DELETE FROM lesson_ratings WHERE lesson_id IN " +
-                                        "(SELECT id FROM lessons WHERE class_id = ?)")
-                        .setParameter(1, classId)
-                        .executeUpdate();
-                System.out.println("Deleted " + lessonRatingsDeleted + " lesson ratings");
-
-                int lessonProgressDeleted = entityManager.createNativeQuery(
-                                "DELETE FROM lesson_progress WHERE lesson_id IN " +
-                                        "(SELECT id FROM lessons WHERE class_id = ?)")
-                        .setParameter(1, classId)
-                        .executeUpdate();
-                System.out.println("Deleted " + lessonProgressDeleted + " lesson progress records");
-
-                int lessonsDeleted = entityManager.createNativeQuery(
-                                "DELETE FROM lessons WHERE class_id = ?")
-                        .setParameter(1, classId)
-                        .executeUpdate();
-                System.out.println("Deleted " + lessonsDeleted + " lessons");
-
-                int enrollmentsDeleted = entityManager.createNativeQuery(
-                                "DELETE FROM class_enrollments WHERE course_class_id = ?")
-                        .setParameter(1, classId)
-                        .executeUpdate();
-                System.out.println("Deleted " + enrollmentsDeleted + " enrollments");
-
-                int classDeleted = entityManager.createNativeQuery(
-                                "DELETE FROM classes WHERE id = ?")
-                        .setParameter(1, classId)
-                        .executeUpdate();
-                System.out.println("Deleted class with ID: " + classId);
-
-                entityManager.flush();
-
-                return ResponseEntity.ok().body(Map.of(
-                        "message", "Class successfully deleted",
-                        "classId", classId
-                ));
-            } catch (Exception e) {
-                TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
-                e.printStackTrace();
-                throw e;
-            }
+            return ResponseEntity.ok().body(Map.of(
+                    "message", "Class successfully deleted",
+                    "classId", classId
+            ));
         } catch (ResourceNotFoundException e) {
             return ResponseEntity.notFound().build();
         } catch (Exception e) {
@@ -425,20 +360,13 @@ public class ClassController {
     }
 
     @GetMapping("/{classId}/feedbacks")
-    @Cacheable(value = "classFeedbacks", key = "#classId")
+    @Cacheable(value = "classFeedbacks", key = "#classId + '_' + (#currentUser != null ? #currentUser.id : 0)")
     public ResponseEntity<List<FeedbackResponse>> getClassFeedbacks(
             @PathVariable Long classId,
             @CurrentUser UserPrincipal currentUser) {
         try {
-            List<FeedbackResponse> feedbacks = feedbackService.getClassFeedbacks(classId);
-            if (currentUser != null) {
-                feedbacks = feedbacks.parallelStream()
-                        .map(feedback -> {
-                            Feedback entity = feedbackRepository.findById(feedback.getId()).orElse(null);
-                            return entity != null ? FeedbackResponse.fromEntity(entity, currentUser.getId()) : feedback;
-                        })
-                        .collect(Collectors.toList());
-            }
+            Long userId = currentUser != null ? currentUser.getId() : null;
+            List<FeedbackResponse> feedbacks = feedbackService.getClassFeedbacksWithUserReactions(classId, userId);
             return ResponseEntity.ok(feedbacks);
         } catch (Exception e) {
             return ResponseEntity.badRequest().build();
