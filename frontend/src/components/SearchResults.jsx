@@ -67,7 +67,7 @@ function SearchResults() {
       setLoading(true)
       try {
         // Include category in the search if it exists
-        const searchUrl = `http://localhost:8080/api/classes/search?query=${encodeURIComponent(query)}${
+        const searchUrl = `https://it342-g3-neighbornet.onrender.com/api/classes/search?query=${encodeURIComponent(query)}${
           category ? `&category=${encodeURIComponent(category)}` : ""
         }`
 
@@ -158,7 +158,7 @@ function SearchResults() {
 
   const getFullThumbnailUrl = (thumbnailUrl) => {
     if (!thumbnailUrl) return "/default-class-image.jpg"
-    return thumbnailUrl.startsWith("http") ? thumbnailUrl : `http://localhost:8080${thumbnailUrl}`
+    return thumbnailUrl.startsWith("http") ? thumbnailUrl : `https://it342-g3-neighbornet.onrender.com${thumbnailUrl}`
   }
 
   const toggleSaveClass = (e, classId) => {

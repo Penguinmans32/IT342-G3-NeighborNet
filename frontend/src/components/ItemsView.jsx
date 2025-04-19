@@ -50,7 +50,7 @@ export default function ItemsView() {
 
   const fetchStats = async () => {
     try {
-      const response = await axios.get('http://localhost:8080/api/admin/items/stats', {
+      const response = await axios.get('https://it342-g3-neighbornet.onrender.com/api/admin/items/stats', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -63,7 +63,7 @@ export default function ItemsView() {
 
   const fetchItems = async () => {
     try {
-      const response = await axios.get(`http://localhost:8080/api/admin/items`, {
+      const response = await axios.get(`https://it342-g3-neighbornet.onrender.com/api/admin/items`, {
         params: { search },
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -85,7 +85,7 @@ export default function ItemsView() {
 
   const deleteItem = async () => {
     try {
-      await axios.delete(`http://localhost:8080/api/admin/items/${selectedItem.id}`, {
+      await axios.delete(`https://it342-g3-neighbornet.onrender.com/api/admin/items/${selectedItem.id}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }

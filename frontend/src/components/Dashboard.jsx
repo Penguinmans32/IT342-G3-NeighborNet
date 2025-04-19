@@ -144,7 +144,7 @@ const Dashboard = () => {
 
   const getFullThumbnailUrl = (thumbnailUrl) => {
     if (!thumbnailUrl) return "/default-class-image.jpg"
-    return thumbnailUrl.startsWith("http") ? thumbnailUrl : `http://localhost:8080${thumbnailUrl}`
+    return thumbnailUrl.startsWith("http") ? thumbnailUrl : `https://it342-g3-neighbornet.onrender.com${thumbnailUrl}`
   }
 
   const navigateToProfile = (userId) => {
@@ -161,7 +161,7 @@ const Dashboard = () => {
         const token = localStorage.getItem("token");
         if (!token) return;
   
-        const response = await axios.get(`http://localhost:8080/api/users/profile`, {
+        const response = await axios.get(`https://it342-g3-neighbornet.onrender.com/api/users/profile`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -187,7 +187,7 @@ const Dashboard = () => {
           return
         }
 
-        const response = await axios.get("http://localhost:8080/api/activities/recent", {
+        const response = await axios.get("https://it342-g3-neighbornet.onrender.com/api/activities/recent", {
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
@@ -212,7 +212,7 @@ const Dashboard = () => {
           return
         }
 
-        const response = await axios.get("http://localhost:8080/api/classes/recent?limit=5", {
+        const response = await axios.get("https://it342-g3-neighbornet.onrender.com/api/classes/recent?limit=5", {
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
@@ -238,7 +238,7 @@ const Dashboard = () => {
           return
         }
   
-        const response = await axios.get("http://localhost:8080/api/posts", {
+        const response = await axios.get("https://it342-g3-neighbornet.onrender.com/api/posts", {
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
@@ -274,7 +274,7 @@ const Dashboard = () => {
       const headers = { Authorization: `Bearer ${token}` };
       
       await axios.put(
-        `http://localhost:8080/api/posts/${postId}/comments/${commentId}`,
+        `https://it342-g3-neighbornet.onrender.com/api/posts/${postId}/comments/${commentId}`,
         { content: editedCommentContent },
         { headers }
       );
@@ -315,7 +315,7 @@ const Dashboard = () => {
         return
       }
 
-      await axios.delete(`http://localhost:8080/api/posts/${postId}`, {
+      await axios.delete(`https://it342-g3-neighbornet.onrender.com/api/posts/${postId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -349,7 +349,7 @@ const Dashboard = () => {
       }
 
       const response = await axios.put(
-        `http://localhost:8080/api/posts/${postId}`,
+        `https://it342-g3-neighbornet.onrender.com/api/posts/${postId}`,
         { content: editedContent },
         {
           headers: {
@@ -381,7 +381,7 @@ const Dashboard = () => {
       const shareMessage = prompt("Add a message to your share (optional):")
 
       const response = await axios.post(
-        `http://localhost:8080/api/posts/${postId}/share`,
+        `https://it342-g3-neighbornet.onrender.com/api/posts/${postId}/share`,
         { content: shareMessage },
         {
           headers: {
@@ -422,7 +422,7 @@ const Dashboard = () => {
       }
   
       const response = await axios.post(
-        `http://localhost:8080/api/posts/${postId}/comments`,
+        `https://it342-g3-neighbornet.onrender.com/api/posts/${postId}/comments`,
         { content: newComments[postId] },
         {
           headers: {
@@ -463,7 +463,7 @@ const Dashboard = () => {
       }
 
       const response = await axios.post(
-        `http://localhost:8080/api/posts/${postId}/comments/${commentId}/like`,
+        `https://it342-g3-neighbornet.onrender.com/api/posts/${postId}/comments/${commentId}/like`,
         {},
         {
           headers: {
@@ -490,7 +490,7 @@ const Dashboard = () => {
         return
       }
 
-      const response = await axios.delete(`http://localhost:8080/api/posts/${postId}/comments/${commentId}`, {
+      const response = await axios.delete(`https://it342-g3-neighbornet.onrender.com/api/posts/${postId}/comments/${commentId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -574,7 +574,7 @@ const Dashboard = () => {
         formData.append("image", selectedImage)
       }
 
-      const response = await axios.post("http://localhost:8080/api/posts", formData, {
+      const response = await axios.post("https://it342-g3-neighbornet.onrender.com/api/posts", formData, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "multipart/form-data",
@@ -613,7 +613,7 @@ const Dashboard = () => {
       }
 
       const response = await axios.post(
-        `http://localhost:8080/api/posts/${postId}/like`,
+        `https://it342-g3-neighbornet.onrender.com/api/posts/${postId}/like`,
         {},
         {
           headers: {
@@ -648,7 +648,7 @@ const Dashboard = () => {
     const fetchDashboardStats = async () => {
       try {
         setLoading(true)
-        const response = await axios.get("http://localhost:8080/api/dashboard/stats", {
+        const response = await axios.get("https://it342-g3-neighbornet.onrender.com/api/dashboard/stats", {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
             "Content-Type": "application/json",

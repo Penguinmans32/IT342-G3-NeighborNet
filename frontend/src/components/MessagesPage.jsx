@@ -119,7 +119,7 @@ const MessagesPage = () => {
     try {
       setSelectedContact(contact);
   
-      const response = await fetch(`http://localhost:8080/messages/read/${contact.id}/${user.data.id}`, {
+      const response = await fetch(`https://it342-g3-neighbornet.onrender.com/messages/read/${contact.id}/${user.data.id}`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -225,7 +225,7 @@ const MessagesPage = () => {
 
   useEffect(() => {
     if (user?.data?.id) {
-      const socket = new SockJS("http://localhost:8080/ws");
+      const socket = new SockJS("https://it342-g3-neighbornet.onrender.com/ws");
       const stomp = new Client({
         webSocketFactory: () => socket,
         debug: (str) => {
@@ -376,7 +376,7 @@ const fetchConversations = async () => {
 
   try {
       setLoading(true)
-      const response = await fetch(`http://localhost:8080/conversations/${user.data.id}`)
+      const response = await fetch(`https://it342-g3-neighbornet.onrender.com/conversations/${user.data.id}`)
 
       if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`)

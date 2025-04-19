@@ -15,7 +15,7 @@ class WebSocketService {
             return;
         }
 
-        const socket = new SockJS('http://localhost:8080/ws');
+        const socket = new SockJS('https://it342-g3-neighbornet.onrender.com/ws');
         this.stompClient = new Client({
             webSocketFactory: () => socket,
             debug: (str) => console.log(str),

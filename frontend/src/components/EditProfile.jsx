@@ -72,7 +72,7 @@ const handlePasswordChange = async () => {
   setChangingPassword(true);
   try {
     const response = await axios.put(
-      "http://localhost:8080/api/users/change-password",
+      "https://it342-g3-neighbornet.onrender.com/api/users/change-password",
       {
         currentPassword: passwords.current,
         newPassword: passwords.new
@@ -103,7 +103,7 @@ const handleDeleteAccount = async () => {
   setDeleting(true);
   try {
     await axios.delete(
-      "http://localhost:8080/api/users/account",
+      "https://it342-g3-neighbornet.onrender.com/api/users/account",
       {
         data: { password: deletePassword },
         headers: {
@@ -139,7 +139,7 @@ const handleDeleteAccount = async () => {
   useEffect(() => {
     const fetchProfileData = async () => {
       try {
-        const response = await axios.get("http://localhost:8080/api/users/profile", {
+        const response = await axios.get("https://it342-g3-neighbornet.onrender.com/api/users/profile", {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
@@ -238,7 +238,7 @@ const handleDeleteAccount = async () => {
     formData.append("file", file)
 
     try {
-      const response = await axios.put("http://localhost:8080/api/users/profile/picture", formData, {
+      const response = await axios.put("https://it342-g3-neighbornet.onrender.com/api/users/profile/picture", formData, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
           "Content-Type": "multipart/form-data",
@@ -291,7 +291,7 @@ const handleDeleteAccount = async () => {
     setSaving(true)
     try {
       await axios.patch(
-        "http://localhost:8080/api/users/profile",
+        "https://it342-g3-neighbornet.onrender.com/api/users/profile",
         {
           bio: profileData.bio,
           skills: profileData.skills,

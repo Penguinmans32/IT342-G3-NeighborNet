@@ -29,7 +29,7 @@ const BorrowingAgreementForm = ({ onSubmit, onClose, senderId, receiverId, stomp
         console.log('Fetching items for receiverId:', receiverId);
 
         const response = await fetch(
-          `http://localhost:8080/api/borrowing/items/user/${receiverId}`,
+          `https://it342-g3-neighbornet.onrender.com/api/borrowing/items/user/${receiverId}`,
           {
             headers: { 
               Authorization: `Bearer ${localStorage.getItem('token')}`

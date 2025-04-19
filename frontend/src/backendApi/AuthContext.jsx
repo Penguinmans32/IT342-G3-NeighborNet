@@ -42,7 +42,7 @@ export const AuthProvider = ({ children }) => {
                 axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
             }
             
-            const response = await axios.get('http://localhost:8080/api/auth/user');
+            const response = await axios.get('https://it342-g3-neighbornet.onrender.com/api/auth/user');
             setUser(response.data);
             return true;
         } catch (error) {

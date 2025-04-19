@@ -18,7 +18,7 @@ const YourItems = () => {
 
   const fetchYourItems = async () => {
     try {
-      const response = await fetch("http://localhost:8080/api/borrowing/items/user", {
+      const response = await fetch("https://it342-g3-neighbornet.onrender.com/api/borrowing/items/user", {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
@@ -32,7 +32,7 @@ const YourItems = () => {
 
   const fetchLentItems = async () => {
     try {
-      const response = await fetch("http://localhost:8080/api/borrowing/items/lent", {
+      const response = await fetch("https://it342-g3-neighbornet.onrender.com/api/borrowing/items/lent", {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
@@ -47,7 +47,7 @@ const YourItems = () => {
 
   const fetchBorrowers = async (itemId) => {
     try {
-      const response = await fetch(`http://localhost:8080/api/borrowing/items/${itemId}/borrowers`, {
+      const response = await fetch(`https://it342-g3-neighbornet.onrender.com/api/borrowing/items/${itemId}/borrowers`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },

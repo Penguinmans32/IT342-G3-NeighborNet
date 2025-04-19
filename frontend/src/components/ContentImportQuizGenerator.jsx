@@ -31,7 +31,7 @@ const ContentImportQuizGenerator = ({ onAddGeneratedQuiz, classId }) => {
       };
       
       const response = await axios.post(
-        `http://localhost:8080/api/classes/${classId}/quizzes/generate/from-content`,
+        `https://it342-g3-neighbornet.onrender.com/api/classes/${classId}/quizzes/generate/from-content`,
         requestData,
         {
           headers: {
@@ -74,7 +74,7 @@ const ContentImportQuizGenerator = ({ onAddGeneratedQuiz, classId }) => {
       formData.append('file', file);
       
       const response = await axios.post(
-        'http://localhost:8080/api/upload/extract-text',
+        'https://it342-g3-neighbornet.onrender.com/api/upload/extract-text',
         formData,
         {
           headers: {

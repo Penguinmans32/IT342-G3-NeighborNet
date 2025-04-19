@@ -89,7 +89,7 @@ const CreateQuiz = () => {
 
     try {
       setIsSubmitting(true)
-      const response = await axios.post(`http://localhost:8080/api/classes/${classId}/quizzes`, quizData, {
+      const response = await axios.post(`https://it342-g3-neighbornet.onrender.com/api/classes/${classId}/quizzes`, quizData, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },

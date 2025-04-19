@@ -14,7 +14,7 @@ const VerifyEmail = () => {
       return;
     }
 
-    fetch(`http://localhost:8080/api/auth/verify-email?token=${token}`, {
+    fetch(`https://it342-g3-neighbornet.onrender.com/api/auth/verify-email?token=${token}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
