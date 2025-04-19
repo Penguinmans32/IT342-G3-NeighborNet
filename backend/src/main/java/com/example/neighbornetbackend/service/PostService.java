@@ -318,12 +318,7 @@ public class PostService {
         }
 
         if (post.getImageUrl() != null && !post.getImageUrl().isEmpty()) {
-            try {
-                String filename = post.getImageUrl().substring(post.getImageUrl().lastIndexOf('/') + 1);
-                postImageStorageService.deletePostImage(filename);
-            } catch (IOException e) {
-                logger.error("Failed to delete post image: " + e.getMessage());
-            }
+            postImageStorageService.deletePostImage(post.getImageUrl());
         }
 
         post.getShare().clear();

@@ -14,20 +14,16 @@ import com.example.neighbornetbackend.security.CurrentUser;
 import com.example.neighbornetbackend.security.UserPrincipal;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.MediaTypeFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.core.io.Resource;
 import java.io.IOException;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.springframework.http.HttpHeaders;
 
 @RestController
 @RequestMapping("/api/borrowing/items")
@@ -89,22 +85,15 @@ public class ItemController {
     }
 
     @GetMapping("/images/{filename:.+}")
-    public ResponseEntity<Resource> getImage(@PathVariable String filename) {
+    public ResponseEntity<?> getImage(@PathVariable String filename) {
         try {
-            Path imagePath = itemImageStorageService.getItemImagePath(filename);
+            String imageUrl = itemImageStorageService.getItemImageUrl(filename);
 
-            Resource resource = new UrlResource(imagePath.toUri());
-
-            if (resource.exists() && resource.isReadable()) {
-                return ResponseEntity.ok()
-                        .contentType(MediaTypeFactory.getMediaType(resource).orElse(MediaType.IMAGE_JPEG))
-                        .body(resource);
-            } else {
-                logger.debug("Image not found or not readable: {}", filename);
-                return ResponseEntity.notFound().build();
-            }
-        } catch (IOException e) {
-            logger.debug("Error getting image: " + filename, e);
+            return ResponseEntity.status(HttpStatus.FOUND)
+                    .header(HttpHeaders.LOCATION, imageUrl)
+                    .build();
+        } catch (Exception e) {
+            logger.error("Error getting item image: " + filename, e);
             return ResponseEntity.internalServerError().build();
         }
     }

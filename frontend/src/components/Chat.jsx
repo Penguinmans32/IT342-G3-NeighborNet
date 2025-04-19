@@ -72,6 +72,42 @@ const Chat = ({ senderId, receiverId, receiverName = '?', onMessageSent, stompCl
     );
   }
 
+  const getItemImageUrl = (imageUrl) => {
+    if (!imageUrl) return "/images/no-image.png";
+    
+    if (imageUrl.startsWith('http')) return imageUrl;
+    
+    if (imageUrl.includes('/api/borrowing/items/images/')) {
+      try {
+        const filename = imageUrl.substring(imageUrl.lastIndexOf('/') + 1);
+        return `https://storage.googleapis.com/neighbornet-media/item-images/${filename}`;
+      } catch (error) {
+        console.error("Error parsing image URL:", error);
+        return "/images/no-image.png";
+      }
+    }
+    
+    return imageUrl;
+  };
+
+  const getChatImageUrl = (imageUrl) => {
+    if (!imageUrl) return "/images/no-image.png";
+    
+    if (imageUrl.startsWith('http')) return imageUrl;
+    
+    if (imageUrl.includes('/chat/images/')) {
+      try {
+        const filename = imageUrl.substring(imageUrl.lastIndexOf('/') + 1);
+        return `https://storage.googleapis.com/neighbornet-media/chat-images/${filename}`;
+      } catch (error) {
+        console.error("Error parsing chat image URL:", error);
+        return "/images/no-image.png";
+      }
+    }
+    
+    return imageUrl;
+  };
+
   const getMessageTypeWeight = (type) => {
     switch (type) {
       case "FORM":
@@ -86,9 +122,16 @@ const Chat = ({ senderId, receiverId, receiverName = '?', onMessageSent, stompCl
   };
 
   const handleOpenGallery = (images, startIndex = 0) => {
-    setSelectedGalleryImages(images)
-    setGalleryStartIndex(startIndex)
-    setIsGalleryOpen(true)
+    const processedImages = images.map(url => {
+      if (url && (url.includes('/chat/images/') || url.includes('/api/borrowing/items/images/'))) {
+        return url.includes('/chat/images/') ? getChatImageUrl(url) : getItemImageUrl(url);
+      }
+      return url;
+    });
+    
+    setSelectedGalleryImages(processedImages);
+    setGalleryStartIndex(startIndex);
+    setIsGalleryOpen(true);
   }
 
   const handleReturnResponse = async (returnRequestId, status) => {
@@ -310,7 +353,12 @@ const Chat = ({ senderId, receiverId, receiverName = '?', onMessageSent, stompCl
         timestamp: timestamp 
       };
       
-      const tempMessage = { ...imageMessage, id: `temp-${Date.now()}` };
+      const tempMessage = { 
+        ...imageMessage, 
+        id: `temp-${Date.now()}`,
+        displayImageUrl: getChatImageUrl(imageUrl)
+      };
+      
       setMessages(prev => [...prev, tempMessage]);
       
       if (stompClient && stompClient.connected) {
@@ -805,13 +853,17 @@ const Chat = ({ senderId, receiverId, receiverName = '?', onMessageSent, stompCl
                     whileHover={{ scale: 1.05 }}
                     className="relative h-24 w-24 md:h-28 md:w-28 rounded-xl overflow-hidden shadow-md cursor-pointer"
                     onClick={() =>
-                      messages[0].item.imageUrls?.length > 0 && handleOpenGallery(messages[0].item.imageUrls, 0)
+                      messages[0].item.imageUrls?.length > 0 && handleOpenGallery(messages[0].item.imageUrls.map(getItemImageUrl), 0)
                     }
                   >
                     <img
-                      src={messages[0].item.imageUrls?.[0] || "https://via.placeholder.com/100?text=No+Image"}
+                      src={messages[0].item.imageUrls?.[0] ? getItemImageUrl(messages[0].item.imageUrls[0]) : "/images/no-image.png"}
                       alt={messages[0].item.name}
                       className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = "/images/no-image.png";
+                      }}
                     />
                     {messages[0].item.imageUrls?.length > 1 && (
                       <div className="absolute bottom-0 right-0 bg-black/70 text-white text-xs px-2 py-1 rounded-tl-lg">
@@ -929,11 +981,15 @@ const Chat = ({ senderId, receiverId, receiverName = '?', onMessageSent, stompCl
                       <div className="rounded-lg overflow-hidden">
                         <motion.img
                           whileHover={{ scale: 1.02 }}
-                          src={msg.imageUrl}
+                          src={msg.displayImageUrl || getChatImageUrl(msg.imageUrl)}
                           alt="Shared"
                           className="max-w-full h-auto cursor-pointer rounded-lg"
                           loading="lazy"
-                          onClick={() => handleOpenGallery([msg.imageUrl], 0)}
+                          onClick={() => handleOpenGallery([msg.displayImageUrl || getChatImageUrl(msg.imageUrl)], 0)}
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = "/images/no-image.png";
+                          }}
                         />
                       </div>
                     ) : msg.messageType === "FORM" ? (
@@ -1233,13 +1289,13 @@ const Chat = ({ senderId, receiverId, receiverName = '?', onMessageSent, stompCl
                                     <motion.img
                                       whileHover={{ scale: 1.03 }}
                                       transition={{ duration: 0.2 }}
-                                      src={msg.item.imageUrls[0]}
+                                      src={getItemImageUrl(msg.item.imageUrls[0])}
                                       alt={`${msg.item.name} - Main`}
                                       className="w-full h-full object-cover cursor-pointer"
-                                      onClick={() => handleOpenGallery(msg.item.imageUrls, 0)}
+                                      onClick={() => handleOpenGallery(msg.item.imageUrls.map(getItemImageUrl), 0)}
                                       onError={(e) => {
-                                        e.target.onerror = null
-                                        e.target.src = "https://via.placeholder.com/400x300?text=No+Image"
+                                        e.target.onerror = null;
+                                        e.target.src = "/images/no-image.png";
                                       }}
                                     />
                                   </div>
@@ -1252,15 +1308,15 @@ const Chat = ({ senderId, receiverId, receiverName = '?', onMessageSent, stompCl
                                           key={index}
                                           whileHover={{ scale: 1.05 }}
                                           className="aspect-square relative rounded-lg overflow-hidden cursor-pointer shadow-sm"
-                                          onClick={() => handleOpenGallery(msg.item.imageUrls, index + 1)}
+                                          onClick={() => handleOpenGallery(msg.item.imageUrls.map(getItemImageUrl), index + 1)}
                                         >
                                           <img
-                                            src={url || "/placeholder.svg"}
+                                            src={getItemImageUrl(url) || "/images/no-image.png"}
                                             alt={`${msg.item.name} - ${index + 2}`}
                                             className="w-full h-full object-cover"
                                             onError={(e) => {
-                                              e.target.onerror = null
-                                              e.target.src = "https://via.placeholder.com/150?text=No+Image"
+                                              e.target.onerror = null;
+                                              e.target.src = "/images/no-image.png";
                                             }}
                                           />
                                         </motion.div>

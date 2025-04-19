@@ -13,11 +13,13 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -71,39 +73,17 @@ public class LessonController {
             @PathVariable String filename,
             HttpServletRequest request
     ) {
-        return serveVideo(filename, request);
-    }
-
-
-    private ResponseEntity<Resource> serveVideo(String filename, HttpServletRequest request) {
         try {
-            Path videoPath = videoStorageService.getVideoPath(filename);
-            Resource resource = new UrlResource(videoPath.toUri());
+            String videoUrl = videoStorageService.getVideoUrl(filename);
 
-            if (resource.exists() && resource.isReadable()) {
-                String contentType = request.getServletContext().getMimeType(resource.getFile().getAbsolutePath());
-                if (contentType == null) {
-                    contentType = "video/quicktime";
-                }
+            return ResponseEntity.status(HttpStatus.FOUND)
+                    .location(URI.create(videoUrl))
+                    .build();
 
-                return ResponseEntity.ok()
-                        .contentType(MediaType.parseMediaType(contentType))
-                        .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + resource.getFilename() + "\"")
-                        .header(HttpHeaders.ACCEPT_RANGES, "bytes")
-                        .header(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "*")
-                        .header(HttpHeaders.ACCESS_CONTROL_ALLOW_METHODS, "GET, OPTIONS")
-                        .header(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS, "*")
-                        .body(resource);
-            } else {
-                System.out.println("Video not found at path: " + videoPath);
-                return ResponseEntity.notFound().build();
-            }
         } catch (Exception e) {
-            e.printStackTrace();
             return ResponseEntity.notFound().build();
         }
     }
-
 
     @GetMapping("/{lessonId}")
     public ResponseEntity<LessonResponse> getLesson(
@@ -137,12 +117,12 @@ public class LessonController {
     @GetMapping("/video/check/{filename:.+}")
     public ResponseEntity<Map<String, Object>> checkVideo(@PathVariable String filename) {
         try {
-            Path videoPath = videoStorageService.getVideoPath(filename);
+            String videoUrl = videoStorageService.getVideoUrl(filename);
             Map<String, Object> response = new HashMap<>();
-            response.put("exists", Files.exists(videoPath));
-            response.put("path", videoPath.toString());
-            response.put("isReadable", Files.isReadable(videoPath));
-            response.put("size", Files.exists(videoPath) ? Files.size(videoPath) : -1);
+            response.put("exists", true);
+            response.put("path", videoUrl);
+            response.put("isReadable", true);
+            response.put("size", -1);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             Map<String, Object> error = new HashMap<>();

@@ -122,17 +122,13 @@ public class PostController {
     }
 
     @GetMapping("/images/{filename:.+}")
-    public ResponseEntity<Resource> getImage(@PathVariable String filename) {
+    public ResponseEntity<?> getImage(@PathVariable String filename) {
         try {
-            Path filePath = postImageStorageService.getPostImagePath(filename);
-            Resource resource = new UrlResource(filePath.toUri());
+            String imageUrl = postImageStorageService.getPostImageUrl(filename);
 
-            if (resource.exists()) {
-                return ResponseEntity.ok()
-                        .header(HttpHeaders.CONTENT_TYPE, MediaType.IMAGE_JPEG_VALUE)
-                        .body(resource);
-            }
-            return ResponseEntity.notFound().build();
+            return ResponseEntity.status(HttpStatus.FOUND)
+                    .header(HttpHeaders.LOCATION, imageUrl)
+                    .build();
         } catch (Exception e) {
             return ResponseEntity.internalServerError().build();
         }

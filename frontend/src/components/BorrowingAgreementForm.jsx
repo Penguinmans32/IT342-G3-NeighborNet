@@ -18,8 +18,25 @@ const BorrowingAgreementForm = ({ onSubmit, onClose, senderId, receiverId, stomp
     status: 'PENDING'
   });
 
-  console.log('Form data:', formData); // Debug log
+  console.log('Form data:', formData); 
 
+  const getItemImageUrl = (imageUrl) => {
+    if (!imageUrl) return "/images/no-image.png";
+    
+    if (imageUrl.startsWith('http')) return imageUrl;
+    
+    if (imageUrl.includes('/api/borrowing/items/images/')) {
+      try {
+        const filename = imageUrl.substring(imageUrl.lastIndexOf('/') + 1);
+        return `https://storage.googleapis.com/neighbornet-media/item-images/${filename}`;
+      } catch (error) {
+        console.error("Error parsing image URL:", error);
+        return "/images/no-image.png";
+      }
+    }
+    
+    return imageUrl;
+  };
 
   useEffect(() => {
     const fetchItems = async () => {
@@ -110,8 +127,6 @@ const BorrowingAgreementForm = ({ onSubmit, onClose, senderId, receiverId, stomp
         selectedItem.availableUntil
       );
 
-      
-      
       if (dateError) {
         setError(dateError);
         return;
@@ -270,9 +285,13 @@ const BorrowingAgreementForm = ({ onSubmit, onClose, senderId, receiverId, stomp
                   <div className="aspect-square rounded-lg overflow-hidden bg-gray-100">
                     {selectedItem.imageUrls && selectedItem.imageUrls.length > 0 ? (
                       <img
-                        src={selectedItem.imageUrls[0]}
+                        src={getItemImageUrl(selectedItem.imageUrls[0])}
                         alt={selectedItem.name}
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = "/images/no-image.png";
+                        }}
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-gray-400">
@@ -285,9 +304,13 @@ const BorrowingAgreementForm = ({ onSubmit, onClose, senderId, receiverId, stomp
                       {selectedItem.imageUrls.slice(1, 4).map((url, index) => (
                         <div key={index} className="aspect-square rounded-lg overflow-hidden bg-gray-100">
                           <img
-                            src={url}
+                            src={getItemImageUrl(url)}
                             alt={`${selectedItem.name} ${index + 2}`}
                             className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.src = "/images/no-image.png";
+                            }}
                           />
                         </div>
                       ))}

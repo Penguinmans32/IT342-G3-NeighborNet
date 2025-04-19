@@ -19,10 +19,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.http.CacheControl;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -56,11 +53,15 @@ public class ClassController {
     private final LessonProgressService progressService;
     private final FeedbackRepository feedbackRepository;
     private final AchievementService achievementService;
+    private final FileStorageService fileStorageService;
 
     private static final String CLASSES_CACHE = "classes";
     private static final String POPULAR_CACHE = "popularClasses";
 
-    public ClassController(ClassService classService, ClassRepository classRepository, RatingService ratingService, FeedbackService feedbackService, LessonProgressService progressService, FeedbackRepository feedbackRepository, AchievementService achievementService) {
+    public ClassController(ClassService classService, ClassRepository classRepository,
+                           RatingService ratingService, FeedbackService feedbackService,
+                           LessonProgressService progressService, FeedbackRepository feedbackRepository,
+                           AchievementService achievementService, FileStorageService fileStorageService) {
         this.classService = classService;
         this.classRepository = classRepository;
         this.ratingService = ratingService;
@@ -68,6 +69,7 @@ public class ClassController {
         this.progressService = progressService;
         this.feedbackRepository = feedbackRepository;
         this.achievementService = achievementService;
+        this.fileStorageService = fileStorageService;
     }
 
     @Operation(summary = "Create a new class")
@@ -99,24 +101,13 @@ public class ClassController {
 
 
     @GetMapping("/thumbnail/{filename:.+}")
-    public ResponseEntity<Resource> getThumbnail(@PathVariable String filename) {
+    public ResponseEntity<?> getThumbnail(@PathVariable String filename) {
         try {
-            Path file = Paths.get("thumbnails").resolve(filename).toAbsolutePath();
-            Resource resource = new UrlResource(file.toUri());
+            String thumbnailUrl = fileStorageService.getThumbnailUrl(filename);
 
-            if (resource.exists() && resource.isReadable()) {
-                String contentType = determineContentType(filename);
-                long lastModified = Files.getLastModifiedTime(file).toMillis();
-                String etag = "\"" + lastModified + "\"";
-
-                return ResponseEntity.ok()
-                        .eTag(etag)
-                        .header(HttpHeaders.CACHE_CONTROL, "public, max-age=2592000") // 30 days
-                        .contentType(MediaType.parseMediaType(contentType))
-                        .body(resource);
-            } else {
-                return ResponseEntity.notFound().build();
-            }
+            return ResponseEntity.status(HttpStatus.FOUND)
+                    .header(HttpHeaders.LOCATION, thumbnailUrl)
+                    .build();
         } catch (Exception e) {
             log.error("Error serving thumbnail: {}", filename, e);
             return ResponseEntity.notFound().build();
@@ -138,15 +129,18 @@ public class ClassController {
             @CurrentUser UserPrincipal currentUser) {
         try {
             ClassResponse classResponse = classService.getClassById(classId);
+
+            log.debug("Class ID: {}, Average Rating: {}, Enrolled Count: {}, Rating Count: {}",
+                    classResponse.getId(),
+                    classResponse.getAverageRating(),
+                    classResponse.getEnrolledCount(),
+                    classResponse.getRatingCount());
+
             if (currentUser == null) {
                 classResponse.setLessons(null);
             }
 
-            String etag = "\"" + classResponse.hashCode() + "\"";
-            return ResponseEntity.ok()
-                    .eTag(etag)
-                    .cacheControl(CacheControl.maxAge(1, TimeUnit.HOURS))
-                    .body(classResponse);
+            return ResponseEntity.ok(classResponse);
         } catch (ResourceNotFoundException e) {
             return ResponseEntity.notFound().build();
         } catch (Exception e) {
@@ -156,7 +150,6 @@ public class ClassController {
     }
 
     @GetMapping("/all")
-    @Cacheable(value = "classesPage", key = "'page_' + #page + '_size_' + #size + '_sort_' + #sortBy + '_dir_' + #direction")
     public ResponseEntity<Map<String, Object>> getAllClasses(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
@@ -258,6 +251,7 @@ public class ClassController {
     }
 
     @PostMapping("/{classId}/rate")
+    @CacheEvict(value = "classes", key = "#classId")
     public ResponseEntity<RatingResponse> rateClass(
             @PathVariable Long classId,
             @RequestBody RatingRequest ratingRequest,
@@ -315,6 +309,7 @@ public class ClassController {
     }
 
     @PostMapping("/{classId}/start-learning")
+    @CacheEvict(value = "classes", key = "#classId")
     public ResponseEntity<ClassResponse> startLearning(
             @PathVariable Long classId,
             @CurrentUser UserPrincipal currentUser) {
@@ -349,6 +344,7 @@ public class ClassController {
     }
 
     @PostMapping("/{classId}/feedback")
+    @CacheEvict(value = "classFeedbacks", key = "#classId + '_' + #currentUser.id")
     public ResponseEntity<FeedbackResponse> submitFeedback(
             @PathVariable Long classId,
             @RequestBody FeedbackRequest feedbackRequest,
@@ -405,6 +401,7 @@ public class ClassController {
     }
 
     @PutMapping("/{classId}/feedback/{feedbackId}")
+    @CacheEvict(value = "classFeedbacks", key = "#classId + '_' + #currentUser.id")
     public ResponseEntity<FeedbackResponse> updateFeedback(
             @PathVariable Long classId,
             @PathVariable Long feedbackId,

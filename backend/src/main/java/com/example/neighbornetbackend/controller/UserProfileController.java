@@ -52,33 +52,15 @@ public class UserProfileController {
     }
 
     @GetMapping("/profile-pictures/{filename:.+}")
-    public ResponseEntity<Resource> getProfilePicture(@PathVariable String filename) {
+    public ResponseEntity<?> getProfilePicture(@PathVariable String filename) {
         try {
-            Path filePath = userProfileStorageService.getProfilePicturePath(filename);
-            Resource resource = new UrlResource(filePath.toUri());
+            String profilePictureUrl = userProfileStorageService.getProfilePictureUrl(filename);
 
-            if (resource.exists()) {
-                String contentType = "image/jpeg";
-                if (filename.endsWith(".png")) {
-                    contentType = "image/png";
-                } else if (filename.endsWith(".gif")) {
-                    contentType = "image/gif";
-                }
-
-                long lastModified = resource.lastModified();
-                String etag = "\"" + lastModified + "\"";
-
-                return ResponseEntity.ok()
-                        .contentType(MediaType.parseMediaType(contentType))
-                        .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + resource.getFilename() + "\"")
-                        .cacheControl(CacheControl.maxAge(30, TimeUnit.DAYS))
-                        .eTag(etag)
-                        .body(resource);
-            } else {
-                return ResponseEntity.notFound().build();
-            }
-        } catch (IOException e) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.status(HttpStatus.FOUND)
+                    .header(HttpHeaders.LOCATION, profilePictureUrl)
+                    .build();
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Failed to retrieve profile picture");
         }
     }
 

@@ -10,6 +10,8 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Optional;
@@ -22,6 +24,8 @@ public class NotificationService {
     private final UserRepository userRepository;
     private final SimpMessagingTemplate messagingTemplate;
     private final FCMService fcmService;
+
+    private static final Logger log = LoggerFactory.getLogger(NotificationService.class);
 
     private static final String NOTIFICATIONS_CACHE = "userNotifications";
     private static final String UNREAD_COUNT_CACHE = "unreadNotificationsCount";
@@ -72,12 +76,16 @@ public class NotificationService {
 
         if (user.getFcmToken() != null && !user.getFcmToken().isEmpty()) {
             CompletableFuture.runAsync(() -> {
-                fcmService.sendNotification(
-                        user.getFcmToken(),
-                        title,
-                        message,
-                        type
-                );
+                try {
+                    fcmService.sendNotification(
+                            user.getFcmToken(),
+                            title,
+                            message,
+                            type
+                    );
+                } catch (Exception e) {
+                    log.error("Failed to send FCM notification: {}", e.getMessage());
+                }
             });
         }
     }
@@ -97,7 +105,7 @@ public class NotificationService {
     }
 
     @Transactional
-    @CacheEvict(value = {NOTIFICATIONS_CACHE, UNREAD_COUNT_CACHE}, key = "#userId")
+    @CacheEvict(value = {NOTIFICATIONS_CACHE, UNREAD_COUNT_CACHE}, allEntries = true)
     public void markAllAsRead(Long userId) {
         notificationRepository.markAllAsReadByUserId(userId);
     }
@@ -127,7 +135,7 @@ public class NotificationService {
     }
 
     @Transactional
-    @CacheEvict(value = {NOTIFICATIONS_CACHE, UNREAD_COUNT_CACHE}, key = "#userId")
+    @CacheEvict(value = {NOTIFICATIONS_CACHE, UNREAD_COUNT_CACHE}, allEntries = true)
     public void deleteAllNotifications(Long userId) {
         notificationRepository.deleteByUserId(userId);
     }

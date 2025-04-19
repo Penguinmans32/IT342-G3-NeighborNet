@@ -1,66 +1,79 @@
 package com.example.neighbornetbackend.service;
 
-import jakarta.annotation.PostConstruct;
+import com.google.cloud.storage.BlobId;
+import com.google.cloud.storage.BlobInfo;
+import com.google.cloud.storage.Storage;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
 @Service
 public class ItemImageStorageService {
-    private final Path itemImagesLocation;
+    private final Storage storage;
+    private final String bucketName;
 
-    @Value("${app.baseUrl:http://localhost:8080}")
-    private String baseUrl;
+    @Value("${gcp.storage.public-url:https://storage.googleapis.com}")
+    private String publicUrl;
 
-
-    public ItemImageStorageService() {
-        this.itemImagesLocation = Paths.get(System.getProperty("user.dir"), "item-images").toAbsolutePath();
-        try {
-            Files.createDirectories(this.itemImagesLocation);
-            System.out.println("Item images directory created at: " + this.itemImagesLocation);
-        } catch (IOException e) {
-            throw new RuntimeException("Could not create item images directory!", e);
-        }
+    @Autowired
+    public ItemImageStorageService(Storage storage, @Value("${gcp.storage.bucket-name}") String bucketName) {
+        this.storage = storage;
+        this.bucketName = bucketName;
     }
 
     public List<String> storeItemImages(List<MultipartFile> files) throws IOException {
         List<String> imageUrls = new ArrayList<>();
 
         for (MultipartFile file : files) {
+            if (file.isEmpty()) continue;
+
             String originalFilename = file.getOriginalFilename();
             String fileExtension = originalFilename != null ?
                     originalFilename.substring(originalFilename.lastIndexOf(".")) : ".jpg";
             String filename = UUID.randomUUID().toString() + fileExtension;
+            String objectName = "item-images/" + filename;
 
-            Path targetLocation = this.itemImagesLocation.resolve(filename);
-            Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
+            BlobId blobId = BlobId.of(bucketName, objectName);
+            BlobInfo blobInfo = BlobInfo.newBuilder(blobId)
+                    .setContentType(file.getContentType())
+                    .build();
 
-            imageUrls.add(baseUrl + "/api/borrowing/items/images/" + filename);
+            storage.create(blobInfo, file.getBytes());
+
+            imageUrls.add("/api/borrowing/items/images/" + filename);
         }
 
         return imageUrls;
     }
 
-    public Path getItemImagePath(String filename) {
-        return itemImagesLocation.resolve(filename);
+    public String getItemImageUrl(String filename) {
+        String objectName = "item-images/" + filename;
+        return publicUrl + "/" + bucketName + "/" + objectName;
     }
 
-    public void deleteItemImage(String imageUrl) throws IOException {
-        String filename = imageUrl.substring(imageUrl.lastIndexOf('/') + 1);
-        Path imagePath = itemImagesLocation.resolve(filename);
+    public void deleteItemImage(String imageUrl) {
+        if (imageUrl == null || imageUrl.isEmpty()) return;
 
-        if (Files.exists(imagePath)) {
-            Files.delete(imagePath);
-        } else {
-            throw new IOException("Image file not found: " + filename);
+        try {
+            String filename = imageUrl.substring(imageUrl.lastIndexOf('/') + 1);
+            String objectName = "item-images/" + filename;
+
+            BlobId blobId = BlobId.of(bucketName, objectName);
+            boolean deleted = storage.delete(blobId);
+
+            if (deleted) {
+                System.out.println("Successfully deleted item image: " + objectName);
+            } else {
+                System.out.println("Item image not found or could not be deleted: " + objectName);
+            }
+        } catch (Exception e) {
+            System.err.println("Error deleting item image: " + e.getMessage());
         }
     }
 }

@@ -1,57 +1,84 @@
 package com.example.neighbornetbackend.service;
 
-import jakarta.annotation.PostConstruct;
+import com.google.cloud.storage.BlobId;
+import com.google.cloud.storage.BlobInfo;
+import com.google.cloud.storage.Storage;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.util.UUID;
 
 @Service
 public class ChatImageStorageService {
-    private final Path chatImagesLocation;
+    private static final Logger logger = LoggerFactory.getLogger(ChatImageStorageService.class);
 
-    @Value("${app.baseUrl:http://localhost:8080}")
-    private String baseUrl;
+    private final Storage storage;
+    private final String bucketName;
 
-    public ChatImageStorageService() {
-        this.chatImagesLocation = Paths.get(System.getProperty("user.dir"), "chat-images").toAbsolutePath();
-        try {
-            Files.createDirectories(this.chatImagesLocation);
-            System.out.println("Chat images directory created at: " + this.chatImagesLocation);
-        } catch (IOException e) {
-            throw new RuntimeException("Could not create chat images directory!", e);
-        }
+    @Value("${gcp.storage.public-url:https://storage.googleapis.com}")
+    private String publicUrl;
+
+    @Autowired
+    public ChatImageStorageService(Storage storage, @Value("${gcp.storage.bucket-name}") String bucketName) {
+        this.storage = storage;
+        this.bucketName = bucketName;
+        logger.info("ChatImageStorageService initialized with bucket: {}", bucketName);
     }
 
     public String store(MultipartFile file) throws IOException {
+        if (file == null || file.isEmpty()) {
+            throw new IOException("File is empty");
+        }
+
         String originalFilename = file.getOriginalFilename();
         String fileExtension = originalFilename != null ?
                 originalFilename.substring(originalFilename.lastIndexOf(".")) : ".jpg";
         String filename = UUID.randomUUID().toString() + fileExtension;
+        String objectName = "chat-images/" + filename;
 
-        Path targetLocation = this.chatImagesLocation.resolve(filename);
-        Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
+        BlobId blobId = BlobId.of(bucketName, objectName);
+        BlobInfo blobInfo = BlobInfo.newBuilder(blobId)
+                .setContentType(file.getContentType())
+                .build();
 
-        return baseUrl + "/chat/images/" + filename;
+        storage.create(blobInfo, file.getBytes());
+        logger.info("Successfully uploaded chat image: {}", objectName);
+
+        return "/chat/images/" + filename;
+    }
+
+    public String getChatImageUrl(String filename) {
+        String objectName = "chat-images/" + filename;
+        return publicUrl + "/" + bucketName + "/" + objectName;
     }
 
     public Path getChatImagePath(String filename) {
-        return chatImagesLocation.resolve(filename);
+        return Paths.get("chat-images", filename);
     }
 
-    public void deleteChatImage(String imageUrl) throws IOException {
-        String filename = imageUrl.substring(imageUrl.lastIndexOf('/') + 1);
-        Path imagePath = chatImagesLocation.resolve(filename);
+    public void deleteChatImage(String imageUrl) {
+        if (imageUrl == null || imageUrl.isEmpty()) return;
 
-        if (Files.exists(imagePath)) {
-            Files.delete(imagePath);
-        } else {
-            throw new IOException("Image file not found: " + filename);
+        try {
+            String filename = imageUrl.substring(imageUrl.lastIndexOf('/') + 1);
+            String objectName = "chat-images/" + filename;
+
+            BlobId blobId = BlobId.of(bucketName, objectName);
+            boolean deleted = storage.delete(blobId);
+
+            if (deleted) {
+                logger.info("Successfully deleted chat image: {}", objectName);
+            } else {
+                logger.warn("Chat image not found or could not be deleted: {}", objectName);
+            }
+        } catch (Exception e) {
+            logger.error("Error deleting chat image: {}", e.getMessage(), e);
         }
     }
 }

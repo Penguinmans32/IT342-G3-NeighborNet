@@ -136,6 +136,34 @@ const Dashboard = () => {
     if (total === 0) return 0;
     return ((current / total) * 100);
   };
+
+  const getPostImageUrl = (imageUrl) => {
+    if (!imageUrl) return "/placeholder.svg";
+    
+    if (imageUrl.startsWith('http')) return imageUrl;
+    
+    if (imageUrl.includes('/api/posts/images/')) {
+      const filename = imageUrl.substring(imageUrl.lastIndexOf('/') + 1);
+      
+      return `https://storage.googleapis.com/neighbornet-media/post-images/${filename}`;
+    }
+    
+    return imageUrl;
+  };
+
+  const getUserProfileImageUrl = (imageUrl) => {
+    if (!imageUrl) return "/images/defaultProfile.png";
+    
+    if (imageUrl.startsWith('http')) return imageUrl;
+    
+    if (imageUrl.includes('/api/users/profile-pictures/')) {
+      const filename = imageUrl.substring(imageUrl.lastIndexOf('/') + 1);
+      
+      return `https://storage.googleapis.com/neighbornet-media/profile-pictures/${filename}`;
+    }
+    
+    return imageUrl;
+  };
   
   const totalActivities = stats.skillsShared + stats.itemsBorrowed + stats.activeUsers;
   const skillsSharedPercentage = calculatePercentage(stats.skillsShared, totalActivities);
@@ -254,6 +282,8 @@ const Dashboard = () => {
             clientId: generateUniqueId() 
           }))
         }))
+
+        console.log("Posts: ", postsWithUniqueKeys)
   
         setPosts(postsWithUniqueKeys)
         setIsLoading(false)
@@ -820,16 +850,16 @@ const Dashboard = () => {
               <div className="flex items-start gap-4 mb-8">
                 <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-400 to-blue-500 flex items-center justify-center overflow-hidden flex-shrink-0 border-2 border-white shadow-sm">
                 <img
-                  src={userProfileData?.imageUrl || "/images/defaultProfile.png"}
-                  alt="Profile"
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    e.currentTarget.onerror = null;
-                    if (e.currentTarget.src !== "/images/defaultProfile.png") {
-                      e.currentTarget.src = "/images/defaultProfile.png";
-                    }
-                  }}
-                />
+                    src={getUserProfileImageUrl(userProfileData?.imageUrl)}
+                    alt="Profile"
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      if (e.currentTarget.src !== "/images/defaultProfile.png") {
+                        e.currentTarget.src = "/images/defaultProfile.png";
+                      }
+                    }}
+                  />
                 </div>
                 <div className="flex-1 bg-indigo-50/50 rounded-2xl p-4 border border-indigo-100">
                   <textarea
@@ -909,11 +939,11 @@ const Dashboard = () => {
                                 border-2 border-white shadow-sm cursor-pointer
                                 hover:border-blue-300 transition-all"
                     >
-                      <img
-                        src={post.author.imageUrl || "/images/defaultProfile.png"}
-                        alt={post.author.username}
-                        className="w-full h-full object-cover"
-                      />
+                     <img
+                      src={getUserProfileImageUrl(post.author.imageUrl)}
+                      alt={post.author.username}
+                      className="w-full h-full object-cover"
+                    />
                     </div>
                       <div className="flex-1">
                         <div className="flex items-center justify-between">
@@ -975,10 +1005,9 @@ const Dashboard = () => {
                               <div className="flex items-center gap-2 mb-2">
                               <img
                                   onClick={() => navigateToProfile(post.originalPost.author.id)}
-                                  src={post.originalPost.author.imageUrl || "/images/defaultProfile.png"}
+                                  src={getUserProfileImageUrl(post.originalPost.author.imageUrl)}
                                   alt={post.originalPost.author.username}
-                                  className="w-8 h-8 rounded-full border border-indigo-200 cursor-pointer
-                                            hover:border-blue-300 transition-all"
+                                  className="w-8 h-8 rounded-full border border-indigo-200 cursor-pointer hover:border-blue-300 transition-all"
                                 />
                                 <div>
                                 <div 
@@ -992,8 +1021,8 @@ const Dashboard = () => {
                               <p className="text-indigo-800">{post.originalPost.content}</p>
                               {post.originalPost.imageUrl && (
                                 <img
-                                  src={post.originalPost.imageUrl || "/placeholder.svg"}
-                                  alt="Original post content"
+                                  src={getPostImageUrl(post.originalPost.imageUrl)}
+                                  alt="Original post content" 
                                   className="mt-3 rounded-xl w-full object-cover max-h-96 border border-indigo-100"
                                 />
                               )}
@@ -1039,7 +1068,7 @@ const Dashboard = () => {
                                 </p>
                                 {post.imageUrl && (
                                   <img
-                                    src={post.imageUrl || "/placeholder.svg"}
+                                    src={getPostImageUrl(post.imageUrl)}
                                     alt="Post content"
                                     className="mt-3 rounded-xl w-full object-cover max-h-96 border border-indigo-100 shadow-sm"
                                   />
@@ -1101,11 +1130,11 @@ const Dashboard = () => {
                             >
                               {/* Add comment input */}
                               <div className="flex gap-3">
-                                <img
-                                  src={userProfileData?.imageUrl || "/images/defaultProfile.png"}
-                                  alt="Profile"
-                                  className="w-8 h-8 rounded-full object-cover border-2 border-indigo-100"
-                                />
+                              <img
+                                src={getUserProfileImageUrl(userProfileData?.imageUrl)}
+                                alt="Profile"
+                                className="w-8 h-8 rounded-full object-cover border-2 border-indigo-100"
+                              />
                                 <div className="flex-1 flex gap-2">
                                   <input
                                     type="text"
@@ -1145,10 +1174,9 @@ const Dashboard = () => {
                                 >
                                    <img
                                       onClick={() => navigateToProfile(comment.author.id)}
-                                      src={comment.author.imageUrl || "/images/defaultProfile.png"}
+                                      src={getUserProfileImageUrl(comment.author.imageUrl)}
                                       alt={comment.author.username}
-                                      className="w-8 h-8 rounded-full object-cover border-2 border-indigo-100
-                                                cursor-pointer hover:border-blue-300 transition-all"
+                                      className="w-8 h-8 rounded-full object-cover border-2 border-indigo-100 cursor-pointer hover:border-blue-300 transition-all"
                                     />
                                   <div className="flex-1">
                                     <div className="bg-indigo-50 rounded-xl px-4 py-3">

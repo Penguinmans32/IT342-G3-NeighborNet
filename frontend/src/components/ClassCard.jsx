@@ -6,8 +6,34 @@ import { motion } from "framer-motion";
 const DEFAULT_CLASS_IMAGE = "/images/defaultProfile.png"; 
 const DEFAULT_PROFILE_IMAGE = "/images/defaultProfile.png";
 
-const getCorrectImageUrl = (imageUrl) => {
-  if (!imageUrl) return DEFAULT_CLASS_IMAGE;
+// Get Google Cloud Storage URL for thumbnails
+const getThumbnailUrl = (thumbnailUrl) => {
+  if (!thumbnailUrl) return "/placeholder.svg";
+  
+  if (thumbnailUrl.startsWith('http')) return thumbnailUrl;
+  
+  if (thumbnailUrl.includes('/api/classes/thumbnail/')) {
+    const filename = thumbnailUrl.substring(thumbnailUrl.lastIndexOf('/') + 1);
+    return `https://storage.googleapis.com/neighbornet-media/thumbnails/${filename}`;
+  }
+  
+  return thumbnailUrl;
+};
+
+// Handle different types of image URLs
+const getCorrectImageUrl = (imageUrl, isProfileImage = false) => {
+  if (!imageUrl) return isProfileImage ? DEFAULT_PROFILE_IMAGE : DEFAULT_CLASS_IMAGE;
+  
+  // Handle profile pictures from Google Cloud Storage
+  if (isProfileImage && imageUrl.includes('/api/users/profile-pictures/')) {
+    const filename = imageUrl.substring(imageUrl.lastIndexOf('/') + 1);
+    return `https://storage.googleapis.com/neighbornet-media/profile-pictures/${filename}`;
+  }
+  
+  // Handle class thumbnails from Google Cloud Storage
+  if (!isProfileImage && imageUrl.includes('/api/classes/thumbnail/')) {
+    return getThumbnailUrl(imageUrl);
+  }
   
   if (imageUrl.includes('localhost:8080')) {
     const path = imageUrl.split('localhost:8080')[1];
@@ -56,10 +82,9 @@ const ClassCard = memo(({
 
     const placeholderImage = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23cccccc'/%3E%3Ctext x='50' y='50' font-family='Arial' font-size='12' text-anchor='middle' alignment-baseline='middle' fill='%23ffffff'%3ENo Image%3C/text%3E%3C/svg%3E";
     
-    const thumbnailUrl = getCorrectImageUrl(classItem.thumbnailUrl);
-    const profileImageUrl = classItem.creator?.imageUrl 
-      ? getCorrectImageUrl(classItem.creator.imageUrl)
-      : DEFAULT_PROFILE_IMAGE;
+    // Use the updated functions with proper cloud storage handling
+    const thumbnailUrl = getCorrectImageUrl(classItem.thumbnailUrl, false);
+    const profileImageUrl = getCorrectImageUrl(classItem.creator?.imageUrl, true);
 
     return (
         <motion.div

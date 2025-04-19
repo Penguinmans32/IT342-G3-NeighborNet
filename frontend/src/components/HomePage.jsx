@@ -421,8 +421,9 @@ const Homepage = () => {
   useEffect(() => {
     const fetchClasses = async () => {
       try {
+        const timestamp = new Date().getTime();
         const response = await axios.get(
-          "https://it342-g3-neighbornet.onrender.com/api/classes/all", 
+          `https://it342-g3-neighbornet.onrender.com/api/classes/all?_=${timestamp}`, 
           {
             params: {
               page: 0,          
@@ -465,6 +466,7 @@ const Homepage = () => {
         } else if (myClassesResponse.data && typeof myClassesResponse.data === "object") {
           myClassesData = Object.values(myClassesResponse.data);
         }
+        console.log("My classes data:", myClassesData);
   
         setUserClasses(myClassesData);
       } catch (error) {
@@ -528,9 +530,15 @@ const Homepage = () => {
   }
 
   const getFullThumbnailUrl = (thumbnailUrl) => {
-    if (!thumbnailUrl) return "/default-class-image.jpg"
-    return thumbnailUrl.startsWith("http") ? thumbnailUrl : `https://it342-g3-neighbornet.onrender.com${thumbnailUrl}`
-  }
+    if (!thumbnailUrl) return "/default-class-image.jpg";
+    
+    if (thumbnailUrl.includes('/api/classes/thumbnail/')) {
+      const filename = thumbnailUrl.substring(thumbnailUrl.lastIndexOf('/') + 1);
+      return `https://storage.googleapis.com/neighbornet-media/thumbnails/${filename}`;
+    }
+    
+    return thumbnailUrl.startsWith("http") ? thumbnailUrl : `https://it342-g3-neighbornet.onrender.com${thumbnailUrl}`;
+  };
 
   const getFullProfileImageUrl = (imageUrl) => {
     //console.log("Raw imageUrl:", imageUrl)
@@ -579,14 +587,29 @@ const Homepage = () => {
   }, [user]);
 
   const { filteredClasses, currentItems, totalPages } = useMemo(() => {
-    const filtered = classes.filter((classItem) => {
-      const categoryMatch =
-        selectedCategory === "all" ? true : 
-        classItem.category?.toLowerCase() === selectedCategory;
-      const userClassMatch = showOnlyUserClasses
-        ? userClasses.some((userClass) => userClass.id === classItem.id)
-        : true;
-      return categoryMatch && userClassMatch;
+    let dataSource = [];
+    
+    if (showOnlyUserClasses) {
+      dataSource = userClasses;
+    } else {
+      const classMap = new Map();
+      
+      classes.forEach(cls => {
+        classMap.set(cls.id, cls);
+      });
+      
+      userClasses.forEach(cls => {
+        if (!classMap.has(cls.id)) {
+          classMap.set(cls.id, cls);
+        }
+      });
+      
+      dataSource = Array.from(classMap.values());
+    }
+    
+    const filtered = dataSource.filter((classItem) => {
+      return selectedCategory === "all" || 
+             classItem.category?.toLowerCase() === selectedCategory;
     });
   
     const indexOfLastItem = currentPage * itemsPerPage;
@@ -595,7 +618,7 @@ const Homepage = () => {
     const pages = Math.ceil(filtered.length / itemsPerPage);
     
     return { filteredClasses: filtered, currentItems: items, totalPages: pages };
-  }, [classes, selectedCategory, showOnlyUserClasses, userClasses, currentPage, itemsPerPage]);
+  }, [classes, userClasses, selectedCategory, showOnlyUserClasses, currentPage, itemsPerPage]);
 
 
   const toggleDarkMode = () => {
