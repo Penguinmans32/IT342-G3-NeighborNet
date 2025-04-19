@@ -6,6 +6,7 @@ import org.springframework.cache.concurrent.ConcurrentMapCache;
 import org.springframework.cache.support.SimpleCacheManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 
 import java.util.Arrays;
 
@@ -13,6 +14,7 @@ import java.util.Arrays;
 @EnableCaching
 public class CacheConfig {
     @Bean
+    @Primary
     public CacheManager cacheManager() {
         SimpleCacheManager cacheManager = new SimpleCacheManager();
         cacheManager.setCaches(Arrays.asList(
@@ -22,7 +24,8 @@ public class CacheConfig {
                 new ConcurrentMapCache("classFeedbacks"),
                 new ConcurrentMapCache("classRatings"),
                 new ConcurrentMapCache("relatedClasses"),
-                new ConcurrentMapCache("userStats")
+                new ConcurrentMapCache("userStats"),
+                new ConcurrentMapCache("recentActivities")
         ));
         return cacheManager;
     }

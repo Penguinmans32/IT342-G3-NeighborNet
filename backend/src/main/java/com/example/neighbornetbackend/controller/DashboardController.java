@@ -1,6 +1,5 @@
 package com.example.neighbornetbackend.controller;
 
-
 import com.example.neighbornetbackend.dto.DashboardStatsDTO;
 import com.example.neighbornetbackend.security.CurrentUser;
 import com.example.neighbornetbackend.security.UserPrincipal;
@@ -24,8 +23,15 @@ public class DashboardController {
 
     @GetMapping("/stats")
     public ResponseEntity<DashboardStatsDTO> getDashboardStats(@CurrentUser UserPrincipal currentUser) {
-        // For public access, pass null or a default value
-        Long userId = currentUser != null ? currentUser.getId() : null;
-        return ResponseEntity.ok(dashboardService.getDashboardStats(userId));
+        try {
+            Long userId = currentUser != null ? currentUser.getId() : null;
+            return ResponseEntity.ok(dashboardService.getDashboardStats(userId));
+        } catch (Exception e) {
+            DashboardStatsDTO defaultStats = new DashboardStatsDTO(
+                    0L, 0L, 0L,
+                    new DashboardStatsDTO.StatsChangeDTO(0.0, 0.0, 0.0)
+            );
+            return ResponseEntity.ok(defaultStats);
+        }
     }
 }

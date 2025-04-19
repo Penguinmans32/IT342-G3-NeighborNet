@@ -2,6 +2,7 @@ package com.example.neighbornetbackend.repository;
 
 import com.example.neighbornetbackend.model.ClassEnrollment;
 import com.example.neighbornetbackend.model.User;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -22,19 +23,15 @@ public interface ClassEnrollmentRepository extends JpaRepository<ClassEnrollment
 
     List<ClassEnrollment> findByUserId(Long userId);
 
-    List<ClassEnrollment> findByUserIdOrderByEnrolledAtDesc(Long userId);
-
     @Modifying
     @Transactional
     @Query("DELETE FROM ClassEnrollment ce WHERE ce.courseClass.creator.id = :userId OR ce.user.id = :userId")
     void deleteByCreatorOrEnrolledUserId(@Param("userId") Long userId);
 
-    @Modifying
-    @Transactional
-    @Query("DELETE FROM ClassEnrollment ce WHERE ce.courseClass.id = :classId")
-    void deleteByClassId(@Param("classId") Long classId);
-
-    @Modifying
-    @Query("DELETE FROM ClassEnrollment ce WHERE ce.courseClass.id = :classId")
-    void deleteAllByCourseClassId(@Param("classId") Long classId);
+    @Query("SELECT e FROM ClassEnrollment e " +
+            "JOIN FETCH e.user " +
+            "JOIN FETCH e.courseClass c " +
+            "LEFT JOIN FETCH c.feedbacks " +
+            "ORDER BY e.enrolledAt DESC")
+    List<ClassEnrollment> findRecentEnrollmentsWithDetails(Pageable pageable);
 }

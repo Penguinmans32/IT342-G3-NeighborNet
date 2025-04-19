@@ -21,4 +21,9 @@ public interface FeedbackRepository extends JpaRepository<Feedback, Long> {
     @Transactional
     @Query("DELETE FROM Feedback f WHERE f.classEntity.creator.id = :userId")
     void deleteByCreatorId(@Param("userId") Long userId);
+
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM Feedback f WHERE f.classEntity.id = :classId")
+    void deleteByClassEntityId(@Param("classId") Long classId);
 }

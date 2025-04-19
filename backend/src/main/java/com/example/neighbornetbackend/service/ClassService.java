@@ -6,11 +6,16 @@ import com.example.neighbornetbackend.exception.ResourceNotFoundException;
 import com.example.neighbornetbackend.model.*;
 import com.example.neighbornetbackend.repository.*;
 import jakarta.annotation.PostConstruct;
+import jakarta.persistence.EntityManager;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import com.example.neighbornetbackend.model.CourseClass;
+import jakarta.persistence.PersistenceContext;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -25,6 +30,11 @@ import java.util.stream.Collectors;
 
 @Service
 public class ClassService {
+
+    @PersistenceContext
+    private EntityManager entityManager;
+
+
     private final ClassRepository classRepository;
     private final UserRepository userRepository;
     private final FileStorageService fileStorageService;
@@ -33,6 +43,11 @@ public class ClassService {
     private final ClassEnrollmentRepository enrollmentRepository;
     private final NotificationService notificationService;
     private final ActivityService activityService;
+    private final QuizRepository quizRepository;
+    private final QuizAttemptRepository quizAttemptRepository;
+    private final QuestionRepository questionRepository;
+    private final FeedbackRepository feedbackRepository;
+
 
     private final String THUMBNAIL_DIRECTORY = "thumbnails";
 
@@ -50,7 +65,7 @@ public class ClassService {
 
     public ClassService(ClassRepository classRepository,
                         UserRepository userRepository,
-                        FileStorageService fileStorageService, LessonRepository lessonRepository, LessonProgressRepository lessonProgressRepository, ClassEnrollmentRepository enrollmentRepository, NotificationService notificationService, ActivityService activityService) {
+                        FileStorageService fileStorageService, LessonRepository lessonRepository,FeedbackRepository feedbackRepository, QuizAttemptRepository quizAttemptRepository,QuestionRepository questionRepository, LessonProgressRepository lessonProgressRepository, ClassEnrollmentRepository enrollmentRepository, NotificationService notificationService, ActivityService activityService, QuizRepository quizRepository) {
         this.classRepository = classRepository;
         this.userRepository = userRepository;
         this.fileStorageService = fileStorageService;
@@ -59,6 +74,10 @@ public class ClassService {
         this.enrollmentRepository = enrollmentRepository;
         this.notificationService = notificationService;
         this.activityService = activityService;
+        this.quizRepository = quizRepository;
+        this.quizAttemptRepository = quizAttemptRepository;
+        this.questionRepository = questionRepository;
+        this.feedbackRepository = feedbackRepository;
     }
 
     private void notifyClassCreator(CourseClass courseClass, String title, String message, String type) {
@@ -178,59 +197,80 @@ public class ClassService {
     }
 
     public List<ClassResponse> getAllClasses() {
-        return classRepository.findAllWithCreator().stream()
-                .map(ClassResponse::fromEntity)
-                .collect(Collectors.toList());
+        Pageable pageable = PageRequest.of(0, 50);
+
+        List<CourseClass> classes = classRepository.findTop50ByOrderByCreatedAtDesc(pageable);
+
+        List<ClassResponse> result = new ArrayList<>(classes.size());
+        for (CourseClass cls : classes) {
+            result.add(ClassResponse.fromEntity(cls));
+        }
+
+        return result;
     }
 
     @Transactional
-    public void deleteClass(Long classId) {
-        CourseClass classToDelete = classRepository.findById(classId)
-                .orElseThrow(() -> new ResourceNotFoundException("Class not found"));
+    public void deleteClassAndRelatedData(Long classId) {
+        savedClassRepository.deleteByCourseClassId(classId);
 
-        activityService.trackActivity(
-                classToDelete.getCreator().getId(),
-                "class_deleted",
-                "Deleted a class",
-                classToDelete.getTitle(),
-                "Trash",
-                classId
-        );
+        List<Long> quizIds = entityManager.createQuery(
+                        "SELECT q.id FROM Quiz q WHERE q.classEntity.id = :classId", Long.class)
+                .setParameter("classId", classId)
+                .getResultList();
 
-        try {
-            // First delete all lesson progress records
+        if (!quizIds.isEmpty()) {
+            entityManager.createQuery(
+                            "DELETE FROM QuizAttempt qa WHERE qa.quiz.id IN :quizIds")
+                    .setParameter("quizIds", quizIds)
+                    .executeUpdate();
+
+            entityManager.createQuery(
+                            "DELETE FROM Question q WHERE q.quiz.id IN :quizIds")
+                    .setParameter("quizIds", quizIds)
+                    .executeUpdate();
+
+            entityManager.createQuery(
+                            "DELETE FROM Quiz q WHERE q.classEntity.id = :classId")
+                    .setParameter("classId", classId)
+                    .executeUpdate();
+        }
+
+        entityManager.createQuery(
+                        "DELETE FROM FeedbackReaction fr WHERE fr.feedback.id IN " +
+                                "(SELECT f.id FROM Feedback f WHERE f.classEntity.id = :classId)")
+                .setParameter("classId", classId)
+                .executeUpdate();
+
+        feedbackRepository.deleteByClassEntityId(classId);
+
+        entityManager.createQuery(
+                        "DELETE FROM ClassRating cr WHERE cr.courseClass.id = :classId")
+                .setParameter("classId", classId)
+                .executeUpdate();
+
+        List<Long> lessonIds = entityManager.createQuery(
+                        "SELECT l.id FROM Lesson l WHERE l.classEntity.id = :classId", Long.class)
+                .setParameter("classId", classId)
+                .getResultList();
+
+        if (!lessonIds.isEmpty()) {
+            entityManager.createQuery(
+                            "DELETE FROM LessonRating lr WHERE lr.lesson.id IN :lessonIds")
+                    .setParameter("lessonIds", lessonIds)
+                    .executeUpdate();
+
             lessonProgressRepository.deleteByLessonClassId(classId);
-            lessonProgressRepository.deleteByClassId(classId);
 
-            // Then delete lessons
             lessonRepository.deleteByClassId(classId);
-
-            // Delete thumbnail if exists
-            if (classToDelete.getThumbnailUrl() != null) {
-                try {
-                    Path thumbnailPath = Paths.get(THUMBNAIL_DIRECTORY)
-                            .resolve(Paths.get(classToDelete.getThumbnailUrl()).getFileName());
-                    Files.deleteIfExists(thumbnailPath);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-
-
-            classRepository.delete(classToDelete);
-        } catch (Exception e) {
-            throw new RuntimeException("Error deleting class and related data", e);
         }
-    }
 
-    public List<ClassEnrollment> getUserEnrollments(Long userId) {
-        try {
-            return enrollmentRepository.findByUserIdOrderByEnrolledAtDesc(userId);
-        } catch (Exception e) {
-            return new ArrayList<>();
-        }
-    }
+        entityManager.createQuery(
+                        "DELETE FROM ClassEnrollment ce WHERE ce.courseClass.id = :classId")
+                .setParameter("classId", classId)
+                .executeUpdate();
 
+        classRepository.deleteById(classId);
+    }
 
     @Transactional
     public ClassResponse updateClass(Long classId, CreateClassRequest request,
@@ -414,5 +454,25 @@ public class ClassService {
         return savedClasses.stream()
                 .map(savedClass -> ClassResponse.fromEntity(savedClass.getCourseClass(), true))
                 .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public Page<ClassResponse> getAllClassesPaged(Pageable pageable) {
+        Page<CourseClass> classPage = classRepository.findAllWithCreator(pageable);
+
+        return classPage.map(ClassResponse::fromEntity);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<ClassResponse> searchClassesPaged(String query, String category, Pageable pageable) {
+        Page<CourseClass> resultPage;
+
+        if (category != null && !category.isEmpty()) {
+            resultPage = classRepository.searchClassesByCategoryPaged(category.toLowerCase(), query, pageable);
+        } else {
+            resultPage = classRepository.searchClassesPaged(query, pageable);
+        }
+
+        return resultPage.map(ClassResponse::fromEntity);
     }
 }

@@ -5,6 +5,7 @@ import com.example.neighbornetbackend.repository.BorrowingAgreementRepository;
 import com.example.neighbornetbackend.repository.ClassRepository;
 import com.example.neighbornetbackend.repository.ItemRepository;
 import com.example.neighbornetbackend.repository.UserRepository;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -27,20 +28,18 @@ public class DashboardService {
         this.borrowingAgreementRepository = borrowingAgreementRepository;
     }
 
+    @Cacheable(value = "dashboardStats", key = "'global'")
     public DashboardStatsDTO getDashboardStats(Long userId) {
-        // Current period stats
         long currentSkillsShared = classRepository.count();
         long currentItemsBorrowed = borrowingAgreementRepository.count();
         long currentActiveUsers = userRepository.countByEmailVerified(true);
 
-        // Previous period stats
         LocalDateTime oneMonthAgo = LocalDateTime.now().minusMonths(1);
 
         long previousSkillsShared = classRepository.countByCreatedAtBefore(oneMonthAgo);
         long previousItemsBorrowed = borrowingAgreementRepository.countByCreatedAtBefore(oneMonthAgo);
         long previousActiveUsers = userRepository.countByEmailVerifiedAndCreatedDateBefore(true, oneMonthAgo);
 
-        // Calculate percentage changes
         double skillsSharedChange = calculatePercentageChange(previousSkillsShared, currentSkillsShared);
         double itemsBorrowedChange = calculatePercentageChange(previousItemsBorrowed, currentItemsBorrowed);
         double activeUsersChange = calculatePercentageChange(previousActiveUsers, currentActiveUsers);
@@ -60,7 +59,7 @@ public class DashboardService {
     }
 
     private double calculatePercentageChange(double previous, double current) {
-        if (previous == 0) return 100.0; // If previous was 0, treat as 100% increase
+        if (previous == 0) return 100.0;
         return ((current - previous) / previous) * 100.0;
     }
 }

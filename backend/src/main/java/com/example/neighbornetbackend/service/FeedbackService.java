@@ -192,4 +192,26 @@ public class FeedbackService {
         feedback.setHelpfulCount(helpfulCount);
         feedback.setReportCount(reportCount);
     }
+
+    @Transactional(readOnly = true)
+    public List<FeedbackResponse> getClassFeedbacksWithUserReactions(Long classId, Long userId) {
+        if (!classRepository.existsById(classId)) {
+            throw new ResourceNotFoundException("Class not found");
+        }
+
+        List<Feedback> feedbacks = feedbackRepository.findByClassEntityIdOrderByCreatedAtDesc(classId);
+
+        feedbacks.forEach(feedback -> {
+            if (feedback.getHelpfulCount() == null) {
+                feedback.setHelpfulCount(0);
+            }
+            if (feedback.getReportCount() == null) {
+                feedback.setReportCount(0);
+            }
+        });
+
+        return feedbacks.stream()
+                .map(feedback -> FeedbackResponse.fromEntity(feedback, userId))
+                .collect(Collectors.toList());
+    }
 }
