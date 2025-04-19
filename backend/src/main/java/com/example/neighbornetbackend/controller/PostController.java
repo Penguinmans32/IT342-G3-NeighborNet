@@ -1,8 +1,6 @@
 package com.example.neighbornetbackend.controller;
 
 import com.example.neighbornetbackend.dto.*;
-import com.example.neighbornetbackend.model.User;
-import com.example.neighbornetbackend.security.CurrentUser;
 import com.example.neighbornetbackend.security.UserPrincipal;
 import com.example.neighbornetbackend.service.PostImageStorageService;
 import com.example.neighbornetbackend.service.PostService;
@@ -195,5 +193,18 @@ public class PostController {
 
         PostDTO post = postService.updateComment(postId, commentId, request.getContent(), userPrincipal.getId());
         return ResponseEntity.ok(post);
+    }
+
+    @GetMapping("/{postId}/comments")
+    public ResponseEntity<Page<CommentDTO>> getPostComments(
+            @PathVariable Long postId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @AuthenticationPrincipal UserPrincipal userPrincipal
+    ) {
+        if (userPrincipal == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        return ResponseEntity.ok(postService.getPostComments(postId, page, size, userPrincipal.getId()));
     }
 }

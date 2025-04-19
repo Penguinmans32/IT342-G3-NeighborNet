@@ -5,6 +5,8 @@ import com.example.neighbornetbackend.security.CurrentUser;
 import com.example.neighbornetbackend.security.UserPrincipal;
 import com.example.neighbornetbackend.service.QuizService;
 import io.swagger.v3.oas.annotations.Operation;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,6 +25,7 @@ public class QuizController {
 
     @Operation(summary = "Create a new quiz")
     @PostMapping
+    @CacheEvict(value = {"quizzesByClass"}, key = "#classId")
     public ResponseEntity<QuizResponse> createQuiz(
             @PathVariable Long classId,
             @Valid @RequestBody QuizRequest request,
@@ -32,6 +35,7 @@ public class QuizController {
     }
 
     @GetMapping("/{quizId}")
+    @Cacheable(value = "quizById", key = "#quizId + '-' + #currentUser.id")
     public ResponseEntity<QuizResponse> getQuiz(
             @PathVariable Long classId,
             @PathVariable Long quizId,
@@ -41,6 +45,7 @@ public class QuizController {
     }
 
     @GetMapping
+    @Cacheable(value = "quizzesByClass", key = "#classId")
     public ResponseEntity<List<QuizResponse>> getQuizzesByClass(
             @PathVariable Long classId) {
         List<QuizResponse> quizzes = quizService.getQuizzesByClass(classId);
@@ -48,6 +53,7 @@ public class QuizController {
     }
 
     @PutMapping("/{quizId}")
+    @CacheEvict(value = {"quizById", "quizzesByClass"}, allEntries = true)
     public ResponseEntity<QuizResponse> updateQuiz(
             @PathVariable Long classId,
             @PathVariable Long quizId,
@@ -58,6 +64,7 @@ public class QuizController {
     }
 
     @DeleteMapping("/{quizId}")
+    @CacheEvict(value = {"quizById", "quizzesByClass"}, allEntries = true)
     public ResponseEntity<?> deleteQuiz(
             @PathVariable Long classId,
             @PathVariable Long quizId,
@@ -76,6 +83,7 @@ public class QuizController {
     }
 
     @PostMapping("/{quizId}/attempts/{attemptId}/submit")
+    @CacheEvict(value = {"quizAttempts"}, key = "#quizId + '-' + #currentUser.id")
     public ResponseEntity<QuizAttemptResponse> submitQuiz(
             @PathVariable Long classId,
             @PathVariable Long quizId,
@@ -86,7 +94,9 @@ public class QuizController {
         return ResponseEntity.ok(result);
     }
 
+
     @GetMapping("/{quizId}/attempts")
+    @Cacheable(value = "quizAttempts", key = "#quizId + '-' + #currentUser.id")
     public ResponseEntity<List<QuizAttemptResponse>> getQuizAttempts(
             @PathVariable Long classId,
             @PathVariable Long quizId,

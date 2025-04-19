@@ -89,7 +89,7 @@ const CreateQuiz = () => {
 
     try {
       setIsSubmitting(true)
-      const response = await axios.post(`https://neighbornet-back-production.up.railway.app/api/classes/${classId}/quizzes`, quizData, {
+      const response = await axios.post(`http://localhost:8080/api/classes/${classId}/quizzes`, quizData, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },

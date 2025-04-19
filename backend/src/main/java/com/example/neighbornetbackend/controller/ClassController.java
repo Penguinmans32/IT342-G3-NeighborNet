@@ -4,25 +4,26 @@ import com.example.neighbornetbackend.dto.*;
 import com.example.neighbornetbackend.exception.ResourceNotFoundException;
 import com.example.neighbornetbackend.model.AchievementType;
 import com.example.neighbornetbackend.model.CourseClass;
-import com.example.neighbornetbackend.model.Feedback;
 import com.example.neighbornetbackend.repository.ClassRepository;
 import com.example.neighbornetbackend.repository.FeedbackRepository;
 import com.example.neighbornetbackend.security.CurrentUser;
 import com.example.neighbornetbackend.security.UserPrincipal;
 import com.example.neighbornetbackend.service.*;
 import io.swagger.v3.oas.annotations.Operation;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.CacheConfig;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.CacheControl;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.interceptor.TransactionAspectSupport;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.core.io.Resource;
@@ -36,15 +37,17 @@ import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+
+@CacheConfig(cacheNames = {"classes", "popularClasses", "classFeedbacks"})
 @RestController
 @RequestMapping("/api/classes")
 @CrossOrigin
 public class ClassController {
 
-    @PersistenceContext
-    private EntityManager entityManager;
+    private static final Logger log = LoggerFactory.getLogger(ClassController.class);
 
     private final ClassService classService;
     private final ClassRepository classRepository;
@@ -74,19 +77,19 @@ public class ClassController {
             @RequestPart("classData") CreateClassRequest request,
             @CurrentUser UserPrincipal currentUser) {
         try {
-            // Add debug logging
-            System.out.println("Received thumbnail: " + thumbnail.getOriginalFilename());
-            System.out.println("Received classData: " + request);
-            System.out.println("Current user: " + currentUser.getId());
+            log.debug("Received thumbnail: {}", thumbnail.getOriginalFilename());
+            log.debug("Received classData: {}", request);
+            log.debug("Current user: {}", currentUser.getId());
 
             ClassResponse newClass = classService.createClass(request, thumbnail, currentUser.getId());
             achievementService.checkClassCreationAchievements(currentUser.getId());
             return ResponseEntity.ok(newClass);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error creating class", e);
             return ResponseEntity.badRequest().build();
         }
     }
+
 
     @GetMapping("/my-classes")
     public ResponseEntity<List<ClassResponse>> getMyClasses(@CurrentUser UserPrincipal currentUser) {
@@ -103,16 +106,19 @@ public class ClassController {
 
             if (resource.exists() && resource.isReadable()) {
                 String contentType = determineContentType(filename);
+                long lastModified = Files.getLastModifiedTime(file).toMillis();
+                String etag = "\"" + lastModified + "\"";
 
                 return ResponseEntity.ok()
-                        .header(HttpHeaders.CACHE_CONTROL, "public, max-age=86400")
+                        .eTag(etag)
+                        .header(HttpHeaders.CACHE_CONTROL, "public, max-age=2592000") // 30 days
                         .contentType(MediaType.parseMediaType(contentType))
                         .body(resource);
             } else {
                 return ResponseEntity.notFound().build();
             }
         } catch (Exception e) {
-            System.err.println("Error serving thumbnail: " + e.getMessage());
+            log.error("Error serving thumbnail: {}", filename, e);
             return ResponseEntity.notFound().build();
         }
     }
@@ -127,7 +133,6 @@ public class ClassController {
     }
 
     @GetMapping("/{classId}")
-    @Cacheable(value = CLASSES_CACHE, key = "#classId")
     public ResponseEntity<ClassResponse> getClass(
             @PathVariable Long classId,
             @CurrentUser UserPrincipal currentUser) {
@@ -136,15 +141,22 @@ public class ClassController {
             if (currentUser == null) {
                 classResponse.setLessons(null);
             }
-            return ResponseEntity.ok(classResponse);
+
+            String etag = "\"" + classResponse.hashCode() + "\"";
+            return ResponseEntity.ok()
+                    .eTag(etag)
+                    .cacheControl(CacheControl.maxAge(1, TimeUnit.HOURS))
+                    .body(classResponse);
         } catch (ResourceNotFoundException e) {
             return ResponseEntity.notFound().build();
         } catch (Exception e) {
+            log.error("Error fetching class with ID: {}", classId, e);
             return ResponseEntity.badRequest().build();
         }
     }
 
     @GetMapping("/all")
+    @Cacheable(value = "classesPage", key = "'page_' + #page + '_size_' + #size + '_sort_' + #sortBy + '_dir_' + #direction")
     public ResponseEntity<Map<String, Object>> getAllClasses(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
@@ -168,13 +180,14 @@ public class ClassController {
 
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error fetching all classes", e);
             return ResponseEntity.badRequest().build();
         }
     }
 
     @DeleteMapping("/{classId}")
     @Transactional
+    @CacheEvict(value = {"classes", "classesPage", "popularClasses", "relatedClasses"}, allEntries = true)
     public ResponseEntity<?> deleteClass(
             @PathVariable Long classId,
             @CurrentUser UserPrincipal currentUser) {
@@ -215,6 +228,7 @@ public class ClassController {
     }
 
     @PutMapping(value = "/{classId}", consumes = { "multipart/form-data" })
+    @CacheEvict(value = {"classes", "classesPage", "relatedClasses"}, key = "#classId")
     public ResponseEntity<ClassResponse> updateClass(
             @PathVariable Long classId,
             @RequestPart(value = "thumbnail", required = false) MultipartFile thumbnail,
@@ -369,6 +383,7 @@ public class ClassController {
             List<FeedbackResponse> feedbacks = feedbackService.getClassFeedbacksWithUserReactions(classId, userId);
             return ResponseEntity.ok(feedbacks);
         } catch (Exception e) {
+            log.error("Error fetching feedbacks for class: {}", classId, e);
             return ResponseEntity.badRequest().build();
         }
     }
@@ -440,24 +455,15 @@ public class ClassController {
     }
 
     @GetMapping("/{classId}/related")
-    public ResponseEntity<List<ClassResponse>> getRelatedClasses(
-            @PathVariable Long classId) {
+    @Cacheable(value = "relatedClasses", key = "#classId")
+    public ResponseEntity<List<ClassResponse>> getRelatedClasses(@PathVariable Long classId) {
         try {
-            CourseClass currentClass = classRepository.findById(classId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Class not found"));
-
-            List<ClassResponse> relatedClasses = classRepository.findByCategoryAndIdNot(
-                            currentClass.getCategory(), classId)
-                    .stream()
-                    .limit(4)
-                    .map(ClassResponse::fromEntity)
-                    .collect(Collectors.toList());
-
+            List<ClassResponse> relatedClasses = classService.getRelatedClasses(classId, 4);
             return ResponseEntity.ok(relatedClasses);
         } catch (ResourceNotFoundException e) {
             return ResponseEntity.notFound().build();
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error getting related classes for ID: {}", classId, e);
             return ResponseEntity.badRequest().build();
         }
     }
@@ -554,25 +560,12 @@ public class ClassController {
     }
 
     @GetMapping("/user-stats/{userId}")
+    @Cacheable(value = "userStats", key = "#userId")
     public ResponseEntity<Map<String, Object>> getUserStats(@PathVariable Long userId) {
         try {
-            Map<String, Object> stats = new HashMap<>();
-
-            // Get number of classes created by user
-            int classesCreated = classRepository.countByCreatorId(userId);
-            stats.put("classesCreated", classesCreated);
-
-            // Get number of enrolled classes
-            int enrolledClasses = classService.getEnrolledClassesByUser(userId).size();
-            stats.put("enrolledClasses", enrolledClasses);
-
-            // Get saved classes count
-            int savedClassesCount = classService.getSavedClasses(userId).size();
-            stats.put("savedClassesCount", savedClassesCount);
-
-            return ResponseEntity.ok(stats);
+            return ResponseEntity.ok(classService.getUserStats(userId));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error fetching user stats for ID: {}", userId, e);
             return ResponseEntity.badRequest().build();
         }
     }
@@ -587,6 +580,23 @@ public class ClassController {
                     .collect(Collectors.toList());
             return ResponseEntity.ok(popularClasses);
         } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @GetMapping("/recent")
+    @Cacheable(value = "recentClasses", key = "#limit")
+    public ResponseEntity<List<ClassResponse>> getRecentClasses(
+            @RequestParam(defaultValue = "5") int limit) {
+        try {
+            List<ClassResponse> recentClasses = classRepository.findByOrderByCreatedAtDesc(PageRequest.of(0, limit))
+                    .stream()
+                    .map(ClassResponse::fromEntity)
+                    .collect(Collectors.toList());
+
+            return ResponseEntity.ok(recentClasses);
+        } catch (Exception e) {
+            log.error("Error fetching recent classes", e);
             return ResponseEntity.badRequest().build();
         }
     }

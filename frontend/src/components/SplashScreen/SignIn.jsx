@@ -74,7 +74,7 @@ function SignIn() {
 
   const fetchPopularClasses = async () => {
     try {
-      const response = await axios.get('https://neighbornet-back-production.up.railway.app/api/classes/popular');
+      const response = await axios.get('http://localhost:8080/api/classes/popular');
       setPopularClasses(response.data);
     } catch (error) {
       console.error('Error fetching popular classes:', error);
@@ -88,7 +88,7 @@ function SignIn() {
   // Fetch dashboard stats
   const fetchDashboardStats = async () => {
     try {
-      const response = await axios.get("https://neighbornet-back-production.up.railway.app/api/dashboard/stats")
+      const response = await axios.get("http://localhost:8080/api/dashboard/stats")
       setDashboardStats(response.data)
     } catch (error) {
       console.error("Error fetching dashboard stats:", error)

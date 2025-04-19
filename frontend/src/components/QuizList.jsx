@@ -30,7 +30,7 @@ const QuizList = ({
         
         for (const quiz of quizzes) {
           const response = await axios.get(
-            `https://neighbornet-back-production.up.railway.app/api/classes/${classId}/quizzes/${quiz.id}/attempts`,
+            `http://localhost:8080/api/classes/${classId}/quizzes/${quiz.id}/attempts`,
             { headers: { Authorization: `Bearer ${token}` } }
           )
           

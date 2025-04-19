@@ -5,6 +5,7 @@ import com.example.neighbornetbackend.dto.ActivityResponse;
 import com.example.neighbornetbackend.dto.UserDTO;
 import com.example.neighbornetbackend.model.*;
 import com.example.neighbornetbackend.repository.*;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
@@ -13,9 +14,12 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Service
 public class ActivityService {
+    private static final Logger logger = LoggerFactory.getLogger(ActivityService.class);
     private final ActivityRepository activityRepository;
     private final UserService userService;
     private final BorrowingAgreementRepository borrowingAgreementRepository;
@@ -23,10 +27,9 @@ public class ActivityService {
     private final UserRepository userRepository;
     private final ItemRepository itemRepository;
 
-
     private static final DateTimeFormatter formatter = DateTimeFormatter.ISO_DATE_TIME;
 
-    public ActivityService(ActivityRepository activityRepository,UserRepository userRepository, ItemRepository itemRepository, UserService userService, BorrowingAgreementRepository borrowingAgreementRepository,  ClassEnrollmentRepository classEnrollmentRepository) {
+    public ActivityService(ActivityRepository activityRepository, UserRepository userRepository, ItemRepository itemRepository, UserService userService, BorrowingAgreementRepository borrowingAgreementRepository, ClassEnrollmentRepository classEnrollmentRepository) {
         this.activityRepository = activityRepository;
         this.userService = userService;
         this.borrowingAgreementRepository = borrowingAgreementRepository;
@@ -66,33 +69,37 @@ public class ActivityService {
         );
     }
 
+    @Cacheable(value = "recentActivities")
     public List<ActivityResponse> getRecentActivities(int page, int size) {
-        int halfSize = Math.max(size / 2, 5);
+        try {
+            int halfSize = Math.max(size / 2, 5);
 
-        List<ClassEnrollment> recentEnrollments =
-                classEnrollmentRepository.findRecentEnrollmentsWithDetails(
-                        PageRequest.of(0, halfSize));
+            List<Long> enrollmentIds = classEnrollmentRepository.findRecentEnrollmentIds(PageRequest.of(0, halfSize));
+            List<Long> borrowIds = borrowingAgreementRepository.findRecentBorrowIds(PageRequest.of(0, halfSize));
 
-        List<BorrowingAgreement> recentBorrows =
-                borrowingAgreementRepository.findRecentBorrowsWithDetails(
-                        PageRequest.of(0, halfSize));
+            List<ActivityResponse> activities = new ArrayList<>();
 
-        List<ActivityResponse> activities = new ArrayList<>(
-                recentEnrollments.size() + recentBorrows.size());
+            for (Long id : enrollmentIds) {
+                classEnrollmentRepository.findByIdWithDetails(id).ifPresent(enrollment ->
+                        activities.add(mapEnrollmentToActivity(enrollment))
+                );
+            }
 
-        activities.addAll(recentEnrollments.stream()
-                .map(this::mapEnrollmentToActivity)
-                .collect(Collectors.toList()));
+            for (Long id : borrowIds) {
+                borrowingAgreementRepository.findByIdWithDetails(id).ifPresent(borrow ->
+                        activities.add(mapBorrowToActivity(borrow))
+                );
+            }
 
-        activities.addAll(recentBorrows.stream()
-                .map(this::mapBorrowToActivity)
-                .collect(Collectors.toList()));
-
-        return activities.stream()
-                .sorted(Comparator.comparing(ActivityResponse::getCreatedAt).reversed())
-                .skip((long) page * size)
-                .limit(size)
-                .collect(Collectors.toList());
+            return activities.stream()
+                    .sorted(Comparator.comparing(ActivityResponse::getCreatedAt).reversed())
+                    .skip((long) page * size)
+                    .limit(size)
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            logger.error("Error fetching recent activities", e);
+            return List.of();
+        }
     }
 
     private ActivityResponse mapEnrollmentToActivity(ClassEnrollment enrollment) {

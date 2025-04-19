@@ -67,9 +67,10 @@ public interface BorrowingAgreementRepository extends JpaRepository<BorrowingAgr
     long countDistinctBorrowerIdByStatus(@Param("status") String status);
 
 
+    @Query("SELECT b.id FROM BorrowingAgreement b ORDER BY b.createdAt DESC")
+    List<Long> findRecentBorrowIds(Pageable pageable);
+
     @Query("SELECT b FROM BorrowingAgreement b " +
-            "JOIN User u ON b.borrowerId = u.id " +
-            "JOIN Item i ON b.itemId = i.id " +
-            "ORDER BY b.createdAt DESC")
-    List<BorrowingAgreement> findRecentBorrowsWithDetails(Pageable pageable);
+            "WHERE b.id = :id")
+    Optional<BorrowingAgreement> findByIdWithDetails(@Param("id") Long id);
 }

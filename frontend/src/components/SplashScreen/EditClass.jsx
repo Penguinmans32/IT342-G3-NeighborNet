@@ -50,7 +50,7 @@ const EditClass = () => {
             try {
                 const token = localStorage.getItem('token');
                 const response = await axios.get(
-                    `https://neighbornet-back-production.up.railway.app/api/classes/${classId}`,
+                    `http://localhost:8080/api/classes/${classId}`,
                     {
                         headers: {
                             Authorization: `Bearer ${token}`,
@@ -64,7 +64,7 @@ const EditClass = () => {
                     description: classData.description || '',
                     requirements: classData.requirements?.length ? classData.requirements : [''],
                     thumbnailPreview: classData.thumbnailUrl 
-                    ? `https://neighbornet-back-production.up.railway.app${classData.thumbnailUrl}`
+                    ? `http://localhost:8080${classData.thumbnailUrl}`
                     : null,
                     thumbnailDescription: classData.thumbnailDescription || '',
                     duration: classData.duration || '',
@@ -146,7 +146,7 @@ const EditClass = () => {
                 }));
 
                 const response = await axios.put(
-                    `https://neighbornet-back-production.up.railway.app/api/classes/${classId}`,
+                    `http://localhost:8080/api/classes/${classId}`,
                     formDataToSend,
                     {
                         headers: {

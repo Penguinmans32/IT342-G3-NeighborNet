@@ -41,7 +41,7 @@ const AdminLogin = () => {
     setIsLoading(true);
 
     try {
-        const response = await axios.post('https://neighbornet-back-production.up.railway.app/api/admin/login', {
+        const response = await axios.post('http://localhost:8080/api/admin/login', {
             username: email,
             password: password
         });
@@ -51,7 +51,7 @@ const AdminLogin = () => {
           localStorage.setItem('token', accessToken);
           axios.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
           
-          const userResponse = await axios.get('https://neighbornet-back-production.up.railway.app/api/auth/user');
+          const userResponse = await axios.get('http://localhost:8080/api/auth/user');
           console.log('User data:', userResponse.data);
           
           const userData = userResponse.data.data;  

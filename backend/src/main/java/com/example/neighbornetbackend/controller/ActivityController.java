@@ -19,7 +19,6 @@ public class ActivityController {
     }
 
     @GetMapping("/recent")
-    @Cacheable(value = "recentActivities", key = "'recent'")
     public ResponseEntity<List<ActivityResponse>> getRecentActivities(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
@@ -28,7 +27,7 @@ public class ActivityController {
             return ResponseEntity.ok(activities);
         } catch (Exception e) {
             e.printStackTrace();
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.ok(List.of());
         }
     }
 }

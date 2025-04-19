@@ -8,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface QuizRepository extends JpaRepository<Quiz, Long> {
     List<Quiz> findByClassEntity_Id(Long classId);
@@ -19,4 +20,7 @@ public interface QuizRepository extends JpaRepository<Quiz, Long> {
     @Transactional
     @Query("DELETE FROM Quiz q WHERE q.classEntity.id = :classId")
     void deleteByClassId(@Param("classId") Long classId);
+
+    @Query("SELECT q FROM Quiz q LEFT JOIN FETCH q.questions WHERE q.id = :quizId")
+    Optional<Quiz> findByIdWithQuestions(@Param("quizId") Long quizId);
 }

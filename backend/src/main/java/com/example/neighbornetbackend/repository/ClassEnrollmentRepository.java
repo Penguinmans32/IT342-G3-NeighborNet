@@ -11,6 +11,7 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface ClassEnrollmentRepository extends JpaRepository<ClassEnrollment, Long> {
@@ -28,10 +29,14 @@ public interface ClassEnrollmentRepository extends JpaRepository<ClassEnrollment
     @Query("DELETE FROM ClassEnrollment ce WHERE ce.courseClass.creator.id = :userId OR ce.user.id = :userId")
     void deleteByCreatorOrEnrolledUserId(@Param("userId") Long userId);
 
+
+    @Query("SELECT e.id FROM ClassEnrollment e ORDER BY e.enrolledAt DESC")
+    List<Long> findRecentEnrollmentIds(Pageable pageable);
+
     @Query("SELECT e FROM ClassEnrollment e " +
             "JOIN FETCH e.user " +
             "JOIN FETCH e.courseClass c " +
             "LEFT JOIN FETCH c.feedbacks " +
-            "ORDER BY e.enrolledAt DESC")
-    List<ClassEnrollment> findRecentEnrollmentsWithDetails(Pageable pageable);
+            "WHERE e.id = :id")
+    Optional<ClassEnrollment> findByIdWithDetails(@Param("id") Long id);
 }

@@ -159,7 +159,7 @@ const LessonPlayer = ({
       <div className="aspect-video relative cursor-pointer" onClick={handlePlayPause}>
         <video
           ref={videoRef}
-          src={videoUrl ? `https://neighbornet-back-production.up.railway.app/api/classes/${classId}/lessons/video/${videoUrl.split('/').pop()}` : ''}
+          src={videoUrl ? `http://localhost:8080/api/classes/${classId}/lessons/video/${videoUrl.split('/').pop()}` : ''}
           className="w-full h-full object-cover"
           onLoadedMetadata={handleLoadedMetadata}
           onLoadedData={() => setIsLoading(false)}

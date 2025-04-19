@@ -171,7 +171,7 @@ const CreateClass = () => {
             }));
             
             const response = await axios.post(
-                'https://neighbornet-back-production.up.railway.app/api/classes',
+                'http://localhost:8080/api/classes',
                 formDataToSend,
                 {
                     headers: {

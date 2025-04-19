@@ -3,7 +3,6 @@ import { useAuth } from "../backendApi/AuthContext"
 import { useNavigate, useLocation } from "react-router-dom"
 import { useEffect, useState, useRef, useCallback, useMemo } from "react"
 import { useNotification } from "../backendApi/NotificationContext"
-import Footer from "./SplashScreen/Footer"
 import "../styles/SignIn.css"
 import "../styles/Categories.css"
 import ClassCard from "./ClassCard"
@@ -43,7 +42,96 @@ import {
 } from "react-icons/md"
 import axios from "axios"
 import '../styles/homepage-styles.css'
-import { ChevronRight } from 'lucide-react';
+
+const useDebounce = (value, delay) => {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+  
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+    
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+  
+  return debouncedValue;
+};
+
+const Pagination = ({ currentPage, totalPages, onPageChange }) => {
+  const pages = [];
+  
+  // Create array of page numbers to display
+  for (let i = 1; i <= totalPages; i++) {
+    if (
+      i === 1 || // First page
+      i === totalPages || // Last page
+      (i >= currentPage - 2 && i <= currentPage + 2) // Pages around current
+    ) {
+      pages.push(i);
+    } else if (
+      (i === 2 && currentPage > 4) ||
+      (i === totalPages - 1 && currentPage < totalPages - 3)
+    ) {
+      // Add ellipsis
+      pages.push("...");
+    }
+  }
+
+  // Remove duplicates
+  const uniquePages = pages.filter((page, index, self) =>
+    page === "..." ? page !== self[index - 1] : true
+  );
+
+  return (
+    <div className="flex justify-center mt-8 gap-1">
+      <button
+        onClick={() => onPageChange(Math.max(1, currentPage - 1))}
+        disabled={currentPage === 1}
+        className={`px-3 py-1 rounded-lg ${
+          currentPage === 1
+            ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+            : "bg-blue-100 text-blue-600 hover:bg-blue-200"
+        } transition-colors`}
+      >
+        &laquo; Prev
+      </button>
+
+      {uniquePages.map((page, index) =>
+        page === "..." ? (
+          <span key={`ellipsis-${index}`} className="px-3 py-1">
+            ...
+          </span>
+        ) : (
+          <button
+            key={`page-${page}`}
+            onClick={() => onPageChange(page)}
+            className={`w-8 h-8 flex items-center justify-center rounded-lg ${
+              currentPage === page
+                ? "bg-blue-500 text-white"
+                : "bg-gray-100 hover:bg-gray-200 text-gray-700"
+            } transition-colors`}
+          >
+            {page}
+          </button>
+        )
+      )}
+
+      <button
+        onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
+        disabled={currentPage === totalPages}
+        className={`px-3 py-1 rounded-lg ${
+          currentPage === totalPages
+            ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+            : "bg-blue-100 text-blue-600 hover:bg-blue-200"
+        } transition-colors`}
+      >
+        Next &raquo;
+      </button>
+    </div>
+  );
+};
 
 const LogoutModal = ({ isOpen, onClose, onConfirm }) => {
   if (!isOpen) return null;
@@ -129,7 +217,13 @@ const Homepage = () => {
   const [isCategoriesSidebarOpen, setIsCategoriesSidebarOpen] = useState(false)
   const [isNotificationsOpen, setNotificationsOpen] = useState(false)
   const [isDarkMode, setIsDarkMode] = useState(false)
-  const [savedClasses, setSavedClasses] = useState([])
+
+  const [paginationInfo, setPaginationInfo] = useState({
+    currentPage: 0,
+    totalPages: 0,
+    totalItems: 0,
+    pageSize: 20
+  });
 
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(6); 
@@ -137,6 +231,8 @@ const Homepage = () => {
   // Refs for click outside handling
   const profileMenuRef = useRef(null)
   const notificationsRef = useRef(null)
+
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
   const getRelativeTime = (date) => {
     const now = new Date();
@@ -180,7 +276,7 @@ const Homepage = () => {
 
   const fetchSavedClasses = async () => {
     try {
-      const response = await axios.get("https://neighbornet-back-production.up.railway.app/api/classes/saved", {
+      const response = await axios.get("http://localhost:8080/api/classes/saved", {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
@@ -221,28 +317,38 @@ const Homepage = () => {
     }
   }, [])
 
-  const handleSearch = (e) => {
-    if (e.key === "Enter" && searchTerm.trim() !== "") {
-      e.preventDefault()
-      setSearchQuery(searchTerm)
-      setHasSearched(true)
-      setIsSearchFocused(false)
-
-      const lowerCaseSearchTerm = searchTerm.toLowerCase()
+  useEffect(() => {
+    if (debouncedSearchTerm.trim() !== "") {
+      const lowerCaseSearchTerm = debouncedSearchTerm.toLowerCase();
       const filtered = classes.filter(
         (classItem) =>
           classItem.title?.toLowerCase().includes(lowerCaseSearchTerm) ||
           classItem.category?.toLowerCase().includes(lowerCaseSearchTerm) ||
           classItem.creatorName?.toLowerCase().includes(lowerCaseSearchTerm) ||
-          classItem.description?.toLowerCase().includes(lowerCaseSearchTerm),
-      )
-
-      setDisplayedResults(filtered)
-
-      // Optionally scroll to results
-      window.scrollTo({ top: 0, behavior: "smooth" })
+          classItem.description?.toLowerCase().includes(lowerCaseSearchTerm)
+      );
+      
+      setDisplayedResults(filtered);
+      
+      if (!hasSearched) {
+        setSearchQuery(debouncedSearchTerm);
+        setHasSearched(true);
+      }
+    } else if (hasSearched) {
+      setHasSearched(false);
+      setSearchQuery("");
+      setDisplayedResults([]);
     }
-  }
+  }, [debouncedSearchTerm, classes, hasSearched]);
+
+  const handleSearch = (e) => {
+    if (e.key === "Enter" && searchTerm.trim() !== "") {
+      e.preventDefault();
+      setIsSearchFocused(false);
+      
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
 
   const handleNotificationBellClick = async () => {
     console.log("Notification bell clicked")
@@ -316,7 +422,7 @@ const Homepage = () => {
     const fetchClasses = async () => {
       try {
         const response = await axios.get(
-          "https://neighbornet-back-production.up.railway.app/api/classes/all", 
+          "http://localhost:8080/api/classes/all", 
           {
             params: {
               page: 0,          
@@ -339,20 +445,13 @@ const Homepage = () => {
             totalItems: response.data.totalItems,
             pageSize: response.data.size
           });
-          
-          console.log("Fetched classes:", response.data.classes);
-          console.log("Pagination info:", {
-            currentPage: response.data.currentPage,
-            totalPages: response.data.totalPages,
-            totalItems: response.data.totalItems
-          });
         } else {
           console.error("Unexpected response format:", response.data);
           setClasses([]);
         }
   
         const myClassesResponse = await axios.get(
-          "https://neighbornet-back-production.up.railway.app/api/classes/my-classes", 
+          "http://localhost:8080/api/classes/my-classes", 
           {
             headers: {
               Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -395,7 +494,7 @@ const Homepage = () => {
   useEffect(() => {
     const fetchProfileData = async () => {
       try {
-        const response = await axios.get("https://neighbornet-back-production.up.railway.app/api/users/profile", {
+        const response = await axios.get("http://localhost:8080/api/users/profile", {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
@@ -446,8 +545,8 @@ const Homepage = () => {
     try {
       const isSaved = savedClassesSet.has(classId);
       const endpoint = isSaved ? 
-        `https://neighbornet-back-production.up.railway.app/api/classes/${classId}/unsave` : 
-        `https://neighbornet-back-production.up.railway.app/api/classes/${classId}/save`;
+        `http://localhost:8080/api/classes/${classId}/unsave` : 
+        `http://localhost:8080/api/classes/${classId}/save`;
       const method = isSaved ? 'DELETE' : 'POST';
   
       await axios({
@@ -479,17 +578,24 @@ const Homepage = () => {
     }
   }, [user]);
 
-  const filteredClasses = useMemo(() => {
-    return classes.filter((classItem) => {
-        const categoryMatch =
-            selectedCategory === "all" ? true : 
-            classItem.category?.toLowerCase() === selectedCategory;
-        const userClassMatch = showOnlyUserClasses
-            ? userClasses.some((userClass) => userClass.id === classItem.id)
-            : true;
-        return categoryMatch && userClassMatch;
+  const { filteredClasses, currentItems, totalPages } = useMemo(() => {
+    const filtered = classes.filter((classItem) => {
+      const categoryMatch =
+        selectedCategory === "all" ? true : 
+        classItem.category?.toLowerCase() === selectedCategory;
+      const userClassMatch = showOnlyUserClasses
+        ? userClasses.some((userClass) => userClass.id === classItem.id)
+        : true;
+      return categoryMatch && userClassMatch;
     });
-}, [classes, selectedCategory, showOnlyUserClasses, userClasses]);
+  
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    const items = filtered.slice(indexOfFirstItem, indexOfLastItem);
+    const pages = Math.ceil(filtered.length / itemsPerPage);
+    
+    return { filteredClasses: filtered, currentItems: items, totalPages: pages };
+  }, [classes, selectedCategory, showOnlyUserClasses, userClasses, currentPage, itemsPerPage]);
 
 
   const toggleDarkMode = () => {
@@ -1058,6 +1164,7 @@ const Homepage = () => {
                     >
                       <div className="w-24 h-24 md:w-32 md:h-32 rounded-lg overflow-hidden flex-shrink-0 relative">
                         <img
+                          loading="lazy"
                           src={getFullThumbnailUrl(classItem.thumbnailUrl) || "/placeholder.svg"}
                           alt={classItem.title}
                           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"

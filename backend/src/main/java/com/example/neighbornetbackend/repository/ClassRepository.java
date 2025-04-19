@@ -77,6 +77,8 @@ public interface ClassRepository extends JpaRepository<CourseClass, Long> {
             @Param("query") String query,
             Pageable pageable
     );
+
+    Page<CourseClass> findByOrderByCreatedAtDesc(Pageable pageable);
 }
 
 

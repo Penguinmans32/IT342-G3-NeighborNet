@@ -15,7 +15,7 @@ class WebSocketService {
             return;
         }
 
-        const socket = new SockJS('https://neighbornet-back-production.up.railway.app/ws');
+        const socket = new SockJS('http://localhost:8080/ws');
         this.stompClient = new Client({
             webSocketFactory: () => socket,
             debug: (str) => console.log(str),
