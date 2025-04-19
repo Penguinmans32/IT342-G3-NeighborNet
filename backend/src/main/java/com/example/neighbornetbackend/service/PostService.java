@@ -7,28 +7,31 @@ import com.example.neighbornetbackend.exception.ResourceNotFoundException;
 import com.example.neighbornetbackend.exception.UnauthorizedException;
 import com.example.neighbornetbackend.model.Comment;
 import com.example.neighbornetbackend.model.Post;
-import com.example.neighbornetbackend.model.Share;
 import com.example.neighbornetbackend.model.User;
 import com.example.neighbornetbackend.repository.PostRepository;
-import org.hibernate.Hibernate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.domain.Sort;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
+import org.springframework.core.task.AsyncTaskExecutor;
+import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
 public class PostService {
+
+    private final AsyncTaskExecutor notificationExecutor;
+
+
     private final PostRepository postRepository;
     private final UserService userService;
     private final NotificationService notificationService;
@@ -36,11 +39,17 @@ public class PostService {
 
     private static final Logger logger = LoggerFactory.getLogger(PostService.class);
 
-    public PostService(PostRepository postRepository, UserService userService, NotificationService notificationService, PostImageStorageService postImageStorageService) {
+    public PostService(
+            PostRepository postRepository,
+            UserService userService,
+            NotificationService notificationService,
+            PostImageStorageService postImageStorageService,
+            @Qualifier("notificationTaskExecutor") AsyncTaskExecutor notificationExecutor) {
         this.postRepository = postRepository;
         this.userService = userService;
         this.notificationService = notificationService;
         this.postImageStorageService = postImageStorageService;
+        this.notificationExecutor = notificationExecutor;
     }
 
     private UserDTO convertToAuthorDTO(User user) {
@@ -109,6 +118,10 @@ public class PostService {
         );
     }
 
+    @Caching(evict = {
+            @CacheEvict(value = "postPages", allEntries = true),
+            @CacheEvict(value = "posts", allEntries = true)
+    })
     @Transactional
     public PostDTO createPost(String content, String imageUrl, Long userId) {
         User user = userService.getUserById(userId);
@@ -122,6 +135,7 @@ public class PostService {
     }
 
 
+    @CacheEvict(value = "posts", key = "'post_' + #postId")
     @Transactional
     public PostDTO likePost(Long postId, Long userId) {
         Post post = postRepository.findByIdWithLikes(postId)
@@ -131,9 +145,8 @@ public class PostService {
         boolean wasLiked = post.getLikes().removeIf(likedUser -> likedUser.getId().equals(userId));
         if (!wasLiked) {
             post.getLikes().add(user);
-            // Send notification to post owner
             if (!post.getUser().getId().equals(userId)) {
-                notificationService.createAndSendNotification(
+                sendNotificationAsync(
                         post.getUser().getId(),
                         "New Like",
                         user.getUsername() + " liked your post: " + truncateContent(post.getContent()),
@@ -154,21 +167,34 @@ public class PostService {
 
     @Transactional(readOnly = true)
     public Page<PostDTO> getPosts(int page, int size, Long currentUserId) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        Page<Post> posts = postRepository.findAllPosts(pageable);
+        try {
+            Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+            Page<Post> posts = postRepository.findAllPosts(pageable);
 
-        if (posts.isEmpty()) {
-            return Page.empty(pageable);
-        }
+            List<Long> postIds = posts.getContent().stream()
+                    .map(Post::getId)
+                    .collect(Collectors.toList());
 
-        posts.getContent().forEach(post -> {
-            Hibernate.initialize(post.getLikes());
-            if (post.getOriginalPost() != null) {
-                Hibernate.initialize(post.getOriginalPost().getLikes());
+            List<Post> detailedPosts = new ArrayList<>();
+            for (Long id : postIds) {
+                postRepository.findByIdWithDetails(id)
+                        .ifPresent(detailedPosts::add);
             }
-        });
 
-        return posts.map(post -> convertToDTO(post, currentUserId));
+            int start = (int) pageable.getOffset();
+            int end = Math.min((start + pageable.getPageSize()), detailedPosts.size());
+
+            Page<Post> detailedPage = new PageImpl<>(
+                    detailedPosts.subList(start, end),
+                    pageable,
+                    posts.getTotalElements()
+            );
+
+            return detailedPage.map(post -> convertToDTO(post, currentUserId));
+        } catch (Exception e) {
+            logger.error("Error fetching posts", e);
+            return Page.empty(PageRequest.of(page, size));
+        }
     }
 
     private boolean isCommentLikedByUser(Comment comment, Long userId) {
@@ -176,6 +202,7 @@ public class PostService {
                 .anyMatch(user -> user.getId().equals(userId));
     }
 
+    @CacheEvict(value = "posts", key = "'post_' + #postId")
     @Transactional
     public PostDTO addComment(Long postId, String content, Long userId) {
         Post post = postRepository.findById(postId)
@@ -189,10 +216,10 @@ public class PostService {
         post.getComments().add(comment);
 
         if (!post.getUser().getId().equals(userId)) {
-            notificationService.createAndSendNotification(
+            sendNotificationAsync(
                     post.getUser().getId(),
                     "New Comment",
-                    user.getUsername() + " commented on your post: " + truncateContent(content),
+                    user.getUsername() + " liked your post: " + truncateContent(post.getContent()),
                     "POST_COMMENT"
             );
         }
@@ -201,6 +228,7 @@ public class PostService {
         return convertToDTO(savedPost, userId);
     }
 
+    @CacheEvict(value = "posts", key = "'post_' + #postId")
     @Transactional
     public PostDTO deleteComment(Long postId, Long commentId, Long userId) {
         Post post = postRepository.findById(postId)
@@ -220,6 +248,7 @@ public class PostService {
     }
 
 
+    @CacheEvict(value = "posts", key = "'post_' + #postId")
     @Transactional
     public PostDTO likeComment(Long postId, Long commentId, Long userId) {
         Post post = postRepository.findById(postId)
@@ -235,11 +264,11 @@ public class PostService {
         if (!wasLiked) {
             comment.getLikes().add(user);
             if (!comment.getUser().getId().equals(userId)) {
-                notificationService.createAndSendNotification(
-                        comment.getUser().getId(),
+                sendNotificationAsync(
+                        post.getUser().getId(),
                         "Comment Liked",
-                        user.getUsername() + " liked your comment: " + truncateContent(comment.getContent()),
-                        "COMMENT_LIKE"
+                        user.getUsername() + " liked your post: " + truncateContent(post.getContent()),
+                        "COMMENT_LIKED"
                 );
             }
         }
@@ -248,6 +277,7 @@ public class PostService {
         return convertToDTO(savedPost, userId);
     }
 
+    @CacheEvict(value = "postPages", allEntries = true)
     @Transactional
     public PostDTO sharePost(Long postId, String content, Long userId) {
         Post originalPost = postRepository.findById(postId)
@@ -263,10 +293,10 @@ public class PostService {
         sharedPost.setContent(content);
         sharedPost.setOriginalPost(originalPost);
 
-        notificationService.createAndSendNotification(
+        sendNotificationAsync(
                 originalPost.getUser().getId(),
                 "Post Shared",
-                user.getUsername() + " shared your post: " + truncateContent(originalPost.getContent()),
+                user.getUsername() + " liked your post: " + truncateContent(originalPost.getContent()),
                 "POST_SHARE"
         );
 
@@ -274,23 +304,19 @@ public class PostService {
         return convertToDTO(savedPost, userId);
     }
 
-
-    private boolean isSharedByUser(Post post, Long userId) {
-        return post.getShares().stream()
-                .anyMatch(share -> share.getUser().getId().equals(userId));
-    }
-
+    @Caching(evict = {
+            @CacheEvict(value = "posts", key = "'post_' + #postId"),
+            @CacheEvict(value = "postPages", allEntries = true)
+    })
     @Transactional
     public void deletePost(Long postId, Long userId) {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new ResourceNotFoundException("Post not found"));
 
-        // Remove this check for admin deletions
         if (userId != null && !post.getUser().getId().equals(userId)) {
             throw new UnauthorizedException("You can only delete your own posts");
         }
 
-        // Delete images if they exist
         if (post.getImageUrl() != null && !post.getImageUrl().isEmpty()) {
             try {
                 String filename = post.getImageUrl().substring(post.getImageUrl().lastIndexOf('/') + 1);
@@ -300,7 +326,6 @@ public class PostService {
             }
         }
 
-        // Clear relationships
         post.getShare().clear();
         post.getShares().clear();
         post.getLikes().clear();
@@ -309,6 +334,10 @@ public class PostService {
         postRepository.delete(post);
     }
 
+    @Caching(evict = {
+            @CacheEvict(value = "posts", key = "'post_' + #postId"),
+            @CacheEvict(value = "postPages", allEntries = true)
+    })
     @Transactional
     public PostDTO updatePost(Long postId, String content, Long userId) {
         Post post = postRepository.findById(postId)
@@ -376,5 +405,36 @@ public class PostService {
             logger.error("Error searching posts: ", e);
             throw new RuntimeException("Error searching posts: " + e.getMessage());
         }
+    }
+
+    public Page<CommentDTO> getPostComments(Long postId, int page, int size, Long userId) {
+        Pageable pageable = PageRequest.of(page, size);
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new ResourceNotFoundException("Post not found"));
+
+        int start = page * size;
+        int end = Math.min(start + size, post.getComments().size());
+
+        if (start >= post.getComments().size()) {
+            return Page.empty(pageable);
+        }
+
+        List<CommentDTO> commentDTOs = post.getComments().stream()
+                .skip(start)
+                .limit(size)
+                .map(comment -> convertToCommentDTO(comment, userId))
+                .collect(Collectors.toList());
+
+        return new PageImpl<>(commentDTOs, pageable, post.getComments().size());
+    }
+
+    private void sendNotificationAsync(Long userId, String title, String message, String type) {
+        notificationExecutor.execute(() -> {
+            try {
+                notificationService.createAndSendNotification(userId, title, message, type);
+            } catch (Exception e) {
+                logger.error("Failed to send notification: " + e.getMessage(), e);
+            }
+        });
     }
 }

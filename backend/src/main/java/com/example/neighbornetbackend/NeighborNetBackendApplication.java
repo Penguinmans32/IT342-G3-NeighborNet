@@ -11,7 +11,13 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 public class NeighborNetBackendApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(NeighborNetBackendApplication.class, args);
-    }
+        SpringApplication application = new SpringApplication(NeighborNetBackendApplication.class);
 
+        String environment = System.getenv("SPRING_PROFILES_ACTIVE");
+        if (environment == null) {
+            application.setAdditionalProfiles("prod");
+        }
+
+        application.run(args);
+    }
 }

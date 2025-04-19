@@ -159,7 +159,7 @@ const QuizPage = () => {
           try {
             const token = localStorage.getItem('token')
             const response = await axios.get(
-              `https://neighbornet-back-production.up.railway.app/api/classes/${classId}/quizzes/${quizId}`,
+              `http://localhost:8080/api/classes/${classId}/quizzes/${quizId}`,
               {
                 headers: { Authorization: `Bearer ${token}` }
               }
@@ -182,7 +182,7 @@ const QuizPage = () => {
     try {
       const token = localStorage.getItem('token')
       const response = await axios.post(
-        `https://neighbornet-back-production.up.railway.app/api/classes/${classId}/quizzes/${quizId}/start`,
+        `http://localhost:8080/api/classes/${classId}/quizzes/${quizId}/start`,
         {},
         {
           headers: { Authorization: `Bearer ${token}` }
@@ -212,7 +212,7 @@ const QuizPage = () => {
     try {
       const token = localStorage.getItem('token')
       const response = await axios.post(
-        `https://neighbornet-back-production.up.railway.app/api/classes/${classId}/quizzes/${quizId}/attempts/${currentAttempt.id}/submit`,
+        `http://localhost:8080/api/classes/${classId}/quizzes/${quizId}/attempts/${currentAttempt.id}/submit`,
         { answers },
         {
           headers: { Authorization: `Bearer ${token}` }

@@ -355,7 +355,7 @@ const RelatedClassCard = ({ classItem, onClick }) => {
       <div className="relative aspect-video w-full overflow-hidden">
         {classItem.thumbnailUrl ? (
           <img
-            src={`https://neighbornet-back-production.up.railway.app${classItem.thumbnailUrl}`}
+            src={`http://localhost:8080${classItem.thumbnailUrl}`}
             alt={classItem.title}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
           />
@@ -433,7 +433,7 @@ const StarRating = ({ initialRating = 0, classId, onRatingUpdate, readOnly = fal
       const headers = { Authorization: `Bearer ${token}` }
 
       const response = await axios.post(
-        `https://neighbornet-back-production.up.railway.app/api/classes/${classId}/rate`,
+        `http://localhost:8080/api/classes/${classId}/rate`,
         { rating: value },
         { headers },
       )
@@ -443,7 +443,7 @@ const StarRating = ({ initialRating = 0, classId, onRatingUpdate, readOnly = fal
 
       const existingToken = localStorage.getItem("token")
       const headersForUpdate = { Authorization: `Bearer ${existingToken}` }
-      const updatedClassResponse = await axios.get(`https://neighbornet-back-production.up.railway.app/api/classes/${classId}`, {
+      const updatedClassResponse = await axios.get(`http://localhost:8080/api/classes/${classId}`, {
         headers: headersForUpdate,
       })
 
@@ -578,7 +578,7 @@ const ClassDetails = () => {
         const headers = { Authorization: `Bearer ${token}` };
         
         const attemptsPromises = quizzes.map(quiz =>
-          axios.get(`https://neighbornet-back-production.up.railway.app/api/classes/${classId}/quizzes/${quiz.id}/attempts`, { headers })
+          axios.get(`http://localhost:8080/api/classes/${classId}/quizzes/${quiz.id}/attempts`, { headers })
         );
         
         const attemptsResponses = await Promise.all(attemptsPromises);
@@ -631,7 +631,7 @@ const ClassDetails = () => {
       const token = localStorage.getItem("token")
       const headers = { Authorization: `Bearer ${token}` }
 
-      const response = await axios.get(`https://neighbornet-back-production.up.railway.app/api/classes/${classId}/feedbacks`, { headers })
+      const response = await axios.get(`http://localhost:8080/api/classes/${classId}/feedbacks`, { headers })
 
       // Add userId from the user object in the feedback
       const feedbacksWithUserId = response.data.map((feedback) => ({
@@ -639,7 +639,6 @@ const ClassDetails = () => {
         userId: feedback.user?.id || null, // Make sure to handle null case
       }))
 
-      console.log("Class Feedbacks:", feedbacksWithUserId)
       setClassFeedbacks(feedbacksWithUserId)
     } catch (error) {
       console.error("Error fetching class feedbacks:", error)
@@ -651,14 +650,14 @@ const ClassDetails = () => {
       const token = localStorage.getItem("token")
       const headers = { Authorization: `Bearer ${token}` }
 
-      const response = await axios.get(`https://neighbornet-back-production.up.railway.app/api/classes/${classId}/related`, { headers })
+      const response = await axios.get(`http://localhost:8080/api/classes/${classId}/related`, { headers })
 
       setRelatedClasses(response.data)
     } catch (error) {
       console.error("Error fetching related classes:", error)
 
       try {
-        const categoryResponse = await axios.get(`https://neighbornet-back-production.up.railway.app/api/classes/all`, { headers })
+        const categoryResponse = await axios.get(`http://localhost:8080/api/classes/all`, { headers })
 
         const classes = categoryResponse.data
           .filter((c) => c.id !== Number.parseInt(classId) && c.category === classData?.category)
@@ -676,7 +675,7 @@ const ClassDetails = () => {
       const token = localStorage.getItem("token")
       const headers = { Authorization: `Bearer ${token}` }
 
-      await axios.post(`https://neighbornet-back-production.up.railway.app/api/classes/${feedbackId}/react`, { helpful: true }, { headers })
+      await axios.post(`http://localhost:8080/api/classes/${feedbackId}/react`, { helpful: true }, { headers })
 
       await fetchClassFeedbacks()
     } catch (error) {
@@ -690,7 +689,7 @@ const ClassDetails = () => {
       const token = localStorage.getItem("token")
       const headers = { Authorization: `Bearer ${token}` }
 
-      await axios.post(`https://neighbornet-back-production.up.railway.app/api/classes/${feedbackId}/react`, { helpful: false }, { headers })
+      await axios.post(`http://localhost:8080/api/classes/${feedbackId}/react`, { helpful: false }, { headers })
 
       await fetchClassFeedbacks()
     } catch (error) {
@@ -720,7 +719,7 @@ const ClassDetails = () => {
       const token = localStorage.getItem("token")
       const headers = { Authorization: `Bearer ${token}` }
 
-      await axios.delete(`https://neighbornet-back-production.up.railway.app/api/classes/${classId}/feedback/${feedbackId}`, { headers })
+      await axios.delete(`http://localhost:8080/api/classes/${classId}/feedback/${feedbackId}`, { headers })
 
       await fetchClassFeedbacks()
       toast.success("Feedback deleted successfully")
@@ -747,7 +746,7 @@ const ClassDetails = () => {
       if (editingFeedback) {
         // Update existing feedback
         await axios.put(
-          `https://neighbornet-back-production.up.railway.app/api/classes/${classId}/feedback/${editingFeedback.id}`,
+          `http://localhost:8080/api/classes/${classId}/feedback/${editingFeedback.id}`,
           {
             content: feedbackText,
             rating: userRating,
@@ -758,7 +757,7 @@ const ClassDetails = () => {
       } else {
         // Create new feedback
         await axios.post(
-          `https://neighbornet-back-production.up.railway.app/api/classes/${classId}/feedback`,
+          `http://localhost:8080/api/classes/${classId}/feedback`,
           {
             content: feedbackText,
             rating: userRating,
@@ -786,7 +785,7 @@ const ClassDetails = () => {
       const token = localStorage.getItem("token")
       const headers = { Authorization: `Bearer ${token}` }
 
-      const response = await axios.get(`https://neighbornet-back-production.up.railway.app/api/classes/${classId}/learning-status`, { headers })
+      const response = await axios.get(`http://localhost:8080/api/classes/${classId}/learning-status`, { headers })
 
       setIsLearning(response.data)
       setHasStartedJourney(response.data)
@@ -812,7 +811,7 @@ const ClassDetails = () => {
       const token = localStorage.getItem("token")
       const headers = { Authorization: `Bearer ${token}` }
 
-      const response = await axios.post(`https://neighbornet-back-production.up.railway.app/api/classes/${classId}/start-learning`, {}, { headers })
+      const response = await axios.post(`http://localhost:8080/api/classes/${classId}/start-learning`, {}, { headers })
 
       setIsLearning(true)
       setHasStartedJourney(true)
@@ -835,13 +834,12 @@ const ClassDetails = () => {
     useEffect(() => {
       const fetchQuizzes = async () => {
         try {
-          const response = await axios.get(`https://neighbornet-back-production.up.railway.app/api/classes/${classId}/quizzes`, {
+          const response = await axios.get(`http://localhost:8080/api/classes/${classId}/quizzes`, {
             headers: {
               Authorization: `Bearer ${localStorage.getItem('token')}`
             }
           })
           setQuizzes(response.data)
-          console.log('Fetched quizzes:', response.data)
         } catch (error) {
           console.error('Error fetching quizzes:', error)
           toast.error('Failed to load quizzes')
@@ -864,7 +862,7 @@ const ClassDetails = () => {
       const token = localStorage.getItem("token")
       const headers = { Authorization: `Bearer ${token}` }
 
-      const classResponse = await axios.get(`https://neighbornet-back-production.up.railway.app/api/classes/${classId}`, { headers })
+      const classResponse = await axios.get(`http://localhost:8080/api/classes/${classId}`, { headers })
 
       const classData = classResponse.data
       console.log("Class Response:", classData)
@@ -897,16 +895,15 @@ const ClassDetails = () => {
         const headers = isAuthenticated ? { Authorization: `Bearer ${token}` } : {}
 
         const [classResponse, lessonsResponse] = await Promise.all([
-          axios.get(`https://neighbornet-back-production.up.railway.app/api/classes/${classId}`, { headers }),
+          axios.get(`http://localhost:8080/api/classes/${classId}`, { headers }),
           isAuthenticated
-            ? axios.get(`https://neighbornet-back-production.up.railway.app/api/classes/${classId}/lessons`, { headers })
+            ? axios.get(`http://localhost:8080/api/classes/${classId}/lessons`, { headers })
             : Promise.resolve({ data: [] }), // Empty lessons for unauthenticated users
         ])
 
         const classResponseData = classResponse.data
         setClassData(classResponse.data)
         setLessons(lessonsResponse.data)
-        console.log(classData)
 
         setDisplayRating({
           average: Number(classResponseData.averageRating || 0),
@@ -917,7 +914,7 @@ const ClassDetails = () => {
           await checkLearningStatus()
           try {
             // Fetch latest progress
-            const progressResponse = await axios.get(`https://neighbornet-back-production.up.railway.app/api/classes/${classId}/progress`, {
+            const progressResponse = await axios.get(`http://localhost:8080/api/classes/${classId}/progress`, {
               headers,
             })
 
@@ -941,7 +938,7 @@ const ClassDetails = () => {
             })
 
             try {
-              const ratingResponse = await axios.get(`https://neighbornet-back-production.up.railway.app/api/classes/${classId}/rating`, { headers })
+              const ratingResponse = await axios.get(`http://localhost:8080/api/classes/${classId}/rating`, { headers })
               if (ratingResponse.data && ratingResponse.data.rating) {
                 setUserRating(ratingResponse.data.rating)
               }
@@ -1001,7 +998,7 @@ const ClassDetails = () => {
       const headers = { Authorization: `Bearer ${token}` }
 
       // Submit the new rating
-      await axios.post(`https://neighbornet-back-production.up.railway.app/api/classes/${classId}/rate`, { rating: newRating }, { headers })
+      await axios.post(`http://localhost:8080/api/classes/${classId}/rate`, { rating: newRating }, { headers })
 
       // Fetch updated class data
       const updatedData = await fetchLatestClassData()
@@ -1237,7 +1234,7 @@ const ClassDetails = () => {
                 {classData?.thumbnailUrl ? (
                   <div className="group relative h-full">
                     <img
-                      src={`https://neighbornet-back-production.up.railway.app${classData.thumbnailUrl}`}
+                      src={`http://localhost:8080${classData.thumbnailUrl}`}
                       alt={classData.title}
                       className="w-full h-full object-cover transition-transform duration-300 
                                 group-hover:scale-105"

@@ -94,6 +94,10 @@ const GlobalStyle = createGlobalStyle`
   }
 `
 
+const generateUniqueId = () => {
+  return Date.now().toString(36) + Math.random().toString(36).substr(2);
+};
+
 const Dashboard = () => {
   const { user } = useAuth()
   const [isLoading, setIsLoading] = useState(true)
@@ -140,7 +144,7 @@ const Dashboard = () => {
 
   const getFullThumbnailUrl = (thumbnailUrl) => {
     if (!thumbnailUrl) return "/default-class-image.jpg"
-    return thumbnailUrl.startsWith("http") ? thumbnailUrl : `https://neighbornet-back-production.up.railway.app${thumbnailUrl}`
+    return thumbnailUrl.startsWith("http") ? thumbnailUrl : `http://localhost:8080${thumbnailUrl}`
   }
 
   const navigateToProfile = (userId) => {
@@ -157,7 +161,7 @@ const Dashboard = () => {
         const token = localStorage.getItem("token");
         if (!token) return;
   
-        const response = await axios.get(`https://neighbornet-back-production.up.railway.app/api/users/profile`, {
+        const response = await axios.get(`http://localhost:8080/api/users/profile`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -183,7 +187,7 @@ const Dashboard = () => {
           return
         }
 
-        const response = await axios.get("https://neighbornet-back-production.up.railway.app/api/activities/recent", {
+        const response = await axios.get("http://localhost:8080/api/activities/recent", {
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
@@ -208,17 +212,15 @@ const Dashboard = () => {
           return
         }
 
-        const response = await axios.get("https://neighbornet-back-production.up.railway.app/api/classes/all", {
+        const response = await axios.get("http://localhost:8080/api/classes/recent?limit=5", {
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
         })
 
-        // Get the 5 most recent classes
-        const sortedClasses = response.data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 5)
 
-        setRecentClasses(sortedClasses)
+        setRecentClasses(response.data)
       } catch (error) {
         console.error("Error fetching recent classes:", error)
       }
@@ -235,21 +237,25 @@ const Dashboard = () => {
           navigate("/login")
           return
         }
-
-        const response = await axios.get("https://neighbornet-back-production.up.railway.app/api/posts", {
+  
+        const response = await axios.get("http://localhost:8080/api/posts", {
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
         })
-
-        const postsWithLikeStatus = response.data.content.map((post) => ({
+  
+        const postsWithUniqueKeys = response.data.content.map((post) => ({
           ...post,
           isLiked: post.isLiked || false,
           isEdited: post.isEdited || false,
+          comments: (post.comments || []).map(comment => ({
+            ...comment,
+            clientId: generateUniqueId() 
+          }))
         }))
-
-        setPosts(postsWithLikeStatus)
+  
+        setPosts(postsWithUniqueKeys)
         setIsLoading(false)
       } catch (error) {
         console.error("Error fetching posts:", error)
@@ -258,7 +264,7 @@ const Dashboard = () => {
         }
       }
     }
-
+  
     fetchPosts()
   }, [navigate])
 
@@ -268,7 +274,7 @@ const Dashboard = () => {
       const headers = { Authorization: `Bearer ${token}` };
       
       await axios.put(
-        `https://neighbornet-back-production.up.railway.app/api/posts/${postId}/comments/${commentId}`,
+        `http://localhost:8080/api/posts/${postId}/comments/${commentId}`,
         { content: editedCommentContent },
         { headers }
       );
@@ -309,7 +315,7 @@ const Dashboard = () => {
         return
       }
 
-      await axios.delete(`https://neighbornet-back-production.up.railway.app/api/posts/${postId}`, {
+      await axios.delete(`http://localhost:8080/api/posts/${postId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -343,7 +349,7 @@ const Dashboard = () => {
       }
 
       const response = await axios.put(
-        `https://neighbornet-back-production.up.railway.app/api/posts/${postId}`,
+        `http://localhost:8080/api/posts/${postId}`,
         { content: editedContent },
         {
           headers: {
@@ -375,7 +381,7 @@ const Dashboard = () => {
       const shareMessage = prompt("Add a message to your share (optional):")
 
       const response = await axios.post(
-        `https://neighbornet-back-production.up.railway.app/api/posts/${postId}/share`,
+        `http://localhost:8080/api/posts/${postId}/share`,
         { content: shareMessage },
         {
           headers: {
@@ -405,38 +411,48 @@ const Dashboard = () => {
   }
 
   const handleAddComment = async (postId) => {
-    if (!newComments[postId]?.trim()) return
-
+    if (!newComments[postId]?.trim()) return;
+  
     try {
-      setIsCommenting((prev) => ({ ...prev, [postId]: true }))
-      const token = localStorage.getItem("token")
+      setIsCommenting((prev) => ({ ...prev, [postId]: true }));
+      const token = localStorage.getItem("token");
       if (!token) {
-        navigate("/login")
-        return
+        navigate("/login");
+        return;
       }
-
+  
       const response = await axios.post(
-        `https://neighbornet-back-production.up.railway.app/api/posts/${postId}/comments`,
+        `http://localhost:8080/api/posts/${postId}/comments`,
         { content: newComments[postId] },
         {
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
-        },
-      )
-
-      setPosts((prev) => prev.map((post) => (post.id === postId ? response.data : post)))
-      setNewComments((prev) => ({ ...prev, [postId]: "" }))
+        }
+      );
+  
+      const updatedPost = {
+        ...response.data,
+        comments: response.data.comments.map(comment => ({
+          ...comment,
+          clientId: generateUniqueId()
+        }))
+      };
+  
+      setPosts((prev) => 
+        prev.map((post) => post.id === postId ? updatedPost : post)
+      );
+      setNewComments((prev) => ({ ...prev, [postId]: "" }));
     } catch (error) {
-      console.error("Error adding comment:", error)
+      console.error("Error adding comment:", error);
       if (error.response?.status === 401) {
-        navigate("/login")
+        navigate("/login");
       }
     } finally {
-      setIsCommenting((prev) => ({ ...prev, [postId]: false }))
+      setIsCommenting((prev) => ({ ...prev, [postId]: false }));
     }
-  }
+  };
 
   const handleLikeComment = async (postId, commentId) => {
     try {
@@ -447,7 +463,7 @@ const Dashboard = () => {
       }
 
       const response = await axios.post(
-        `https://neighbornet-back-production.up.railway.app/api/posts/${postId}/comments/${commentId}/like`,
+        `http://localhost:8080/api/posts/${postId}/comments/${commentId}/like`,
         {},
         {
           headers: {
@@ -474,7 +490,7 @@ const Dashboard = () => {
         return
       }
 
-      const response = await axios.delete(`https://neighbornet-back-production.up.railway.app/api/posts/${postId}/comments/${commentId}`, {
+      const response = await axios.delete(`http://localhost:8080/api/posts/${postId}/comments/${commentId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -558,7 +574,7 @@ const Dashboard = () => {
         formData.append("image", selectedImage)
       }
 
-      const response = await axios.post("https://neighbornet-back-production.up.railway.app/api/posts", formData, {
+      const response = await axios.post("http://localhost:8080/api/posts", formData, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "multipart/form-data",
@@ -597,7 +613,7 @@ const Dashboard = () => {
       }
 
       const response = await axios.post(
-        `https://neighbornet-back-production.up.railway.app/api/posts/${postId}/like`,
+        `http://localhost:8080/api/posts/${postId}/like`,
         {},
         {
           headers: {
@@ -632,7 +648,7 @@ const Dashboard = () => {
     const fetchDashboardStats = async () => {
       try {
         setLoading(true)
-        const response = await axios.get("https://neighbornet-back-production.up.railway.app/api/dashboard/stats", {
+        const response = await axios.get("http://localhost:8080/api/dashboard/stats", {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
             "Content-Type": "application/json",
@@ -649,7 +665,6 @@ const Dashboard = () => {
         }
 
         setStats(data)
-        console.log("Dashboard stats:", data)
       } catch (error) {
         console.error("Error fetching dashboard stats:", error)
         setStats({
@@ -1121,9 +1136,9 @@ const Dashboard = () => {
                               </div>
 
                               {/* Comments list */}
-                              {post.comments.map((comment) => (
+                              {post.comments.map((comment, idx) => (
                                 <motion.div
-                                  key={comment.id}
+                                  key={comment.clientId || `comment-${generateUniqueId()}`}
                                   initial={{ opacity: 0, y: 10 }}
                                   animate={{ opacity: 1, y: 0 }}
                                   className="flex gap-3"
@@ -1348,26 +1363,28 @@ const Dashboard = () => {
       </div>
       <Footer />
 
-      <style jsx>{`
-        .wave {
-          animation-name: wave-animation;
-          animation-duration: 2.5s;
-          animation-iteration-count: infinite;
-          transform-origin: 70% 70%;
-          display: inline-block;
-        }
-        
-        @keyframes wave-animation {
-          0% { transform: rotate( 0.0deg) }
-          10% { transform: rotate(14.0deg) }
-          20% { transform: rotate(-8.0deg) }
-          30% { transform: rotate(14.0deg) }
-          40% { transform: rotate(-4.0deg) }
-          50% { transform: rotate(10.0deg) }
-          60% { transform: rotate( 0.0deg) }
-          100% { transform: rotate( 0.0deg) }
-        }
-      `}</style>
+      <style dangerouslySetInnerHTML={{
+        __html: `
+          .wave {
+            animation-name: wave-animation;
+            animation-duration: 2.5s;
+            animation-iteration-count: infinite;
+            transform-origin: 70% 70%;
+            display: inline-block;
+          }
+          
+          @keyframes wave-animation {
+            0% { transform: rotate( 0.0deg) }
+            10% { transform: rotate(14.0deg) }
+            20% { transform: rotate(-8.0deg) }
+            30% { transform: rotate(14.0deg) }
+            40% { transform: rotate(-4.0deg) }
+            50% { transform: rotate(10.0deg) }
+            60% { transform: rotate( 0.0deg) }
+            100% { transform: rotate( 0.0deg) }
+          }
+        `
+      }} />
     </div>
   )
 }

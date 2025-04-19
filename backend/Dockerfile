@@ -1,8 +1,29 @@
-FROM eclipse-temurin:21-jdk-alpine
+FROM maven:3.8.5-openjdk-17-slim AS build
 WORKDIR /app
-COPY . .
-RUN chmod +x mvnw
-RUN ./mvnw clean package -DskipTests
 
+# Copy the Maven POM file
+COPY pom.xml .
+# Copy the source code
+COPY src ./src
+
+# Build the application
+RUN mvn clean package -DskipTests
+
+# Create a lightweight runtime image
+FROM openjdk:17-jdk-slim
+WORKDIR /app
+
+# Copy the JAR file from the build stage
+COPY --from=build /app/target/*.jar app.jar
+
+# Create directories for file uploads
+RUN mkdir -p ./uploads
+RUN mkdir -p ./thumbnails
+RUN mkdir -p ./videos
+RUN mkdir -p ./item-images
+
+# Expose the port the app will run on
 EXPOSE 8080
-CMD ["java", "-jar", "-Dspring.profiles.active=prod", "target/NeighborNet-Backend-0.0.1-SNAPSHOT.jar"]
+
+# Run the application
+CMD ["java", "-jar", "app.jar"]

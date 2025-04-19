@@ -19,6 +19,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.http.CacheControl;
+import java.util.concurrent.TimeUnit;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -54,27 +58,32 @@ public class UserProfileController {
             Resource resource = new UrlResource(filePath.toUri());
 
             if (resource.exists()) {
-                // Determine content type
-                String contentType = "image/jpeg"; // default
+                String contentType = "image/jpeg";
                 if (filename.endsWith(".png")) {
                     contentType = "image/png";
                 } else if (filename.endsWith(".gif")) {
                     contentType = "image/gif";
                 }
 
+                long lastModified = resource.lastModified();
+                String etag = "\"" + lastModified + "\"";
+
                 return ResponseEntity.ok()
                         .contentType(MediaType.parseMediaType(contentType))
                         .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + resource.getFilename() + "\"")
+                        .cacheControl(CacheControl.maxAge(30, TimeUnit.DAYS))
+                        .eTag(etag)
                         .body(resource);
             } else {
                 return ResponseEntity.notFound().build();
             }
-        } catch (MalformedURLException e) {
+        } catch (IOException e) {
             return ResponseEntity.badRequest().build();
         }
     }
 
     @GetMapping("/profile")
+    @Cacheable(value = "userProfiles", key = "#authentication.name")
     public ResponseEntity<?> getUserProfile(Authentication authentication) {
         if (authentication == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not authenticated");
@@ -91,8 +100,8 @@ public class UserProfileController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    // Update the picture endpoint too
     @PutMapping("/profile/picture")
+    @CacheEvict(value = "userProfiles", key = "#authentication.name")
     public ResponseEntity<?> updateProfilePicture(@RequestParam("file") MultipartFile file, Authentication authentication) {
         if (authentication == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not authenticated");
@@ -116,6 +125,7 @@ public class UserProfileController {
     }
 
     @PatchMapping("/profile")
+    @CacheEvict(value = "userProfiles", key = "#authentication.name")
     public ResponseEntity<?> updateProfile(
             @RequestBody UpdateProfileRequest request,
             Authentication authentication) {
@@ -133,6 +143,7 @@ public class UserProfileController {
     }
 
     @GetMapping("/{userId}/profile")
+    @Cacheable(value = "userProfiles", key = "#userId")
     public ResponseEntity<?> getUserProfile(@PathVariable Long userId, Authentication authentication) {
         try {
             User targetUser = userRepository.findById(userId)
@@ -268,6 +279,7 @@ public class UserProfileController {
     }
 
     @GetMapping("/{userId}/followers-data")
+    @Cacheable(value = "followersData", key = "#userId + '-' + #currentUser.id")
     public ResponseEntity<?> getFollowersData(
             @PathVariable Long userId,
             @CurrentUser UserPrincipal currentUser) {

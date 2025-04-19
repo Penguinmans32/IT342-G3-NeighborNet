@@ -5,13 +5,15 @@ import com.example.neighbornetbackend.model.Notification;
 import com.example.neighbornetbackend.model.User;
 import com.example.neighbornetbackend.repository.NotificationRepository;
 import com.example.neighbornetbackend.repository.UserRepository;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 @Service
@@ -20,6 +22,9 @@ public class NotificationService {
     private final UserRepository userRepository;
     private final SimpMessagingTemplate messagingTemplate;
     private final FCMService fcmService;
+
+    private static final String NOTIFICATIONS_CACHE = "userNotifications";
+    private static final String UNREAD_COUNT_CACHE = "unreadNotificationsCount";
 
     public NotificationService(NotificationRepository notificationRepository,
                                UserRepository userRepository,
@@ -31,49 +36,59 @@ public class NotificationService {
     }
 
     @Transactional
+    @CacheEvict(value = {NOTIFICATIONS_CACHE, UNREAD_COUNT_CACHE}, key = "#userId")
     public void createAndSendNotification(Long userId, String title, String message, String type) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        CompletableFuture<Optional<User>> userFuture = CompletableFuture.supplyAsync(() ->
+                userRepository.findById(userId));
 
-        // Create notification entity
         Notification notification = new Notification();
-        notification.setUser(user);
         notification.setTitle(title);
         notification.setMessage(message);
         notification.setType(type);
         notification.setRead(false);
 
-        // Save to database
+        User user = userFuture.join()
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        notification.setUser(user);
+
         notification = notificationRepository.save(notification);
 
-        // Send WebSocket notification
-        NotificationDTO notificationDTO = new NotificationDTO(
+        final NotificationDTO notificationDTO = new NotificationDTO(
+                notification.getId(),
                 notification.getTitle(),
                 notification.getMessage(),
-                notification.getType()
+                notification.getType(),
+                notification.isRead(),
+                notification.getCreatedAt()
         );
 
-        messagingTemplate.convertAndSendToUser(
-                userId.toString(),
-                "/queue/notifications",
-                notificationDTO
-        );
+        CompletableFuture.runAsync(() -> {
+            messagingTemplate.convertAndSendToUser(
+                    userId.toString(),
+                    "/queue/notifications",
+                    notificationDTO
+            );
+        });
 
         if (user.getFcmToken() != null && !user.getFcmToken().isEmpty()) {
-            fcmService.sendNotification(
-                    user.getFcmToken(),
-                    title,
-                    message,
-                    type
-            );
+            CompletableFuture.runAsync(() -> {
+                fcmService.sendNotification(
+                        user.getFcmToken(),
+                        title,
+                        message,
+                        type
+                );
+            });
         }
     }
 
+    @Cacheable(value = NOTIFICATIONS_CACHE, key = "#userId")
     public List<Notification> getUserNotifications(Long userId) {
         return notificationRepository.findByUserIdOrderByCreatedAtDesc(userId);
     }
 
     @Transactional
+    @CacheEvict(value = {NOTIFICATIONS_CACHE, UNREAD_COUNT_CACHE}, key = "#notification.user.id")
     public void markAsRead(Long notificationId) {
         Notification notification = notificationRepository.findById(notificationId)
                 .orElseThrow(() -> new RuntimeException("Notification not found"));
@@ -82,17 +97,22 @@ public class NotificationService {
     }
 
     @Transactional
+    @CacheEvict(value = {NOTIFICATIONS_CACHE, UNREAD_COUNT_CACHE}, key = "#userId")
     public void markAllAsRead(Long userId) {
-        List<Notification> notifications = notificationRepository.findByUserIdOrderByCreatedAtDesc(userId);
-        notifications.forEach(notification -> notification.setRead(true));
-        notificationRepository.saveAll(notifications);
+        notificationRepository.markAllAsReadByUserId(userId);
     }
 
+    @Cacheable(value = NOTIFICATIONS_CACHE, key = "'dto-' + #userId")
     public List<NotificationDTO> getUserNotificationsDTO(Long userId) {
         List<Notification> notifications = notificationRepository.findByUserIdOrderByCreatedAtDesc(userId);
         return notifications.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
+    }
+
+    @Cacheable(value = UNREAD_COUNT_CACHE, key = "#userId")
+    public int getUnreadNotificationCount(Long userId) {
+        return notificationRepository.countByUserIdAndIsReadFalse(userId);
     }
 
     private NotificationDTO convertToDTO(Notification notification) {
@@ -107,8 +127,8 @@ public class NotificationService {
     }
 
     @Transactional
+    @CacheEvict(value = {NOTIFICATIONS_CACHE, UNREAD_COUNT_CACHE}, key = "#userId")
     public void deleteAllNotifications(Long userId) {
         notificationRepository.deleteByUserId(userId);
     }
-
 }

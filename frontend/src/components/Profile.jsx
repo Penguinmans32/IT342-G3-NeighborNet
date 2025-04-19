@@ -107,8 +107,8 @@ export default function Profile() {
   const handleFollowToggle = async () => {
     try {
       const endpoint = isFollowing 
-        ? `https://neighbornet-back-production.up.railway.app/api/users/${userId}/unfollow`
-        : `https://neighbornet-back-production.up.railway.app/api/users/${userId}/follow`;
+        ? `http://localhost:8080/api/users/${userId}/unfollow`
+        : `http://localhost:8080/api/users/${userId}/follow`;
   
       const response = await axios.post(endpoint, {}, {
         headers: {
@@ -131,7 +131,7 @@ export default function Profile() {
         const targetId = userId || user?.id;
         if (!targetId) return;
   
-        const response = await axios.get(`https://neighbornet-back-production.up.railway.app/api/users/${targetId}/followers-data`, {
+        const response = await axios.get(`http://localhost:8080/api/users/${targetId}/followers-data`, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
@@ -170,12 +170,12 @@ export default function Profile() {
       }
   
       const [classStats, itemStats] = await Promise.all([
-        axios.get(`https://neighbornet-back-production.up.railway.app/api/classes/user-stats/${targetId}`, {
+        axios.get(`http://localhost:8080/api/classes/user-stats/${targetId}`, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
         }),
-        axios.get(`https://neighbornet-back-production.up.railway.app/api/borrowing/items/user-stats/${targetId}`, {
+        axios.get(`http://localhost:8080/api/borrowing/items/user-stats/${targetId}`, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
@@ -221,8 +221,8 @@ export default function Profile() {
     try {
       const targetId = userId || user?.id;
       const endpoint = userId 
-        ? `https://neighbornet-back-production.up.railway.app/api/classes/saved/${targetId}` // For viewing other profiles
-        : "https://neighbornet-back-production.up.railway.app/api/classes/saved"; // For current user
+        ? `http://localhost:8080/api/classes/saved/${targetId}` // For viewing other profiles
+        : "http://localhost:8080/api/classes/saved"; // For current user
   
       const response = await axios.get(endpoint, {
         headers: {
@@ -247,8 +247,8 @@ export default function Profile() {
     const fetchProfileData = async (targetUserId) => {
       try {
         const endpoint = targetUserId 
-          ? `https://neighbornet-back-production.up.railway.app/api/users/${targetUserId}/profile` 
-          : "https://neighbornet-back-production.up.railway.app/api/users/profile";
+          ? `http://localhost:8080/api/users/${targetUserId}/profile` 
+          : "http://localhost:8080/api/users/profile";
     
         const response = await axios.get(endpoint, {
           headers: {
@@ -291,7 +291,7 @@ export default function Profile() {
 
     setIsUpdating(true)
     try {
-      const response = await axios.put("https://neighbornet-back-production.up.railway.app/api/users/profile/picture", formData, {
+      const response = await axios.put("http://localhost:8080/api/users/profile/picture", formData, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
           "Content-Type": "multipart/form-data",
@@ -384,7 +384,7 @@ export default function Profile() {
                     profileData?.imageUrl
                       ? profileData.imageUrl.startsWith("http")
                         ? profileData.imageUrl
-                        : `https://neighbornet-back-production.up.railway.app${profileData.imageUrl}`
+                        : `http://localhost:8080${profileData.imageUrl}`
                       : "/images/defaultProfile.png?height=36&width=36"
                   }
                   alt="Profile"
@@ -438,7 +438,7 @@ export default function Profile() {
                         profileData?.imageUrl
                           ? profileData.imageUrl.startsWith("http")
                             ? profileData.imageUrl
-                            : `https://neighbornet-back-production.up.railway.app${profileData.imageUrl}`
+                            : `http://localhost:8080${profileData.imageUrl}`
                           : "/images/defaultProfile.png?height=128&width=128"
                       }
                       alt="Profile picture"
@@ -499,7 +499,7 @@ export default function Profile() {
                           try {
                             // First, ensure a conversation exists or create one
                             const response = await axios.post(
-                              'https://neighbornet-back-production.up.railway.app/conversations/create',
+                              'http://localhost:8080/conversations/create',
                               {
                                 userId1: user.data.id,
                                 userId2: userId
@@ -795,7 +795,7 @@ export default function Profile() {
                                       classItem.thumbnailUrl
                                         ? classItem.thumbnailUrl.startsWith("http")
                                           ? classItem.thumbnailUrl
-                                          : `https://neighbornet-back-production.up.railway.app${classItem.thumbnailUrl}`
+                                          : `http://localhost:8080${classItem.thumbnailUrl}`
                                         : "/default-class-image.jpg"
                                     }
                                     alt={classItem.title}

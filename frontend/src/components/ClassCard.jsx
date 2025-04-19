@@ -11,7 +11,7 @@ const getCorrectImageUrl = (imageUrl) => {
   
   if (imageUrl.includes('localhost:8080')) {
     const path = imageUrl.split('localhost:8080')[1];
-    return `https://neighbornet-back-production.up.railway.app${path}`;
+    return `http://localhost:8080${path}`;
   }
   
   if (imageUrl.startsWith("http")) {
@@ -19,7 +19,7 @@ const getCorrectImageUrl = (imageUrl) => {
   }
   
   if (imageUrl.startsWith("/api/")) {
-    return `https://neighbornet-back-production.up.railway.app${imageUrl}`;
+    return `http://localhost:8080${imageUrl}`;
   }
   
   return imageUrl;

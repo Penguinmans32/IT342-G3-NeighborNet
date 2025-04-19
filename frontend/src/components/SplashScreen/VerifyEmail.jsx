@@ -14,7 +14,7 @@ const VerifyEmail = () => {
       return;
     }
 
-    fetch(`https://neighbornet-back-production.up.railway.app/api/auth/verify-email?token=${token}`, {
+    fetch(`http://localhost:8080/api/auth/verify-email?token=${token}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',

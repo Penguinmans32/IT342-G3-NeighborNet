@@ -25,7 +25,19 @@ public class CacheConfig {
                 new ConcurrentMapCache("classRatings"),
                 new ConcurrentMapCache("relatedClasses"),
                 new ConcurrentMapCache("userStats"),
-                new ConcurrentMapCache("recentActivities")
+                new ConcurrentMapCache("recentActivities"),
+                new ConcurrentMapCache("posts"),
+                new ConcurrentMapCache("postPages"),
+                new ConcurrentMapCache("comments"),
+                new ConcurrentMapCache("classesPage"),
+                new ConcurrentMapCache("recentClasses"),
+                new ConcurrentMapCache("userProfiles"),
+                new ConcurrentMapCache("followersData"),
+                new ConcurrentMapCache("userNotifications"),
+                new ConcurrentMapCache("unreadNotificationsCount"),
+                new ConcurrentMapCache("quizById"),
+                new ConcurrentMapCache("quizzesByClass"),
+                new ConcurrentMapCache("quizAttempts")
         ));
         return cacheManager;
     }

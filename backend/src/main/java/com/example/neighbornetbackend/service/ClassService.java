@@ -22,10 +22,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -474,5 +471,33 @@ public class ClassService {
         }
 
         return resultPage.map(ClassResponse::fromEntity);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ClassResponse> getRelatedClasses(Long classId, int limit) {
+        CourseClass currentClass = classRepository.findById(classId)
+                .orElseThrow(() -> new ResourceNotFoundException("Class not found"));
+
+        return classRepository.findByCategoryAndIdNot(currentClass.getCategory(), classId)
+                .stream()
+                .limit(limit)
+                .map(ClassResponse::fromEntity)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, Object> getUserStats(Long userId) {
+        Map<String, Object> stats = new HashMap<>();
+
+        int classesCreated = classRepository.countByCreatorId(userId);
+        stats.put("classesCreated", classesCreated);
+
+        int enrolledClasses = getEnrolledClassesByUser(userId).size();
+        stats.put("enrolledClasses", enrolledClasses);
+
+        int savedClassesCount = getSavedClasses(userId).size();
+        stats.put("savedClassesCount", savedClassesCount);
+
+        return stats;
     }
 }

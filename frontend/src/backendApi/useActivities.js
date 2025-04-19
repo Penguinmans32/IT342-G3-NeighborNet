@@ -10,7 +10,7 @@ export const useActivities = (userId) => {
     const fetchActivities = async () => {
       try {
         // Change the endpoint to include userId
-        const response = await axios.get(`https://neighbornet-back-production.up.railway.app/api/tracking/user/${userId}`, {
+        const response = await axios.get(`http://localhost:8080/api/tracking/user/${userId}`, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },

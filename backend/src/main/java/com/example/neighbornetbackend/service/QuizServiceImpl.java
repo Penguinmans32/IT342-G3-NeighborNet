@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 @Service
@@ -57,8 +58,7 @@ public class QuizServiceImpl implements QuizService {
 
         Quiz savedQuiz = quizRepository.save(quiz);
 
-        // Create questions
-        for (QuestionRequest questionRequest : request.getQuestions()) {
+        List<Question> questions = request.getQuestions().stream().map(questionRequest -> {
             Question question = new Question();
             question.setContent(questionRequest.getContent());
             question.setType(questionRequest.getType());
@@ -73,33 +73,40 @@ public class QuizServiceImpl implements QuizService {
             questionData.setMaxWords(questionRequest.getMaxWords());
             question.setQuestionData(questionData);
 
-            questionRepository.save(question);
-        }
+            return question;
+        }).collect(Collectors.toList());
 
-        activityService.trackActivity(
-                userId,
-                "quiz_created",
-                "Created a new quiz",
-                savedQuiz.getTitle(),
-                "ClipboardCheck",
-                savedQuiz.getId()
-        );
+        questionRepository.saveAll(questions);
+
+        CompletableFuture.runAsync(() -> {
+            activityService.trackActivity(
+                    userId,
+                    "quiz_created",
+                    "Created a new quiz",
+                    savedQuiz.getTitle(),
+                    "ClipboardCheck",
+                    savedQuiz.getId()
+            );
+        });
 
         return QuizResponse.fromEntity(savedQuiz);
     }
 
     @Override
     public QuizResponse getQuiz(Long quizId, Long userId) {
-        Quiz quiz = quizRepository.findById(quizId)
+        Quiz quiz = quizRepository.findByIdWithQuestions(quizId)
                 .orElseThrow(() -> new ResourceNotFoundException("Quiz not found"));
 
         CourseClass courseClass = quiz.getClassEntity();
         boolean isCreator = courseClass.getCreator().getId().equals(userId);
-        boolean isEnrolled = courseClass.getEnrollments().stream()
-                .anyMatch(enrollment -> enrollment.getUser().getId().equals(userId));
 
-        if (!isCreator && !isEnrolled) {
-            throw new UnauthorizedException("Not authorized to view this quiz");
+        if (!isCreator) {
+            boolean isEnrolled = courseClass.getEnrollments().stream()
+                    .anyMatch(enrollment -> enrollment.getUser().getId().equals(userId));
+
+            if (!isEnrolled) {
+                throw new UnauthorizedException("Not authorized to view this quiz");
+            }
         }
 
         return QuizResponse.fromEntity(quiz);
@@ -123,6 +130,7 @@ public class QuizServiceImpl implements QuizService {
 
     @Override
     public void deleteQuiz(Long quizId, Long userId) {
+
     }
 
     @Override
@@ -215,8 +223,9 @@ public class QuizServiceImpl implements QuizService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<QuizAttemptResponse> getQuizAttempts(Long quizId, Long userId) {
-        return quizAttemptRepository.findByQuizIdAndUserId(quizId, userId)
+        return quizAttemptRepository.findByQuizIdAndUserIdOrderByStartedAtDesc(quizId, userId)
                 .stream()
                 .map(attempt -> QuizAttemptResponse.fromEntity(attempt, true))
                 .collect(Collectors.toList());
