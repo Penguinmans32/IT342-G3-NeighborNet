@@ -16,11 +16,8 @@ WORKDIR /app
 # Copy the JAR file from the build stage
 COPY --from=build /app/target/*.jar app.jar
 
-# Create directories for file uploads
-RUN mkdir -p ./uploads
-RUN mkdir -p ./thumbnails
-RUN mkdir -p ./videos
-RUN mkdir -p ./item-images
+# Note: Local directories for file storage are no longer needed
+# since the application now uses Google Cloud Storage
 
 # Expose the port the app will run on
 EXPOSE 8080
