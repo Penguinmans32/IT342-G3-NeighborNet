@@ -120,6 +120,10 @@ const Dashboard = () => {
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [editedCommentContent, setEditedCommentContent] = useState('');
   const [recentActivities, setRecentActivities] = useState([])
+  const [deleteConfirmation, setDeleteConfirmation] = useState({
+    isOpen: false,
+    postId: null
+  });
   const [profileData, setProfileData] = useState(null)
   const [stats, setStats] = useState({
     skillsShared: 0,
@@ -335,30 +339,44 @@ const Dashboard = () => {
     }
   };
 
-  const handleDeletePost = async (postId) => {
-    if (!window.confirm("Are you sure you want to delete this post?")) return
+  const handleDeletePost = (postId) => {
+    setDeleteConfirmation({
+      isOpen: true,
+      postId: postId
+    });
+  };
 
+  const confirmDeletePost = async () => {
     try {
       const token = localStorage.getItem("token")
       if (!token) {
         navigate("/login")
         return
       }
-
-      await axios.delete(`https://it342-g3-neighbornet.onrender.com/api/posts/${postId}`, {
+  
+      await axios.delete(`https://it342-g3-neighbornet.onrender.com/api/posts/${deleteConfirmation.postId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
-      })
-
-      setPosts((prev) => prev.filter((post) => post.id !== postId))
+      });
+  
+      setPosts((prev) => prev.filter((post) => post.id !== deleteConfirmation.postId));
+      
+      setDeleteConfirmation({
+        isOpen: false,
+        postId: null
+      });
     } catch (error) {
       console.error("Error deleting post:", error)
       if (error.response?.status === 401) {
         navigate("/login")
       }
+      setDeleteConfirmation({
+        isOpen: false,
+        postId: null
+      });
     }
-  }
+  };
 
   const handleStartEdit = (post) => {
     setEditingPostId(post.id)
@@ -955,7 +973,7 @@ const Dashboard = () => {
                             >
                               {post.author.username}
                             </h3>
-                            {user?.data?.id === post.author.id && (
+                            {(user?.data?.id && post.author.id && String(user.data.id) === String(post.author.id)) && (
                               <div className="ml-4 flex items-center gap-2">
                                 <button
                                   onClick={() => handleStartEdit(post)}
@@ -1389,6 +1407,62 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
+
+
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {deleteConfirmation.isOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+            onClick={() => setDeleteConfirmation({ isOpen: false, postId: null })}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ type: "spring", damping: 20, stiffness: 300 }}
+              className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md p-6 m-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="text-center mb-6">
+                <div className="mx-auto w-16 h-16 mb-4 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
+                  <Trash2 className="text-red-500 w-8 h-8" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+                  Delete Post
+                </h3>
+                <p className="text-gray-500 dark:text-gray-400">
+                  Are you sure you want to delete this post? This action cannot be undone.
+                </p>
+              </div>
+              
+              <div className="flex gap-3 justify-center">
+                <motion.button
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => setDeleteConfirmation({ isOpen: false, postId: null })}
+                  className="px-5 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 font-medium transition-colors flex-1"
+                >
+                  Cancel
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={confirmDeletePost}
+                  className="px-5 py-2.5 bg-gradient-to-r from-red-600 to-pink-600 text-white rounded-lg font-medium flex-1 shadow-sm hover:shadow-md transition-all"
+                >
+                  Delete
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      
       <Footer />
 
       <style dangerouslySetInnerHTML={{
