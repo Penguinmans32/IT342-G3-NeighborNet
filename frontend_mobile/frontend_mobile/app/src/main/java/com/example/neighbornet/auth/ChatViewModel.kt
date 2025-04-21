@@ -37,7 +37,8 @@ import javax.inject.Inject
 class ChatViewModel @Inject constructor(
     private val chatRepository: ChatRepository,
     private val tokenManager: TokenManager,
-    private val chatStateManager: ChatStateManager
+    private val chatStateManager: ChatStateManager,
+    private val stompClientProvider: StompClient
 ) : ViewModel() {
 
     val messages = chatStateManager.messages
@@ -48,7 +49,6 @@ class ChatViewModel @Inject constructor(
     private val _currentUser = MutableStateFlow<String?>(null)
     val currentUser: StateFlow<String?> = _currentUser.asStateFlow()
 
-    private var stompClient: StompClient? = null
     private var messageSubscription: StompSubscription? = null
 
     private val _currentUserId = MutableStateFlow<Long?>(null)
@@ -105,8 +105,8 @@ class ChatViewModel @Inject constructor(
                 val token = tokenManager.getToken()
                 if (token != null) {
                     chatStateManager.updateConnectionState(false)
-                    setupStompClient(token)
-                    subscribeToMessages(senderId.toString())
+                    // Connect to WebSocket using the injected stompClientProvider
+                    connectToWebSocket(token, senderId)
                     fetchExistingMessages(senderId, receiverId)
                 } else {
                     Log.e("ChatViewModel", "No token available")
@@ -118,34 +118,15 @@ class ChatViewModel @Inject constructor(
         }
     }
 
-    private fun setupStompClient(token: String) {
-        Log.d("ChatViewModel", "Setting up STOMP client")
-        val url = "http://10.0.191.212:8080/ws"
-        val client = OkHttpClient.Builder()
-            .addInterceptor { chain ->
-                val request = chain.request().newBuilder()
-                    .addHeader("Authorization", "Bearer $token")
-                    .build()
-                chain.proceed(request)
-            }
-            // Add WebSocket timeout configurations
-            .pingInterval(20, TimeUnit.SECONDS)
-            .readTimeout(30, TimeUnit.SECONDS)
-            .writeTimeout(30, TimeUnit.SECONDS)
-            .build()
-
-        stompClient = StompClient(url, client)
-
+    private fun connectToWebSocket(token: String, senderId: Long) {
         viewModelScope.launch {
             try {
-                stompClient?.connect(
+                stompClientProvider.connect(
                     onConnect = {
                         viewModelScope.launch {
                             Log.d("ChatViewModel", "WebSocket connected successfully")
                             chatStateManager.updateConnectionState(true)
-                            _currentUserId.value?.let { userId ->
-                                subscribeToMessages(userId.toString())
-                            }
+                            subscribeToMessages(senderId.toString())
                         }
                     },
                     onError = { error ->
@@ -153,7 +134,7 @@ class ChatViewModel @Inject constructor(
                         viewModelScope.launch {
                             chatStateManager.updateConnectionState(false)
                             delay(5000)
-                            setupStompClient(token)
+                            connectToWebSocket(token, senderId)
                         }
                     }
                 )
@@ -167,7 +148,7 @@ class ChatViewModel @Inject constructor(
     private fun subscribeToMessages(userId: String) {
         messageSubscription?.unsubscribe()
 
-        messageSubscription = stompClient?.subscribe(
+        messageSubscription = stompClientProvider.subscribe(
             destination = "/user/$userId/queue/messages",
             onMessage = { message ->
                 Log.d("ChatViewModel", "Received message: $message")
@@ -288,7 +269,7 @@ class ChatViewModel @Inject constructor(
                 val savedMessage = chatRepository.sendMessage(message)
 
                 // Then send via WebSocket for real-time delivery
-                stompClient?.send("/app/chat", savedMessage.toJson())
+                stompClientProvider.send("/app/chat", savedMessage.toJson())
 
                 // Update UI
                 chatStateManager.updateMessage { current ->
@@ -321,7 +302,7 @@ class ChatViewModel @Inject constructor(
                 val savedMessage = chatRepository.sendMessage(message)
 
                 // Send through WebSocket for real-time update
-                stompClient?.send("/app/chat", savedMessage.toJson())
+                stompClientProvider.send("/app/chat", savedMessage.toJson())
 
                 // Update UI
                 chatStateManager.updateMessage { current ->
@@ -354,11 +335,10 @@ class ChatViewModel @Inject constructor(
         }
     }
 
-
     override fun onCleared() {
         super.onCleared()
         messageSubscription?.unsubscribe()
-        stompClient?.disconnect()
+        stompClientProvider.disconnect()
     }
 
     suspend fun createConversation(userId1: Long, userId2: Long): ConversationDTO {
@@ -395,7 +375,7 @@ class ChatViewModel @Inject constructor(
             chatStateManager.clearAll()
             _isInitialized.value = false
             messageSubscription?.unsubscribe()
-            stompClient?.disconnect()
+            stompClientProvider.disconnect()
         }
     }
 
@@ -403,7 +383,7 @@ class ChatViewModel @Inject constructor(
         viewModelScope.launch {
             chatStateManager.clearAll()
             messageSubscription?.unsubscribe()
-            stompClient?.disconnect()
+            stompClientProvider.disconnect()
         }
     }
 }

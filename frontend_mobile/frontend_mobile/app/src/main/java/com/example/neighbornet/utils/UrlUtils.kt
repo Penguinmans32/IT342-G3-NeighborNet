@@ -1,7 +1,7 @@
 package com.example.neighbornet.utils
 
 object UrlUtils {
-    private const val BASE_URL = "http://10.0.191.212:8080"
+    private const val BASE_URL = "https://it342-g3-neighbornet.onrender.com"
     private const val LOCALHOST = "http://localhost:8080"
 
     fun getFullImageUrl(url: String?): String {
