@@ -31,40 +31,6 @@ import Footer from "./SplashScreen/Footer"
 import { useAuth } from "../backendApi/AuthContext"
 
 
-const ActivityPagination = ({ currentPage, totalPages, onPageChange }) => {
-  return (
-    <div className="flex justify-center items-center gap-2 mt-6">
-      <button
-        onClick={() => onPageChange(currentPage - 1)}
-        disabled={currentPage === 1}
-        className={`p-2 rounded-lg ${
-          currentPage === 1
-            ? 'text-gray-400 cursor-not-allowed'
-            : 'text-blue-600 hover:bg-blue-50'
-        }`}
-      >
-        <ArrowLeft className="h-4 w-4" />
-      </button>
-      
-      <span className="text-sm text-gray-600">
-        Page {currentPage} of {totalPages}
-      </span>
-
-      <button
-        onClick={() => onPageChange(currentPage + 1)}
-        disabled={currentPage === totalPages}
-        className={`p-2 rounded-lg ${
-          currentPage === totalPages
-            ? 'text-gray-400 cursor-not-allowed'
-            : 'text-blue-600 hover:bg-blue-50'
-        }`}
-      >
-        <ArrowRight className="h-4 w-4" />
-      </button>
-    </div>
-  );
-};
-
 export default function Profile() {
   const { user } = useAuth()
   const router = useNavigate()
@@ -102,6 +68,24 @@ export default function Profile() {
   const [showTooltip, setShowTooltip] = useState(false)
   const [scrollY, setScrollY] = useState(0)
   const profileRef = useRef(null)
+
+  const getItemImageUrl = (imageUrl) => {
+    if (!imageUrl) return "/images/no-image.png";
+    
+    if (imageUrl.startsWith('http')) return imageUrl;
+    
+    if (imageUrl.includes('/api/borrowing/items/images/')) {
+      try {
+        const filename = imageUrl.substring(imageUrl.lastIndexOf('/') + 1);
+        return `https://storage.googleapis.com/neighbornet-media/item-images/${filename}`;
+      } catch (error) {
+        console.error("Error parsing image URL:", error);
+        return "/images/no-image.png";
+      }
+    }
+    
+    return imageUrl;
+  };
 
 
   const handleFollowToggle = async () => {
@@ -820,11 +804,11 @@ export default function Profile() {
                                   <h3 className="font-medium text-slate-800 mb-1 line-clamp-1">{classItem.title}</h3>
                                   <p className="text-sm text-slate-500 line-clamp-2">{classItem.description}</p>
                                   <div className="mt-3 flex items-center gap-2">
-                                    <img
-                                      src={classItem.creator?.imageUrl || "/images/defaultProfile.png"}
-                                      alt={classItem.creatorName}
-                                      className="w-6 h-6 rounded-full object-cover"
-                                    />
+                                  <img
+                                    src={getItemImageUrl(classItem.creator?.imageUrl) || "/images/defaultProfile.png"}
+                                    alt={classItem.creatorName}
+                                    className="w-6 h-6 rounded-full object-cover"
+                                  />
                                     <span className="text-xs text-slate-600">{classItem.creatorName}</span>
                                   </div>
                                 </div>

@@ -16,7 +16,7 @@ const Testimonials = () => {
       webAdditionalInfo: "Full keyboard support for fast typing",
       mobileAdditionalInfo: "On-the-go chat with push notifications",
       icon: <Zap className="w-5 h-5" />,
-      mobileScreenshot: "/images/chat-mobile.png",
+      mobileScreenshot: "/images/chat-mobile.jpg",
       webScreenshot: "/images/Web-Chat.png"
     },
     {
@@ -27,7 +27,7 @@ const Testimonials = () => {
       webAdditionalInfo: "Advanced agreement templates and calendar integration",
       mobileAdditionalInfo: "Quick agreements with predefined terms",
       icon: <Clock className="w-5 h-5" />,
-      mobileScreenshot: "/images/borrow-mobile.png",
+      mobileScreenshot: "/images/borrowing-web.jpg",
       webScreenshot: "/images/Web-Borrowing.png"
     },
     {
@@ -49,7 +49,7 @@ const Testimonials = () => {
       webAdditionalInfo: "Picture-in-picture and speed controls",
       mobileAdditionalInfo: "Offline download support for on-the-go learning",
       icon: <Shield className="w-5 h-5" />,
-      mobileScreenshot: "/images/video-mobile.png",
+      mobileScreenshot: "/images/Lesson-web.jpg",
       webScreenshot: "/images/Web-Lesson.png"
     }
   ];
