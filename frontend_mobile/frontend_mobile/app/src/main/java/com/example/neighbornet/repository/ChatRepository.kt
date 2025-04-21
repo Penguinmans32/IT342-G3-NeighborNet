@@ -28,7 +28,7 @@ class ChatRepository @Inject constructor(
     private val tokenManager: TokenManager,
     @ApplicationContext private val context: Context
 ) {
-    private val baseUrl = "http://10.0.191.212:8080"
+    private val baseUrl = "https://it342-g3-neighbornet.onrender.com"
 
     suspend fun getMessages(senderId: Long, receiverId: Long): List<Message> {
         return withContext(Dispatchers.IO) {
@@ -72,15 +72,12 @@ class ChatRepository @Inject constructor(
                 val requestBody = file.asRequestBody("image/*".toMediaTypeOrNull())
                 val part = MultipartBody.Part.createFormData("image", file.name, requestBody)
 
-                // Get the image URL from the server
                 val imageUrl = api.uploadImage(part)
 
-                // Delete the temp file
                 file.delete()
 
-                // Return the complete URL
                 if (!imageUrl.startsWith("http")) {
-                    "http://10.0.191.212:8080$imageUrl"  // Add your base URL
+                    "$baseUrl$imageUrl"
                 } else {
                     imageUrl
                 }

@@ -76,7 +76,7 @@ object NetworkModule {
         okHttpClient: OkHttpClient,
         @ApplicationContext context: Context
     ): StompClient {
-        val wsUrl = "ws://10.0.191.212:8080/ws"
+        val wsUrl = "wss://it342-g3-neighbornet.onrender.com/ws"
         return StompClient(wsUrl, okHttpClient)
     }
 
@@ -108,7 +108,7 @@ object NetworkModule {
     @Singleton
     fun provideRetrofit(okHttpClient: OkHttpClient, gson: Gson): Retrofit {
         return Retrofit.Builder()
-            .baseUrl("http://10.0.191.212:8080/")
+            .baseUrl("https://it342-g3-neighbornet.onrender.com/")
             .client(okHttpClient)
             .addConverterFactory(ScalarsConverterFactory.create())
             .addConverterFactory(LoggingGsonConverterFactory.create(gson))

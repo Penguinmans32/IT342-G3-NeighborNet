@@ -11,10 +11,13 @@ import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import android.util.Log
+import androidx.annotation.OptIn
 import androidx.media3.common.PlaybackException
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.datasource.DefaultHttpDataSource
 
+@OptIn(UnstableApi::class)
 @Composable
 fun VideoPlayer(
     videoUrl: String,
@@ -26,7 +29,7 @@ fun VideoPlayer(
 
     // Add logging
     val filename = videoUrl.substringAfterLast("/")
-    val fullVideoUrl = "http://10.0.191.212:8080/api/classes/$classId/lessons/video/$filename"
+    val fullVideoUrl = "https://it342-g3-neighbornet.onrender.com/api/classes/$classId/lessons/video/$filename"
 
     Log.d("VideoPlayer", "Original videoUrl: $videoUrl")
     Log.d("VideoPlayer", "Constructed fullVideoUrl: $fullVideoUrl")

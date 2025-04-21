@@ -6,6 +6,7 @@ import com.example.neighbornet.network.FeedbackRequest
 import com.example.neighbornet.network.FeedbackResponse
 import com.example.neighbornet.network.LessonProgress
 import com.example.neighbornet.network.LessonResponse
+import com.example.neighbornet.network.PaginatedClassResponse
 import com.example.neighbornet.network.RatingRequest
 import com.example.neighbornet.network.RatingResponse
 import com.example.neighbornet.network.UpdateProgressRequest
@@ -17,7 +18,7 @@ import retrofit2.http.Path
 
 interface ClassApiService {
     @GET("api/classes/all")
-    suspend fun getAllClasses(): Response<List<ClassResponse>>
+    suspend fun getAllClasses(): Response<PaginatedClassResponse>
 
     @GET("api/classes/{id}")
     suspend fun getClassById(@Path("id") id: Long): Response<Class>
