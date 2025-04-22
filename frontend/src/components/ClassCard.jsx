@@ -20,17 +20,15 @@ const getThumbnailUrl = (thumbnailUrl) => {
   return thumbnailUrl;
 };
 
-// Handle different types of image URLs
+
 const getCorrectImageUrl = (imageUrl, isProfileImage = false) => {
   if (!imageUrl) return isProfileImage ? DEFAULT_PROFILE_IMAGE : DEFAULT_CLASS_IMAGE;
   
-  // Handle profile pictures from Google Cloud Storage
   if (isProfileImage && imageUrl.includes('/api/users/profile-pictures/')) {
     const filename = imageUrl.substring(imageUrl.lastIndexOf('/') + 1);
     return `https://storage.googleapis.com/neighbornet-media/profile-pictures/${filename}`;
   }
   
-  // Handle class thumbnails from Google Cloud Storage
   if (!isProfileImage && imageUrl.includes('/api/classes/thumbnail/')) {
     return getThumbnailUrl(imageUrl);
   }
