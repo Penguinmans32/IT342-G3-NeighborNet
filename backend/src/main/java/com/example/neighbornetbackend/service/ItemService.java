@@ -385,4 +385,26 @@ public class ItemService {
                 )
                 .collect(Collectors.toList());
     }
+
+    @Transactional(readOnly = true)
+    public List<ItemDTO> getAllItemsWithoutActivityLogging() {
+        LocalDate today = LocalDate.now();
+        LocalDate nearExpirationThreshold = today.plusDays(3);
+
+        return itemRepository.findAll().stream()
+                .filter(item -> {
+                    LocalDate availableUntil = item.getAvailableUntil();
+                    if (availableUntil == null || availableUntil.isBefore(today)) {
+                        return false;
+                    }
+                    return true;
+                })
+                .map(item -> {
+                    ItemDTO dto = convertToDTO(item);
+                    dto.setExpirationStatus(getExpirationStatus(item.getAvailableUntil()));
+                    dto.setImageUrls(new ArrayList<>(item.getImageUrls()));
+                    return dto;
+                })
+                .collect(Collectors.toList());
+    }
 }

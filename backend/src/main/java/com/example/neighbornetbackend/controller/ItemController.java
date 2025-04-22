@@ -64,8 +64,7 @@ public class ItemController {
     public ResponseEntity<List<ItemDTO>> getAllItems() {
         try {
             logger.debug("Getting all items");
-            List<ItemDTO> items = itemService.getAllItems();
-            // Force initialization of collections
+            List<ItemDTO> items = itemService.getAllItemsWithoutActivityLogging();
             items.forEach(item -> {
                 if (item.getImageUrls() == null) {
                     item.setImageUrls(new ArrayList<>());
