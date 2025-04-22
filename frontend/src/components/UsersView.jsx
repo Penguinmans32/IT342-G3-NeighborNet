@@ -42,6 +42,34 @@ export default function UsersView() {
     setShowEditModal(true);
   };
 
+  const getCorrectImageUrl = (imageUrl, isProfileImage = false) => {
+    if (!imageUrl) return isProfileImage ? DEFAULT_PROFILE_IMAGE : DEFAULT_CLASS_IMAGE;
+    
+    if (isProfileImage && imageUrl.includes('/api/users/profile-pictures/')) {
+      const filename = imageUrl.substring(imageUrl.lastIndexOf('/') + 1);
+      return `https://storage.googleapis.com/neighbornet-media/profile-pictures/${filename}`;
+    }
+    
+    if (!isProfileImage && imageUrl.includes('/api/classes/thumbnail/')) {
+      return getThumbnailUrl(imageUrl);
+    }
+    
+    if (imageUrl.includes('localhost:8080')) {
+      const path = imageUrl.split('localhost:8080')[1];
+      return `https://it342-g3-neighbornet.onrender.com${path}`;
+    }
+    
+    if (imageUrl.startsWith("http")) {
+      return imageUrl;
+    }
+    
+    if (imageUrl.startsWith("/api/")) {
+      return `https://it342-g3-neighbornet.onrender.com${imageUrl}`;
+    }
+    
+    return imageUrl;
+  };
+
   const handleAddUser = async (userData) => {
     try {
       await axios.post(
@@ -307,11 +335,11 @@ export default function UsersView() {
                 >
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <img 
-                        className="h-10 w-10 rounded-full" 
-                        src={user.imageUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username)}&background=random`} 
-                        alt="" 
-                      />
+                    <img 
+                      className="h-10 w-10 rounded-full" 
+                      src={getCorrectImageUrl(user.imageUrl, true) || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username)}&background=random`} 
+                      alt="" 
+                    />
                       <div className="ml-4">
                         <div className="text-sm font-medium text-gray-900">{user.username}</div>
                         <div className="text-sm text-gray-500">{user.email}</div>

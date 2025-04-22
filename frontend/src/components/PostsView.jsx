@@ -26,10 +26,55 @@ export default function PostsView() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedPost, setSelectedPost] = useState(null);
 
+  const DEFAULT_CLASS_IMAGE = "/images/defaultProfile.png"; 
+  const DEFAULT_PROFILE_IMAGE = "/images/defaultProfile.png";
+
   useEffect(() => {
     fetchStats();
     fetchPosts();
   }, [search]);
+
+  const getCorrectImageUrl = (imageUrl, isProfileImage = false) => {
+    if (!imageUrl) return isProfileImage ? DEFAULT_PROFILE_IMAGE : DEFAULT_CLASS_IMAGE;
+    
+    if (isProfileImage && imageUrl.includes('/api/users/profile-pictures/')) {
+      const filename = imageUrl.substring(imageUrl.lastIndexOf('/') + 1);
+      return `https://storage.googleapis.com/neighbornet-media/profile-pictures/${filename}`;
+    }
+    
+    if (!isProfileImage && imageUrl.includes('/api/classes/thumbnail/')) {
+      return getThumbnailUrl(imageUrl);
+    }
+    
+    if (imageUrl.includes('localhost:8080')) {
+      const path = imageUrl.split('localhost:8080')[1];
+      return `https://it342-g3-neighbornet.onrender.com${path}`;
+    }
+    
+    if (imageUrl.startsWith("http")) {
+      return imageUrl;
+    }
+    
+    if (imageUrl.startsWith("/api/")) {
+      return `https://it342-g3-neighbornet.onrender.com${imageUrl}`;
+    }
+    
+    return imageUrl;
+  };
+
+  const getPostImageUrl = (imageUrl) => {
+    if (!imageUrl) return "/placeholder.svg";
+    
+    if (imageUrl.startsWith('http')) return imageUrl;
+    
+    if (imageUrl.includes('/api/posts/images/')) {
+      const filename = imageUrl.substring(imageUrl.lastIndexOf('/') + 1);
+      
+      return `https://storage.googleapis.com/neighbornet-media/post-images/${filename}`;
+    }
+    
+    return imageUrl;
+  };
 
   const fetchStats = async () => {
     try {
@@ -175,11 +220,11 @@ export default function PostsView() {
               {/* Post Header */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <img
-                    src={post.author.imageUrl || `https://ui-avatars.com/api/?name=${post.author.username}&background=random`}
-                    alt={post.author.username}
-                    className="w-12 h-12 rounded-full object-cover"
-                  />
+                <img
+                  src={getCorrectImageUrl(post.author.imageUrl, true)}
+                  alt={post.author.username}
+                  className="w-12 h-12 rounded-full object-cover"
+                />
                   <div>
                     <h3 className="font-semibold text-gray-800">{post.author.username}</h3>
                     <div className="flex items-center gap-2 text-sm text-gray-500">
@@ -206,10 +251,10 @@ export default function PostsView() {
                 <p className="text-gray-700 whitespace-pre-line">{post.content}</p>
                 {post.imageUrl && (
                   <img
-                    src={post.imageUrl}
-                    alt="Post content"
-                    className="mt-4 rounded-lg w-full"
-                  />
+                  src={getPostImageUrl(post.imageUrl)}
+                  alt="Post content"
+                  className="mt-4 rounded-lg w-full"
+                />
                 )}
               </div>
 

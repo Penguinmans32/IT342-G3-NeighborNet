@@ -37,7 +37,8 @@ public class CacheConfig {
                 new ConcurrentMapCache("unreadNotificationsCount"),
                 new ConcurrentMapCache("quizById"),
                 new ConcurrentMapCache("quizzesByClass"),
-                new ConcurrentMapCache("quizAttempts")
+                new ConcurrentMapCache("quizAttempts"),
+                new ConcurrentMapCache("adminClassStats")
         ));
         return cacheManager;
     }
