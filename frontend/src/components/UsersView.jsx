@@ -42,6 +42,10 @@ export default function UsersView() {
     setShowEditModal(true);
   };
 
+    
+  const DEFAULT_CLASS_IMAGE = "/images/defaultProfile.png"; 
+  const DEFAULT_PROFILE_IMAGE = "/images/defaultProfile.png";
+
   const getCorrectImageUrl = (imageUrl, isProfileImage = false) => {
     if (!imageUrl) return isProfileImage ? DEFAULT_PROFILE_IMAGE : DEFAULT_CLASS_IMAGE;
     
