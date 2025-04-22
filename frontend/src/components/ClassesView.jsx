@@ -100,7 +100,8 @@ export default function ClassesView() {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
-      setClasses(response.data.data);
+      
+      setClasses(response.data.data.classes || []);
       setLoading(false);
       console.log(response.data.data);
     } catch (error) {
