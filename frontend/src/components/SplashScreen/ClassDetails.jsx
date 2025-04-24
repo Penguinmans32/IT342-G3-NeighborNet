@@ -228,26 +228,6 @@ const FeedbackItemEnhanced = ({ feedback, currentUserId, onHelpful, onReport, on
                   </>
                 )}
               </motion.button>
-
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={handleReport}
-                disabled={isReportLoading}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm
-                  ${
-                    feedback.isReported ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  } transition-colors`}
-              >
-                {isReportLoading ? (
-                  <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <>
-                    <MdFlag className={feedback.isReported ? "text-red-500" : ""} />
-                    <span>Report</span>
-                  </>
-                )}
-              </motion.button>
             </div>
           </div>
         </div>

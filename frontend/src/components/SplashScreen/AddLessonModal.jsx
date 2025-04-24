@@ -11,6 +11,7 @@ const AddLessonModal = ({ isOpen, onClose, onSubmit, classId }) => {
   });
   
   const [dragActive, setDragActive] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false); 
   const inputRef = useRef(null);
   const modalRef = useRef(null);
   
@@ -22,6 +23,8 @@ const AddLessonModal = ({ isOpen, onClose, onSubmit, classId }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsSubmitting(true); 
+    
     const formData = new FormData();
     formData.append('title', lessonData.title);
     formData.append('description', lessonData.description);
@@ -31,8 +34,14 @@ const AddLessonModal = ({ isOpen, onClose, onSubmit, classId }) => {
       formData.append('parentLessonId', lessonData.parentLessonId);
     }
 
-    await onSubmit(formData);
-    onClose();
+    try {
+      await onSubmit(formData);
+      onClose();
+    } catch (error) {
+      console.error("Error submitting lesson:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
   
   const handleDrag = (e) => {
@@ -110,6 +119,12 @@ const AddLessonModal = ({ isOpen, onClose, onSubmit, classId }) => {
       scale: 0.95,
       transition: { duration: 0.2 } 
     }
+  };
+
+  const spinTransition = {
+    repeat: Infinity,
+    ease: "linear",
+    duration: 1
   };
 
   return (
@@ -260,19 +275,36 @@ const AddLessonModal = ({ isOpen, onClose, onSubmit, classId }) => {
                   whileTap={{ scale: 0.98 }}
                   type="button"
                   onClick={onClose}
+                  disabled={isSubmitting}
                   className="px-6 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 
-                    text-gray-700 dark:text-gray-300 font-medium transition-all duration-200"
+                    text-gray-700 dark:text-gray-300 font-medium transition-all duration-200 disabled:opacity-50"
                 >
                   Cancel
                 </motion.button>
                 <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
+                  whileHover={{ scale: isSubmitting ? 1 : 1.02 }}
+                  whileTap={{ scale: isSubmitting ? 1 : 0.98 }}
                   type="submit"
+                  disabled={isSubmitting}
                   className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-medium shadow-md 
-                    hover:shadow-lg transition-all duration-200"
+                    hover:shadow-lg transition-all duration-200 disabled:opacity-90 relative overflow-hidden"
                 >
-                  Create Lesson
+                  <span className={`flex items-center justify-center ${isSubmitting ? 'opacity-0' : 'opacity-100'}`}>
+                    Create Lesson
+                  </span>
+                  
+                  {isSubmitting && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="flex items-center space-x-2">
+                        <motion.span 
+                          animate={{ rotate: 360 }}
+                          transition={spinTransition}
+                          className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"
+                        />
+                        <span className="text-sm">Uploading...</span>
+                      </div>
+                    </div>
+                  )}
                 </motion.button>
               </div>
             </form>
