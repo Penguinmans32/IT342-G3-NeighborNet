@@ -421,7 +421,9 @@ public class ClassController {
     }
 
     @DeleteMapping("/{classId}/feedback/{feedbackId}")
+    @CacheEvict(value = "classFeedbacks", key = "#classId + '_' + #currentUser.id")
     public ResponseEntity<?> deleteFeedback(
+            @PathVariable Long classId,
             @PathVariable Long feedbackId,
             @CurrentUser UserPrincipal currentUser
     ) {

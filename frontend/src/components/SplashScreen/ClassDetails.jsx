@@ -547,6 +547,10 @@ const ClassDetails = () => {
     completedQuizzes: new Set(),
     currentQuizIndex: 0
   })
+  const [deleteConfirmation, setDeleteConfirmation] = useState({
+    isOpen: false,
+    feedbackId: null
+  });
 
 
   useEffect(() => {
@@ -694,23 +698,36 @@ const ClassDetails = () => {
   }
 
   const handleDeleteFeedback = async (feedbackId) => {
-    if (!window.confirm("Are you sure you want to delete this feedback?")) {
-      return
-    }
+    setDeleteConfirmation({
+      isOpen: true,
+      feedbackId
+    });
+  };
 
+  const confirmDelete = async () => {
+    const feedbackId = deleteConfirmation.feedbackId;
+    
     try {
-      const token = localStorage.getItem("token")
-      const headers = { Authorization: `Bearer ${token}` }
-
-      await axios.delete(`https://it342-g3-neighbornet.onrender.com/api/classes/${classId}/feedback/${feedbackId}`, { headers })
-
-      await fetchClassFeedbacks()
-      toast.success("Feedback deleted successfully")
+      const token = localStorage.getItem("token");
+      const headers = { Authorization: `Bearer ${token}` };
+  
+      await axios.delete(`https://it342-g3-neighbornet.onrender.com/api/classes/${classId}/feedback/${feedbackId}`, { headers });
+  
+      setFeedbacks(current => current.filter(feedback => feedback.id !== feedbackId));
+      
+      await fetchClassFeedbacks();
+      toast.success("Feedback deleted successfully");
     } catch (error) {
-      console.error("Failed to delete feedback:", error)
-      toast.error("Failed to delete feedback")
+      console.error("Failed to delete feedback:", error);
+      toast.error("Failed to delete feedback");
+    } finally {
+      setDeleteConfirmation({ isOpen: false, feedbackId: null });
     }
-  }
+  };
+  
+  const cancelDelete = () => {
+    setDeleteConfirmation({ isOpen: false, feedbackId: null });
+  };
 
   const handleSubmitFeedback = async (e) => {
     e.preventDefault()
@@ -1958,6 +1975,48 @@ const ClassDetails = () => {
         </div>
       </div>
 
+
+      {/* Confirmation Dialog */}
+        {deleteConfirmation.isOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <div 
+              className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-scale-in"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="bg-gradient-to-r from-red-500 to-red-600 p-4 relative">
+                <div className="flex items-center">
+                  <div className="bg-white/20 p-2 rounded-full mr-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <h3 className="text-xl font-bold text-white">Delete Feedback</h3>
+                </div>
+              </div>
+              
+              <div className="p-5">
+                <p className="text-gray-700 dark:text-gray-300 mb-6">
+                  Are you sure you want to delete this feedback? This action cannot be undone.
+                </p>
+                
+                <div className="flex justify-end gap-3">
+                  <button
+                    onClick={cancelDelete}
+                    className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={confirmDelete}
+                    className="px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg font-medium shadow-md hover:shadow-lg transition-all"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       <Footer />
     </div>
   )
