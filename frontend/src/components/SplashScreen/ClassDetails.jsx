@@ -114,18 +114,6 @@ const FeedbackItemEnhanced = ({ feedback, currentUserId, onHelpful, onReport, on
     }
   }
 
-  const handleReport = async () => {
-    setIsReportLoading(true)
-    try {
-      await onReport(feedback.id)
-      toast.success("Feedback reported")
-    } catch (error) {
-      toast.error("Failed to report feedback")
-    } finally {
-      setIsReportLoading(false)
-    }
-  }
-
   return (
     <motion.div
       whileHover={{ y: -3 }}
@@ -187,10 +175,7 @@ const FeedbackItemEnhanced = ({ feedback, currentUserId, onHelpful, onReport, on
                   </button>
                   <button
                     onClick={() => {
-                      setDeleteConfirmation({
-                        isOpen: true,
-                        feedbackId: feedback.id
-                      });
+                      onDelete(feedback.id);
                       setShowActionsMenu(false);
                     }}
                     className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
