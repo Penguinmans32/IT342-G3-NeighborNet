@@ -4,7 +4,53 @@ import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { useNavigate } from "react-router-dom"
 import { toast } from "react-hot-toast"
-import { BookOpen, Users, ChevronRight, Copy, ExternalLink, Key, Home, Sparkles } from "lucide-react"
+import { BookOpen, Users, ChevronRight, Copy, ExternalLink, Key, Home, Sparkles, Loader } from "lucide-react"
+
+// Loading Component
+const LoadingScreen = () => {
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-white to-emerald-50">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5 }}
+        className="text-center"
+      >
+        <motion.div
+          animate={{ 
+            rotate: 360,
+            transition: { 
+              duration: 2, 
+              ease: "linear", 
+              repeat: Infinity 
+            }
+          }}
+          className="inline-flex mb-6"
+        >
+          <BookOpen size={48} className="text-emerald-600" />
+        </motion.div>
+        
+        <h2 className="text-2xl font-bold text-gray-800 mb-2">Loading Study Rooms</h2>
+        <p className="text-gray-600">Please wait while we prepare your learning environment...</p>
+        
+        <div className="mt-8 flex justify-center">
+          <div className="relative w-64 h-2 bg-gray-200 rounded-full overflow-hidden">
+            <motion.div
+              initial={{ width: "0%" }}
+              animate={{ width: "100%" }}
+              transition={{ 
+                duration: 2.5, 
+                ease: "easeInOut",
+                repeat: Infinity
+              }}
+              className="absolute top-0 left-0 h-full bg-gradient-to-r from-emerald-500 to-emerald-300 rounded-full"
+            />
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
 
 const ReturnLinkModal = ({ isOpen, onClose, onContinue }) => {
     const appUrl = window.location.origin;
@@ -272,6 +318,8 @@ const StudyRooms = () => {
   const [newRoomDescription, setNewRoomDescription] = useState("")
   const [roomCodes, setRoomCodes] = useState(null)
   const [selectedRoom, setSelectedRoom] = useState(null)
+  const [isLoading, setIsLoading] = useState(true) // Add loading state
+  const [loadError, setLoadError] = useState(null) // Add error state
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -288,6 +336,7 @@ const StudyRooms = () => {
 
   const fetchRooms = async () => {
     try {
+      setLoadError(null); // Reset any previous errors
       const response = await fetch("https://it342-g3-neighbornet.onrender.com/api/rooms", {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -306,6 +355,7 @@ const StudyRooms = () => {
       )
     } catch (error) {
       console.error("Error fetching rooms:", error)
+      setLoadError("Failed to load study rooms. Please try refreshing the page.");
       toast.error("Failed to load study rooms", {
         style: {
           borderRadius: "10px",
@@ -314,6 +364,8 @@ const StudyRooms = () => {
         },
       })
       setRooms([])
+    } finally {
+      setIsLoading(false); // Set loading to false whether successful or not
     }
   }
 
@@ -358,6 +410,37 @@ const StudyRooms = () => {
         },
       })
     }
+  }
+
+  // If loading, show loading screen
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
+
+  // If there was an error loading, show error message
+  if (loadError) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-white to-emerald-50 p-4">
+        <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full text-center border border-red-100">
+          <div className="bg-red-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Unable to Load Study Rooms</h2>
+          <p className="text-gray-600 mb-6">{loadError}</p>
+          <button 
+            onClick={() => {
+              setIsLoading(true);
+              fetchRooms();
+            }}
+            className="px-6 py-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 mx-auto"
+          >
+            <Loader size={18} /> Retry Loading
+          </button>
+        </div>
+      </div>
+    );
   }
 
   // Sample room data for empty state
