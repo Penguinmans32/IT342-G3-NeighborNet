@@ -434,6 +434,7 @@ public class ClassController {
     }
 
     @PostMapping("/{feedbackId}/react")
+    @CacheEvict(value = "classFeedbacks", key = "#classId + '_' + #currentUser.id")
     public ResponseEntity<FeedbackResponse> reactToFeedback(
             @PathVariable Long feedbackId,
             @RequestBody ReactionRequest request,
