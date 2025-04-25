@@ -745,12 +745,13 @@ const Dashboard = () => {
         animate={{ opacity: 1, x: 0 }}
         transition={{ delay: 0.2 }}
         onClick={() => navigate("/homepage")}
-        className="absolute top-4 left-4 z-10 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 
-                text-white rounded-full hover:shadow-lg transition-all duration-300 ease-in-out
-                font-medium hover:scale-105 flex items-center gap-2"
+        className="fixed top-4 left-4 z-50 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 
+                  text-white rounded-full hover:shadow-lg transition-all duration-300 ease-in-out
+                  font-medium hover:scale-105 flex items-center gap-2 text-sm md:text-base
+                  md:px-5 md:py-2.5"
       >
-        <ChevronRight className="w-4 h-4 rotate-180" />
-        Homepage
+        <ChevronRight className="w-3 h-3 md:w-4 md:h-4 rotate-180" />
+        <span>Homepage</span>
       </motion.button>
 
       {/* Main Content */}
