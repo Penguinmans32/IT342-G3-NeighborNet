@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MdClose, MdCloudUpload, MdVideoLibrary, MdCheck } from 'react-icons/md';
 
@@ -15,14 +15,27 @@ const AddLessonModal = ({ isOpen, onClose, onSubmit, classId }) => {
   const inputRef = useRef(null);
   const modalRef = useRef(null);
   
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'auto';
+    }
+    
+    return () => {
+      document.body.style.overflow = 'auto';
+    };
+  }, [isOpen]);
+  
   const handleBackdropClick = (e) => {
-    if (modalRef.current && !modalRef.current.contains(e.target)) {
+    if (e.target === e.currentTarget) {
       onClose();
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    e.stopPropagation(); 
     setIsSubmitting(true); 
     
     const formData = new FormData();
@@ -68,12 +81,14 @@ const AddLessonModal = ({ isOpen, onClose, onSubmit, classId }) => {
   };
   
   const handleFileChange = (e) => {
+    e.stopPropagation(); 
     if (e.target.files && e.target.files[0]) {
       setLessonData({ ...lessonData, videoFile: e.target.files[0] });
     }
   };
   
-  const activateBrowse = () => {
+  const activateBrowse = (e) => {
+    e.stopPropagation();
     inputRef.current?.click();
   };
   
@@ -92,7 +107,7 @@ const AddLessonModal = ({ isOpen, onClose, onSubmit, classId }) => {
     },
     exit: { 
       opacity: 0,
-      transition: { duration: 0.2, delay: 0.1 } 
+      transition: { duration: 0.15 } 
     }
   };
 
@@ -109,15 +124,14 @@ const AddLessonModal = ({ isOpen, onClose, onSubmit, classId }) => {
       transition: { 
         type: "spring",
         damping: 25,
-        stiffness: 300,
-        duration: 0.3
+        stiffness: 300
       }
     },
     exit: { 
       y: 20,
       opacity: 0,
       scale: 0.95,
-      transition: { duration: 0.2 } 
+      transition: { duration: 0.15 } 
     }
   };
 
@@ -126,22 +140,31 @@ const AddLessonModal = ({ isOpen, onClose, onSubmit, classId }) => {
     ease: "linear",
     duration: 1
   };
+  
+  if (!isOpen) return null;
 
   return (
-    <AnimatePresence mode="wait">
-      {isOpen && (
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          exit="exit"
-          variants={backdropVariants}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-          onClick={handleBackdropClick}
-        >
+    <div className="fixed inset-0 z-50 overflow-hidden">
+      <motion.div
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+        variants={backdropVariants}
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+        onClick={handleBackdropClick}
+        style={{ willChange: 'opacity' }}
+      />
+      
+      <div className="fixed inset-0 z-50 overflow-y-auto">
+        <div className="flex min-h-full items-center justify-center p-4">
           <motion.div
             ref={modalRef}
             variants={modalVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
             className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden"
+            style={{ willChange: 'transform, opacity' }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header with gradient */}
@@ -151,7 +174,10 @@ const AddLessonModal = ({ isOpen, onClose, onSubmit, classId }) => {
                 <motion.button
                   whileHover={{ scale: 1.1, rotate: 90 }}
                   whileTap={{ scale: 0.9 }}
-                  onClick={onClose}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onClose();
+                  }}
                   className="p-2 hover:bg-white/20 rounded-full transition-colors text-white"
                 >
                   <MdClose className="text-xl" />
@@ -164,7 +190,7 @@ const AddLessonModal = ({ isOpen, onClose, onSubmit, classId }) => {
               </div>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-6">
+            <form onSubmit={handleSubmit} className="p-6 space-y-6" onClick={(e) => e.stopPropagation()}>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Lesson Title
@@ -172,11 +198,15 @@ const AddLessonModal = ({ isOpen, onClose, onSubmit, classId }) => {
                 <input
                   type="text"
                   value={lessonData.title}
-                  onChange={(e) => setLessonData({ ...lessonData, title: e.target.value })}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    setLessonData({ ...lessonData, title: e.target.value });
+                  }}
                   className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 
                     focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all duration-200"
                   placeholder="Enter an engaging lesson title"
                   required
+                  onClick={(e) => e.stopPropagation()}
                 />
               </div>
 
@@ -186,17 +216,21 @@ const AddLessonModal = ({ isOpen, onClose, onSubmit, classId }) => {
                 </label>
                 <textarea
                   value={lessonData.description}
-                  onChange={(e) => setLessonData({ ...lessonData, description: e.target.value })}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    setLessonData({ ...lessonData, description: e.target.value });
+                  }}
                   className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 
                     focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all duration-200"
                   placeholder="Describe what students will learn in this lesson"
                   rows={4}
                   required
+                  onClick={(e) => e.stopPropagation()}
                 />
               </div>
 
               {/* Improved video upload area */}
-              <div>
+              <div onClick={(e) => e.stopPropagation()}>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Video Content
                 </label>
@@ -220,6 +254,7 @@ const AddLessonModal = ({ isOpen, onClose, onSubmit, classId }) => {
                     className="hidden"
                     id="video-upload"
                     required
+                    onClick={(e) => e.stopPropagation()}
                   />
                   
                   <div className="p-8 flex flex-col items-center justify-center">
@@ -243,7 +278,13 @@ const AddLessonModal = ({ isOpen, onClose, onSubmit, classId }) => {
                                   {getVideoDuration(lessonData.videoFile)}
                                 </span>
                               </div>
-                              <span className="text-sm text-blue-500 hover:underline">Change</span>
+                              <span 
+                                className="text-sm text-blue-500 hover:underline"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  activateBrowse(e);
+                                }}
+                              >Change</span>
                             </div>
                           </div>
                         </div>
@@ -269,12 +310,15 @@ const AddLessonModal = ({ isOpen, onClose, onSubmit, classId }) => {
                 </div>
               </div>
 
-              <div className="flex justify-end gap-4 pt-2">
+              <div className="flex justify-end gap-4 pt-2" onClick={(e) => e.stopPropagation()}>
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   type="button"
-                  onClick={onClose}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onClose();
+                  }}
                   disabled={isSubmitting}
                   className="px-6 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 
                     text-gray-700 dark:text-gray-300 font-medium transition-all duration-200 disabled:opacity-50"
@@ -288,6 +332,7 @@ const AddLessonModal = ({ isOpen, onClose, onSubmit, classId }) => {
                   disabled={isSubmitting}
                   className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-medium shadow-md 
                     hover:shadow-lg transition-all duration-200 disabled:opacity-90 relative overflow-hidden"
+                  onClick={(e) => e.stopPropagation()}
                 >
                   <span className={`flex items-center justify-center ${isSubmitting ? 'opacity-0' : 'opacity-100'}`}>
                     Create Lesson
@@ -309,9 +354,9 @@ const AddLessonModal = ({ isOpen, onClose, onSubmit, classId }) => {
               </div>
             </form>
           </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+        </div>
+      </div>
+    </div>
   );
 };
 
