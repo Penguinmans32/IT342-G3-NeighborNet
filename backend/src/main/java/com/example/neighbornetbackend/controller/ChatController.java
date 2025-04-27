@@ -8,8 +8,10 @@ import com.example.neighbornetbackend.model.ChatMessage;
 import com.example.neighbornetbackend.model.Item;
 import com.example.neighbornetbackend.repository.BorrowingAgreementRepository;
 import com.example.neighbornetbackend.repository.ItemRepository;
-import com.example.neighbornetbackend.repository.UserRepository;
-import com.example.neighbornetbackend.service.*;
+import com.example.neighbornetbackend.service.BorrowingAgreementService;
+import com.example.neighbornetbackend.service.ChatImageStorageService;
+import com.example.neighbornetbackend.service.ChatService;
+import com.example.neighbornetbackend.service.ConversationService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -23,19 +25,14 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.UrlResource;
 import java.io.IOException;
 import java.net.URI;
-import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 
 @Controller
 public class ChatController {
@@ -50,8 +47,6 @@ public class ChatController {
     private final ObjectMapper objectMapper;
     private final ItemRepository itemRepository;
     private final BorrowingAgreementRepository borrowingAgreementRepository;
-    private final FCMService fcmService;
-    private final UserRepository userRepository;
 
     public ChatController(
             SimpMessagingTemplate messagingTemplate,
@@ -59,11 +54,7 @@ public class ChatController {
             ChatService chatService,
             ChatImageStorageService chatImageStorageService,
             BorrowingAgreementService borrowingAgreementService,
-            ObjectMapper objectMapper,
-            ItemRepository itemRepository,
-            BorrowingAgreementRepository borrowingAgreementRepository,
-            FCMService fcmService,
-            UserRepository userRepository) {
+            ObjectMapper objectMapper, ItemRepository itemRepository, BorrowingAgreementRepository borrowingAgreementRepository) {
         this.messagingTemplate = messagingTemplate;
         this.conversationService = conversationService;
         this.chatService = chatService;
@@ -72,8 +63,6 @@ public class ChatController {
         this.objectMapper = objectMapper;
         this.itemRepository = itemRepository;
         this.borrowingAgreementRepository = borrowingAgreementRepository;
-        this.fcmService = fcmService;
-        this.userRepository = userRepository;
     }
 
     @MessageMapping("/chat")
@@ -82,80 +71,65 @@ public class ChatController {
             logger.debug("Processing message: senderId={}, receiverId={}, type={}",
                     chatMessage.getSenderId(), chatMessage.getReceiverId(), chatMessage.getMessageType());
 
-            String senderName = userRepository.findById(chatMessage.getSenderId())
-                    .map(user -> user.getUsername())
-                    .orElse("A user");
-
+            // Skip saving if it's a borrowing agreement message since it's already saved
             if (chatMessage.getMessageType() != null &&
                     "FORM".equals(chatMessage.getMessageType()) &&
                     "Sent a borrowing agreement".equals(chatMessage.getContent())) {
 
+                // Cache the ObjectMapper to improve performance
                 JsonNode formDataNode = objectMapper.readTree(chatMessage.getFormData());
                 Long itemId = formDataNode.get("itemId").asLong();
 
+                // Get the item details
                 Item item = itemRepository.findById(itemId)
                         .orElseThrow(() -> new RuntimeException("Item not found"));
 
+                // Create an ObjectNode to modify the formData
                 ObjectNode formDataObj = (ObjectNode) formDataNode;
                 formDataObj.put("itemName", item.getName());
 
+                // Update the formData in the message without saving
                 chatMessage.setFormData(objectMapper.writeValueAsString(formDataObj));
 
+                // Ensure timestamp is set
                 if (chatMessage.getTimestamp() == null) {
                     chatMessage.setTimestamp(LocalDateTime.now(ZoneOffset.UTC));
                 }
 
+                // Just send the WebSocket message without saving
                 messagingTemplate.convertAndSendToUser(
                         String.valueOf(chatMessage.getReceiverId()),
                         "/queue/messages",
                         chatMessage
                 );
 
+                // Also send a copy to the sender for UI consistency
                 messagingTemplate.convertAndSendToUser(
                         String.valueOf(chatMessage.getSenderId()),
                         "/queue/messages",
                         chatMessage
                 );
-
-                sendFcmNotification(
-                        chatMessage.getReceiverId(),
-                        senderName,
-                        "Sent you a borrowing agreement"
-                );
             } else {
+                // For non-agreement messages, proceed with normal save and send
+                // Ensure timestamp is set
                 if (chatMessage.getTimestamp() == null) {
                     chatMessage.setTimestamp(LocalDateTime.now(ZoneOffset.UTC));
                 }
 
                 ChatMessage saved = chatService.save(chatMessage);
 
+                // Send to receiver
                 messagingTemplate.convertAndSendToUser(
                         String.valueOf(chatMessage.getReceiverId()),
                         "/queue/messages",
                         saved
                 );
 
+                // Also send a copy to the sender for UI consistency
                 messagingTemplate.convertAndSendToUser(
                         String.valueOf(chatMessage.getSenderId()),
                         "/queue/messages",
                         saved
-                );
-
-                String notificationContent;
-                if (chatMessage.getMessageType() != null && chatMessage.getMessageType().equals("IMAGE")) {
-                    notificationContent = "Sent you an image";
-                } else {
-                    notificationContent = chatMessage.getContent();
-                    // Truncate long messages for notifications
-                    if (notificationContent != null && notificationContent.length() > 100) {
-                        notificationContent = notificationContent.substring(0, 97) + "...";
-                    }
-                }
-
-                sendFcmNotification(
-                        chatMessage.getReceiverId(),
-                        senderName,
-                        notificationContent
                 );
             }
         } catch (Exception e) {
@@ -173,31 +147,18 @@ public class ChatController {
 
             ChatMessage savedMessage = chatService.save(message);
 
-            String senderName = userRepository.findById(message.getSenderId())
-                    .map(user -> user.getUsername())
-                    .orElse("A user");
-
+            // Send to receiver
             messagingTemplate.convertAndSendToUser(
                     String.valueOf(message.getReceiverId()),
                     "/queue/messages",
                     savedMessage
             );
 
+            // Also send to sender for UI consistency
             messagingTemplate.convertAndSendToUser(
                     String.valueOf(message.getSenderId()),
                     "/queue/messages",
                     savedMessage
-            );
-
-            String notificationContent = message.getContent();
-            if (notificationContent != null && notificationContent.length() > 100) {
-                notificationContent = notificationContent.substring(0, 97) + "...";
-            }
-
-            sendFcmNotification(
-                    message.getReceiverId(),
-                    senderName,
-                    notificationContent
             );
 
             return ResponseEntity.ok(savedMessage);
@@ -644,26 +605,6 @@ public class ChatController {
         } catch (Exception e) {
             logger.error("Error responding to return request", e);
             return ResponseEntity.badRequest().build();
-        }
-    }
-
-    private void sendFcmNotification(Long receiverId, String senderName, String content) {
-        try {
-            userRepository.findById(receiverId).ifPresent(recipient -> {
-                String fcmToken = recipient.getFcmToken();
-
-                logger.debug("Sending FCM notification to user {}: token={}", receiverId,
-                        (fcmToken != null ? fcmToken.substring(0, Math.min(10, fcmToken.length())) + "..." : "null"));
-
-                if (fcmToken != null && !fcmToken.isEmpty()) {
-                    fcmService.sendChatNotification(fcmToken, senderName, content);
-                    logger.debug("FCM notification sent successfully");
-                } else {
-                    logger.debug("FCM notification not sent: user has no FCM token");
-                }
-            });
-        } catch (Exception e) {
-            logger.error("Error sending FCM notification", e);
         }
     }
 }
