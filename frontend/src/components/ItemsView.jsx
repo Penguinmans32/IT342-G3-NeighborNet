@@ -63,7 +63,7 @@ export default function ItemsView() {
 
   const fetchItems = async () => {
     try {
-      const response = await axios.get(`https://it342-g3-neighbornet.onrender.com/api/admin/items`, {
+      const response = await axios.get(`https://it342-g3-neighbornet.onrender.com/api/admin/items/no-activity`, {
         params: { search },
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`

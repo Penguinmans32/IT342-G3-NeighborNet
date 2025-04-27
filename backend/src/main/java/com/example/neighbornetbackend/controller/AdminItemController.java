@@ -83,4 +83,24 @@ public class AdminItemController {
                     .body(ApiResponse.error("Error deleting item: " + e.getMessage()));
         }
     }
+
+    @GetMapping("/no-activity")
+    public ResponseEntity<?> getAllItemsWithoutActivity(
+            @RequestParam(required = false) String search,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        try {
+            List<ItemDTO> items;
+            if (search != null && !search.trim().isEmpty()) {
+                items = itemService.searchItems(search.trim());
+            } else {
+                items = itemService.getAllItemsWithoutActivityLogging();
+            }
+            return ResponseEntity.ok(ApiResponse.success(items, "Items retrieved successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Error fetching items: " + e.getMessage()));
+        }
+    }
 }
