@@ -34,6 +34,25 @@ export default function ItemsView() {
   const [selectedItem, setSelectedItem] = useState(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
+  // Add the getItemImageUrl function
+  const getItemImageUrl = (imageUrl) => {
+    if (!imageUrl) return "/images/no-image.png";
+    
+    if (imageUrl.startsWith('http')) return imageUrl;
+    
+    if (imageUrl.includes('/api/borrowing/items/images/')) {
+      try {
+        const filename = imageUrl.substring(imageUrl.lastIndexOf('/') + 1);
+        return `https://storage.googleapis.com/neighbornet-media/item-images/${filename}`;
+      } catch (error) {
+        console.error("Error parsing image URL:", error);
+        return "/images/no-image.png";
+      }
+    }
+    
+    return imageUrl;
+  };
+
   useEffect(() => {
     fetchStats();
     fetchItems();
@@ -195,23 +214,23 @@ export default function ItemsView() {
             onClick={() => handleItemClick(item)}
           >
             <div className="relative h-48">
-            <img
-              src={item.imageUrls[0]}
-              alt={item.name}
-              className="w-full h-full object-cover"
-            />
-            {item.imageUrls.length > 1 && (
-              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
-                {item.imageUrls.map((_, index) => (
-                  <div
-                    key={index}
-                    className={`w-1.5 h-1.5 rounded-full ${
-                      index === 0 ? "bg-white" : "bg-white/50"
-                    }`}
-                  />
-                ))}
-              </div>
-            )}
+              <img
+                src={getItemImageUrl(item.imageUrls[0])}
+                alt={item.name}
+                className="w-full h-full object-cover"
+              />
+              {item.imageUrls.length > 1 && (
+                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+                  {item.imageUrls.map((_, index) => (
+                    <div
+                      key={index}
+                      className={`w-1.5 h-1.5 rounded-full ${
+                        index === 0 ? "bg-white" : "bg-white/50"
+                      }`}
+                    />
+                  ))}
+                </div>
+              )}
               <div className="absolute top-4 right-4">
                 <span className="px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
                   active
@@ -313,7 +332,7 @@ export default function ItemsView() {
                 <div className="w-48 space-y-2">
                   <div className="relative h-48">
                     <img
-                      src={selectedItem?.imageUrls[currentImageIndex]}
+                      src={getItemImageUrl(selectedItem?.imageUrls[currentImageIndex])}
                       alt={selectedItem?.name}
                       className="w-full h-48 object-cover rounded-lg"
                     />
@@ -357,7 +376,7 @@ export default function ItemsView() {
                           }`}
                         >
                           <img
-                            src={url}
+                            src={getItemImageUrl(url)}
                             alt={`${selectedItem?.name} preview ${index + 1}`}
                             className="w-full h-full object-cover"
                           />
