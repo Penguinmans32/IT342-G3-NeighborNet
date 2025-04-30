@@ -865,11 +865,11 @@ const Homepage = () => {
               animate={{ opacity: 1, y: 0 }}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              className={`w-full mb-4 px-4 py-2.5 rounded-lg flex items-center gap-2 justify-center
+              className={`inline-block sm:w-auto md:max-w-[80%] mb-4 px-6 py-2.5 rounded-lg flex items-center gap-2 justify-center
                 ${isDarkMode 
                   ? "bg-indigo-600 hover:bg-indigo-700 text-white" 
                   : "bg-blue-500 hover:bg-blue-600 text-white"
-                } transition-colors duration-200 font-medium shadow-sm hover:shadow`}
+                } transition-colors duration-200 font-medium shadow-sm hover:shadow mx-auto`}
             >
               <span>👋</span>
               <span>Visit Community Borrowing</span>
