@@ -1791,7 +1791,7 @@ const ClassDetails = () => {
               )}
             </div>
 
-           {/* Rating summary - Fixed to show actual distribution */}
+           {/* Rating summary - Comprehensive fix for all rating scenarios */}
             <div className="mt-6 p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow-sm">
               <div className="flex flex-col md:flex-row md:items-center gap-6">
                 <div className="text-center">
@@ -1820,13 +1820,54 @@ const ClassDetails = () => {
                 <div className="flex-1">
                   <div className="space-y-2">
                     {[5, 4, 3, 2, 1].map((rating) => {
-                      // For 5.0 average rating, all ratings are 5-star
-                      const percentage = 
-                        displayRating.count > 0 && displayRating.average === 5.0 && rating === 5
-                          ? 100 // If average is 5.0, then 100% of ratings are 5-star
-                          : displayRating.count > 0 && displayRating.distribution
-                            ? Math.round((displayRating.distribution[rating] || 0) / displayRating.count * 100)
-                            : 0;
+                      // Calculate percentage based on distribution data or handle special cases
+                      let percentage = 0;
+                      
+                      if (displayRating.count > 0) {
+                        if (displayRating.distribution && typeof displayRating.distribution === 'object') {
+                          // If we have actual distribution data, use it
+                          percentage = Math.round((displayRating.distribution[rating] || 0) / displayRating.count * 100);
+                        } else {
+                          // Handle special cases based on average ratings
+                          if (displayRating.average === 5.0 && rating === 5) {
+                            percentage = 100;  // All 5-star ratings
+                          } else if (displayRating.average === 4.5) {
+                            // Example for 4.5 average: 50% 5-star and 50% 4-star
+                            if (rating === 5) percentage = 50;
+                            else if (rating === 4) percentage = 50;
+                          } else if (displayRating.average === 4.0 && rating === 4) {
+                            percentage = 100;  // All 4-star ratings
+                          } else if (displayRating.average === 3.5) {
+                            if (rating === 4) percentage = 50;
+                            else if (rating === 3) percentage = 50;
+                          } else if (displayRating.average === 3.0 && rating === 3) {
+                            percentage = 100;  // All 3-star ratings
+                          } else if (displayRating.average === 2.5) {
+                            if (rating === 3) percentage = 50;
+                            else if (rating === 2) percentage = 50;
+                          } else if (displayRating.average === 2.0 && rating === 2) {
+                            percentage = 100;  // All 2-star ratings
+                          } else if (displayRating.average === 1.5) {
+                            if (rating === 2) percentage = 50;
+                            else if (rating === 1) percentage = 50;
+                          } else if (displayRating.average === 1.0 && rating === 1) {
+                            percentage = 100;  // All 1-star ratings
+                          }
+                          // Handle more complex cases: for non-standard averages, distribute based on proximity
+                          else if (!Number.isInteger(displayRating.average)) {
+                            const floor = Math.floor(displayRating.average);
+                            const ceiling = Math.ceil(displayRating.average);
+                            const decimalPart = displayRating.average - floor;
+                            
+                            if (rating === ceiling) percentage = Math.round(decimalPart * 100);
+                            else if (rating === floor) percentage = Math.round((1 - decimalPart) * 100);
+                          }
+                          // Default fallback for whole numbers
+                          else if (rating === Math.round(displayRating.average)) {
+                            percentage = 100;
+                          }
+                        }
+                      }
 
                       return (
                         <div key={rating} className="flex items-center gap-2">

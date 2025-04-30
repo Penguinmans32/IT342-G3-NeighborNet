@@ -289,7 +289,7 @@ const StatCard = ({ icon: Icon, label, value, color, trend }) => {
 };
 
 // Enhanced class card with interactive features
-const TreeNode = ({ classItem, index, onExpand, isExpanded, onDelete, onEdit, thumbnailUrl }) => {
+const TreeNode = ({ classItem, index, onExpand, isExpanded, onDelete, onEdit, thumbnailUrl, onAddLessonClick }) => {
   const [isHovered, setIsHovered] = useState(false)
   const [imageLoaded, setImageLoaded] = useState(false)
   const [isAddingLesson, setIsAddingLesson] = useState(false)
