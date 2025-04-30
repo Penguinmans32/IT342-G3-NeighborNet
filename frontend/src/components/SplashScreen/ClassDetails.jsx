@@ -1791,66 +1791,67 @@ const ClassDetails = () => {
               )}
             </div>
 
-            {/* Rating summary - Fixed to show actual distribution */}
-              <div className="mt-6 p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow-sm">
-                <div className="flex flex-col md:flex-row md:items-center gap-6">
-                  <div className="text-center">
-                    <div className="text-4xl font-bold text-blue-600">{displayRating.average.toFixed(1)}</div>
-                    <div className="flex justify-center mt-1">
-                      {[1, 2, 3, 4, 5].map((star) => {
-                        const fullStar = displayRating.average >= star
-                        const halfStar = displayRating.average > star - 0.5 && displayRating.average < star
+           {/* Rating summary - Fixed to show actual distribution */}
+            <div className="mt-6 p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow-sm">
+              <div className="flex flex-col md:flex-row md:items-center gap-6">
+                <div className="text-center">
+                  <div className="text-4xl font-bold text-blue-600">{displayRating.average.toFixed(1)}</div>
+                  <div className="flex justify-center mt-1">
+                    {[1, 2, 3, 4, 5].map((star) => {
+                      const fullStar = displayRating.average >= star
+                      const halfStar = displayRating.average > star - 0.5 && displayRating.average < star
 
-                        return (
-                          <div key={star} className="px-1">
-                            {fullStar ? (
-                              <MdStar size={20} className="text-yellow-400" />
-                            ) : halfStar ? (
-                              <MdStarHalf size={20} className="text-yellow-400" />
-                            ) : (
-                              <MdStarBorder size={20} className="text-gray-300" />
-                            )}
-                          </div>
-                        )
-                      })}
-                    </div>
-                    <div className="text-sm mt-1 text-gray-600">{displayRating.count} ratings</div>
+                      return (
+                        <div key={star} className="px-1">
+                          {fullStar ? (
+                            <MdStar size={20} className="text-yellow-400" />
+                          ) : halfStar ? (
+                            <MdStarHalf size={20} className="text-yellow-400" />
+                          ) : (
+                            <MdStarBorder size={20} className="text-gray-300" />
+                          )}
+                        </div>
+                      )
+                    })}
                   </div>
+                  <div className="text-sm mt-1 text-gray-600">{displayRating.count} ratings</div>
+                </div>
 
-                  <div className="flex-1">
-                    <div className="space-y-2">
-                      {[5, 4, 3, 2, 1].map((rating) => {
-                        // Calculate the percentage based on the actual count of each rating
-                        const countForThisRating = displayRating.distribution?.[rating] || 0;
-                        const percentage = 
-                          displayRating.count > 0
-                            ? Math.round((countForThisRating / displayRating.count) * 100)
+                <div className="flex-1">
+                  <div className="space-y-2">
+                    {[5, 4, 3, 2, 1].map((rating) => {
+                      // For 5.0 average rating, all ratings are 5-star
+                      const percentage = 
+                        displayRating.count > 0 && displayRating.average === 5.0 && rating === 5
+                          ? 100 // If average is 5.0, then 100% of ratings are 5-star
+                          : displayRating.count > 0 && displayRating.distribution
+                            ? Math.round((displayRating.distribution[rating] || 0) / displayRating.count * 100)
                             : 0;
 
-                        return (
-                          <div key={rating} className="flex items-center gap-2">
-                            <div className="flex items-center w-16">
-                              <span className="text-sm text-gray-600">{rating}</span>
-                              <MdStar className="ml-1 text-yellow-400 text-sm" />
-                            </div>
-                            <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
-                              <motion.div
-                                initial={{ width: 0 }}
-                                animate={{ width: `${percentage}%` }}
-                                transition={{ duration: 1, delay: 0.3 + (5 - rating) * 0.1 }}
-                                className="h-full bg-yellow-400 rounded-full"
-                              />
-                            </div>
-                            <div className="w-10 text-right">
-                              <span className="text-sm text-gray-600">{percentage}%</span>
-                            </div>
+                      return (
+                        <div key={rating} className="flex items-center gap-2">
+                          <div className="flex items-center w-16">
+                            <span className="text-sm text-gray-600">{rating}</span>
+                            <MdStar className="ml-1 text-yellow-400 text-sm" />
                           </div>
-                        )
-                      })}
-                    </div>
+                          <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                            <motion.div
+                              initial={{ width: 0 }}
+                              animate={{ width: `${percentage}%` }}
+                              transition={{ duration: 1, delay: 0.3 + (5 - rating) * 0.1 }}
+                              className="h-full bg-yellow-400 rounded-full"
+                            />
+                          </div>
+                          <div className="w-10 text-right">
+                            <span className="text-sm text-gray-600">{percentage}%</span>
+                          </div>
+                        </div>
+                      )
+                    })}
                   </div>
                 </div>
               </div>
+            </div>
           </div>
 
           {/* Feedback Form - Enhanced */}
