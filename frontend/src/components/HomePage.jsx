@@ -682,46 +682,51 @@ const Homepage = () => {
                 </span>
               </motion.div>
 
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex-1 max-w-2xl mx-4 hidden md:block"
-              >
-                <div className="relative group">
-                  <MdSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-xl" />
-                  <input
-                    type="search"
-                    placeholder="Search Categories, Teachers..."
-                    className={`w-full h-10 pl-10 pr-4 rounded-full border-2 border-transparent 
-                              ${
-                                isDarkMode
-                                  ? "bg-gray-800/90 text-white placeholder:text-gray-400 focus:ring-indigo-400"
-                                  : "bg-white/90 text-gray-900 focus:ring-purple-400"
-                              } 
-                              backdrop-blur-sm focus:outline-none focus:ring-2 
-                              transition-all shadow-lg hover:bg-opacity-100`}
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    onKeyDown={handleSearch}
-                    onFocus={() => setIsSearchFocused(true)}
-                    onBlur={() => setTimeout(() => setIsSearchFocused(false), 300)}
-                  />
-                  <span
-                    className={`absolute right-4 top-1/2 transform -translate-y-1/2 
-                                ${isDarkMode ? "bg-gray-700" : "bg-gray-100"} px-2 py-1 rounded-md text-xs 
-                                ${isDarkMode ? "text-gray-300" : "text-gray-500"}
-                                opacity-50 group-hover:opacity-100 transition-opacity duration-300`}
+                <div className="flex-1 flex items-center gap-3 max-w-3xl mx-4 hidden md:flex">
+                  {/* Search Bar */}
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex-1"
                   >
-                    ⌘ K
-                  </span>
-                </div>
+                    <div className="relative group">
+                      <MdSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-xl" />
+                      <input
+                        type="search"
+                        placeholder="Search Categories, Teachers..."
+                        className={`w-full h-10 pl-10 pr-4 rounded-full border-2 border-transparent 
+                                ${
+                                  isDarkMode
+                                    ? "bg-gray-800/90 text-white placeholder:text-gray-400 focus:ring-indigo-400"
+                                    : "bg-white/90 text-gray-900 focus:ring-purple-400"
+                                } 
+                                backdrop-blur-sm focus:outline-none focus:ring-2 
+                                transition-all shadow-lg hover:bg-opacity-100`}
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        onKeyDown={handleSearch}
+                        onFocus={() => setIsSearchFocused(true)}
+                        onBlur={() => setTimeout(() => setIsSearchFocused(false), 300)}
+                      />
+                      <span
+                        className={`absolute right-4 top-1/2 transform -translate-y-1/2 
+                                  ${isDarkMode ? "bg-gray-700" : "bg-gray-100"} px-2 py-1 rounded-md text-xs 
+                                  ${isDarkMode ? "text-gray-300" : "text-gray-500"}
+                                  opacity-50 group-hover:opacity-100 transition-opacity duration-300`}
+                      >
+                        ⌘ K
+                      </span>
+                    </div>
+                  </motion.div>
 
-                 {/* Community Borrowing Button */}
+                  {/* Community Borrowing Button */}
                   <motion.button
                     onClick={() => navigate("/borrowing")}
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    className={`px-4 py-1.5 rounded-full flex items-center gap-2 
+                    className={`whitespace-nowrap px-4 py-2 rounded-full flex items-center gap-2 
                               ${isDarkMode 
                                 ? "bg-indigo-600 hover:bg-indigo-700 text-white" 
                                 : "bg-blue-600 hover:bg-blue-700 text-white"
@@ -730,7 +735,7 @@ const Homepage = () => {
                     <span>👋</span>
                     <span className="text-sm font-medium">Community Borrowing</span>
                   </motion.button>
-              </motion.div>
+                </div>
 
               <motion.div
                 initial={{ opacity: 0, x: 20 }}
