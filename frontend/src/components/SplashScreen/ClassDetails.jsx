@@ -1504,7 +1504,119 @@ const ClassDetails = () => {
 
           {/* Right Column - Sticky Sidebar */}
           <div className="lg:sticky lg:top-24 space-y-8 h-fit">
-            {/* Class Creator Card - Enhanced */}
+            {/* Quick Actions Card - Now first */}
+            {!isOwner && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl shadow-lg p-6 text-white"
+              >
+                <h3 className="text-xl font-semibold mb-4">Ready to Start Learning?</h3>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <MdCheckCircle className="text-blue-200" />
+                    <p className="text-blue-100">Self-paced learning</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <MdCheckCircle className="text-blue-200" />
+                    <p className="text-blue-100">Access to all materials</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <MdCheckCircle className="text-blue-200" />
+                    <p className="text-blue-100">Certificate upon completion</p>
+                  </div>
+
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={startLearning}
+                    className="w-full py-3 px-6 bg-white text-blue-600 rounded-xl font-medium
+                              hover:bg-blue-50 transition-colors duration-300 mt-6
+                              flex items-center justify-center gap-2"
+                  >
+                    {!isAuthenticated ? (
+                      <>
+                        <MdLock className="text-xl" />
+                        Sign Up to Begin
+                      </>
+                    ) : isLearning ? (
+                      <>
+                        <MdCheckCircle className="text-xl" />
+                        Journey Started
+                      </>
+                    ) : (
+                      <>
+                        <MdPlayArrow className="text-xl" />
+                        Begin Your Journey
+                      </>
+                    )}
+                  </motion.button>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Progress Card - Now second */}
+            {Number(user?.data?.id) !== Number(classData?.creatorId) && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6"
+              >
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Your Progress</h3>
+                <div className="space-y-4">
+                  <div className="w-full bg-gray-100 rounded-full h-2">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{
+                        width: `${(progressData.completedLessons.size / lessons.length) * 100}%`,
+                      }}
+                      className="h-full bg-green-500 rounded-full"
+                    />
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">{progressData.completedLessons.size} lessons completed</span>
+                    <span className="text-gray-600">{lessons.length - progressData.completedLessons.size} remaining</span>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* User Rating Card - Now third */}
+            {!isOwner && isAuthenticated && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6"
+              >
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Rate This Class</h3>
+                <div className="space-y-4">
+                  <p className="text-gray-600 text-sm">Your feedback helps other students and improves our content.</p>
+
+                  <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl">
+                    <div className="flex flex-col items-center gap-3">
+                      <p className="text-gray-700 font-medium">Your Rating</p>
+                      <StarRating
+                        initialRating={userRating}
+                        classId={classId}
+                        onRatingUpdate={handleRatingUpdate}
+                        readOnly={false}
+                      />
+                      {userRating > 0 && (
+                        <div className="flex items-center gap-2 mt-2 text-green-600">
+                          <MdCheckCircle />
+                          <span className="text-sm font-medium">Rating submitted</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Class Creator Card - Now last */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -1646,118 +1758,6 @@ const ClassDetails = () => {
                 </div>
               </div>
             </motion.div>
-
-            {/* User Rating Card */}
-            {!isOwner && isAuthenticated && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6"
-              >
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Rate This Class</h3>
-                <div className="space-y-4">
-                  <p className="text-gray-600 text-sm">Your feedback helps other students and improves our content.</p>
-
-                  <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl">
-                    <div className="flex flex-col items-center gap-3">
-                      <p className="text-gray-700 font-medium">Your Rating</p>
-                      <StarRating
-                        initialRating={userRating}
-                        classId={classId}
-                        onRatingUpdate={handleRatingUpdate}
-                        readOnly={false}
-                      />
-                      {userRating > 0 && (
-                        <div className="flex items-center gap-2 mt-2 text-green-600">
-                          <MdCheckCircle />
-                          <span className="text-sm font-medium">Rating submitted</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-
-            {/* Quick Actions Card */}
-            {!isOwner && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl shadow-lg p-6 text-white"
-              >
-                <h3 className="text-xl font-semibold mb-4">Ready to Start Learning?</h3>
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <MdCheckCircle className="text-blue-200" />
-                    <p className="text-blue-100">Self-paced learning</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <MdCheckCircle className="text-blue-200" />
-                    <p className="text-blue-100">Access to all materials</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <MdCheckCircle className="text-blue-200" />
-                    <p className="text-blue-100">Certificate upon completion</p>
-                  </div>
-
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={startLearning}
-                    className="w-full py-3 px-6 bg-white text-blue-600 rounded-xl font-medium
-                                hover:bg-blue-50 transition-colors duration-300 mt-6
-                                flex items-center justify-center gap-2"
-                  >
-                    {!isAuthenticated ? (
-                      <>
-                        <MdLock className="text-xl" />
-                        Sign Up to Begin
-                      </>
-                    ) : isLearning ? (
-                      <>
-                        <MdCheckCircle className="text-xl" />
-                        Journey Started
-                      </>
-                    ) : (
-                      <>
-                        <MdPlayArrow className="text-xl" />
-                        Begin Your Journey
-                      </>
-                    )}
-                  </motion.button>
-                </div>
-              </motion.div>
-            )}
-
-            {/* Progress Card - Only show for non-owners */}
-            {Number(user?.data?.id) !== Number(classData?.creatorId) && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-                className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6"
-              >
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Your Progress</h3>
-                <div className="space-y-4">
-                  <div className="w-full bg-gray-100 rounded-full h-2">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{
-                        width: `${(progressData.completedLessons.size / lessons.length) * 100}%`,
-                      }}
-                      className="h-full bg-green-500 rounded-full"
-                    />
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">{progressData.completedLessons.size} lessons completed</span>
-                    <span className="text-gray-600">{lessons.length - progressData.completedLessons.size} remaining</span>
-                  </div>
-                </div>
-              </motion.div>
-            )}
           </div>
         </div>
       </div>
@@ -1791,64 +1791,66 @@ const ClassDetails = () => {
               )}
             </div>
 
-            {/* Rating summary - New addition */}
-            <div className="mt-6 p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow-sm">
-              <div className="flex flex-col md:flex-row md:items-center gap-6">
-                <div className="text-center">
-                  <div className="text-4xl font-bold text-blue-600">{displayRating.average.toFixed(1)}</div>
-                  <div className="flex justify-center mt-1">
-                    {[1, 2, 3, 4, 5].map((star) => {
-                      const fullStar = displayRating.average >= star
-                      const halfStar = displayRating.average > star - 0.5 && displayRating.average < star
+            {/* Rating summary - Fixed to show actual distribution */}
+              <div className="mt-6 p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow-sm">
+                <div className="flex flex-col md:flex-row md:items-center gap-6">
+                  <div className="text-center">
+                    <div className="text-4xl font-bold text-blue-600">{displayRating.average.toFixed(1)}</div>
+                    <div className="flex justify-center mt-1">
+                      {[1, 2, 3, 4, 5].map((star) => {
+                        const fullStar = displayRating.average >= star
+                        const halfStar = displayRating.average > star - 0.5 && displayRating.average < star
 
-                      return (
-                        <div key={star} className="px-1">
-                          {fullStar ? (
-                            <MdStar size={20} className="text-yellow-400" />
-                          ) : halfStar ? (
-                            <MdStarHalf size={20} className="text-yellow-400" />
-                          ) : (
-                            <MdStarBorder size={20} className="text-gray-300" />
-                          )}
-                        </div>
-                      )
-                    })}
+                        return (
+                          <div key={star} className="px-1">
+                            {fullStar ? (
+                              <MdStar size={20} className="text-yellow-400" />
+                            ) : halfStar ? (
+                              <MdStarHalf size={20} className="text-yellow-400" />
+                            ) : (
+                              <MdStarBorder size={20} className="text-gray-300" />
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                    <div className="text-sm mt-1 text-gray-600">{displayRating.count} ratings</div>
                   </div>
-                  <div className="text-sm mt-1 text-gray-600">{displayRating.count} ratings</div>
-                </div>
 
-                <div className="flex-1">
-                  <div className="space-y-2">
-                    {[5, 4, 3, 2, 1].map((rating) => {
-                      const percentage =
-                        displayRating.count > 0
-                          ? Math.round((displayRating.average >= rating ? (6 - rating) * 20 : 0) * 100) / 100
-                          : 0
+                  <div className="flex-1">
+                    <div className="space-y-2">
+                      {[5, 4, 3, 2, 1].map((rating) => {
+                        // Calculate the percentage based on the actual count of each rating
+                        const countForThisRating = displayRating.distribution?.[rating] || 0;
+                        const percentage = 
+                          displayRating.count > 0
+                            ? Math.round((countForThisRating / displayRating.count) * 100)
+                            : 0;
 
-                      return (
-                        <div key={rating} className="flex items-center gap-2">
-                          <div className="flex items-center w-16">
-                            <span className="text-sm text-gray-600">{rating}</span>
-                            <MdStar className="ml-1 text-yellow-400 text-sm" />
+                        return (
+                          <div key={rating} className="flex items-center gap-2">
+                            <div className="flex items-center w-16">
+                              <span className="text-sm text-gray-600">{rating}</span>
+                              <MdStar className="ml-1 text-yellow-400 text-sm" />
+                            </div>
+                            <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                              <motion.div
+                                initial={{ width: 0 }}
+                                animate={{ width: `${percentage}%` }}
+                                transition={{ duration: 1, delay: 0.3 + (5 - rating) * 0.1 }}
+                                className="h-full bg-yellow-400 rounded-full"
+                              />
+                            </div>
+                            <div className="w-10 text-right">
+                              <span className="text-sm text-gray-600">{percentage}%</span>
+                            </div>
                           </div>
-                          <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
-                            <motion.div
-                              initial={{ width: 0 }}
-                              animate={{ width: `${percentage}%` }}
-                              transition={{ duration: 1, delay: 0.3 + (5 - rating) * 0.1 }}
-                              className="h-full bg-yellow-400 rounded-full"
-                            />
-                          </div>
-                          <div className="w-10 text-right">
-                            <span className="text-sm text-gray-600">{percentage}%</span>
-                          </div>
-                        </div>
-                      )
-                    })}
+                        )
+                      })}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
           </div>
 
           {/* Feedback Form - Enhanced */}

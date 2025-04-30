@@ -726,13 +726,18 @@ const Borrowing = () => {
               <p className="text-xl text-blue-100">Share resources, build trust, strengthen community</p>
             </div>
             <motion.button
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={handleAddItem}
-              className="px-6 py-3 bg-white text-blue-900 rounded-full font-medium 
-                      flex items-center gap-2 hover:bg-blue-50 transition-colors shadow-md"
+              className="fixed bottom-6 right-6 z-50 px-6 py-3 bg-blue-500 text-white rounded-full font-medium 
+                        flex items-center gap-2 hover:bg-blue-600 transition-colors shadow-lg"
+              style={{
+                boxShadow: '0 4px 14px rgba(0, 0, 0, 0.25)'
+              }}
             >
-              <div className="bg-blue-500 text-white p-1 rounded-full">
+              <div className="bg-white text-blue-500 p-1 rounded-full">
                 <MdAdd className="text-xl" />
               </div>
               <span>List an Item</span>
