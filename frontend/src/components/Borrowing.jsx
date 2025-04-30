@@ -731,7 +731,7 @@ const Borrowing = () => {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={handleAddItem}
-              className="fixed bottom-6 right-6 z-50 px-6 py-3 bg-blue-500 text-white rounded-full font-medium 
+              className="fixed top-24 left-6 z-50 px-6 py-3 bg-blue-500 text-white rounded-full font-medium 
                         flex items-center gap-2 hover:bg-blue-600 transition-colors shadow-lg"
               style={{
                 boxShadow: '0 4px 14px rgba(0, 0, 0, 0.25)'

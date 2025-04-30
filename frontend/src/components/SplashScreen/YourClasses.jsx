@@ -319,32 +319,6 @@ const TreeNode = ({ classItem, index, onExpand, isExpanded, onDelete, onEdit, th
     }
   }, [classItem?.id])
 
-  const handleAddLesson = async (formData) => {
-    try {
-      const response = await axios.post(`https://it342-g3-neighbornet.onrender.com/api/classes/${classItem.id}/lessons`, formData, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-          "Content-Type": "multipart/form-data",
-        },
-      })
-      setLessons((prev) => [...prev, response.data])
-      setIsAddingLesson(false)
-      setIsShowingConfetti(true)
-      setTimeout(() => setIsShowingConfetti(false), 2000)
-      
-      toast.success("Lesson added successfully!", {
-        icon: '🎉',
-        style: {
-          borderRadius: '10px',
-          background: '#333',
-          color: '#fff',
-        },
-      })
-    } catch (error) {
-      console.error("Error adding lesson:", error)
-    }
-  }
-
   const nodeVariants = {
     hidden: { opacity: 0, y: 50 },
     visible: {
@@ -522,15 +496,15 @@ const TreeNode = ({ classItem, index, onExpand, isExpanded, onDelete, onEdit, th
         <LessonList classId={classItem.id} lessons={lessons || []} onAddLesson={() => setIsAddingLesson(true)} />
         
         <div className="flex gap-2">
-          <motion.button
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.97 }}
-            onClick={() => setIsAddingLesson(true)}
-            className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all duration-300"
-          >
-            <MdAdd className="text-xl" />
-            <span>Add Lesson</span>
-          </motion.button>
+        <motion.button
+          whileHover={{ scale: 1.03 }}
+          whileTap={{ scale: 0.97 }}
+          onClick={() => onAddLessonClick(classItem.id)} 
+          className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all duration-300"
+        >
+          <MdAdd className="text-xl" />
+          <span>Add Lesson</span>
+        </motion.button>
           
           <motion.button
             whileHover={{ scale: 1.03 }}
@@ -543,15 +517,6 @@ const TreeNode = ({ classItem, index, onExpand, isExpanded, onDelete, onEdit, th
           </motion.button>
         </div>
       </div>
-
-      {isAddingLesson && (
-        <AddLessonModal
-          isOpen={isAddingLesson}
-          onClose={() => setIsAddingLesson(false)}
-          onSubmit={handleAddLesson}
-          classId={classItem.id}
-        />
-      )}
     </motion.div>
   )
 }
@@ -571,35 +536,6 @@ const FilterChip = ({ label, active, onClick, icon: Icon }) => (
     {Icon && <Icon className="w-4 h-4" />}
     <span>{label}</span>
   </motion.button>
-);
-
-// AI suggestion card component
-const AISuggestionCard = ({ title, description, icon: Icon, onClick, color }) => (
-  <motion.div
-    whileHover={{ y: -5, scale: 1.02 }}
-    whileTap={{ scale: 0.98 }}
-    onClick={onClick}
-    className={`bg-white rounded-xl p-5 border border-gray-100 shadow-sm hover:shadow-lg cursor-pointer relative overflow-hidden`}
-  >
-    {/* Accent corner */}
-    <div className={`absolute top-0 right-0 w-16 h-16 bg-${color}/10 rounded-bl-3xl`} />
-    
-    <div className="flex items-center gap-3 mb-3">
-      <div className={`p-2 rounded-lg bg-${color}/10 text-${color}`}>
-        <Icon className="w-5 h-5" />
-      </div>
-      <h3 className="font-semibold text-gray-800">{title}</h3>
-    </div>
-    
-    <p className="text-gray-600 text-sm line-clamp-2">{description}</p>
-    
-    <div className="mt-3 flex justify-end">
-      <div className={`flex items-center text-sm text-${color} font-medium`}>
-        <span>Try now</span>
-        <ChevronRight className="w-4 h-4 ml-1" />
-      </div>
-    </div>
-  </motion.div>
 );
 
 // Insights section
@@ -817,6 +753,53 @@ const YourClasses = () => {
   const [showScrollTop, setShowScrollTop] = useState(false)
   const [isFiltersOpen, setIsFiltersOpen] = useState(false)
   const [recentlyAdded, setRecentlyAdded] = useState(false)
+  const [addingLessonToClass, setAddingLessonToClass] = useState(null);
+
+  const handleAddLessonClick = (classId) => {
+    setAddingLessonToClass(classId);
+  };
+
+  const handleAddLesson = async (formData) => {
+    try {
+      const classId = addingLessonToClass;
+      if (!classId) return;
+      
+      const response = await axios.post(
+        `https://it342-g3-neighbornet.onrender.com/api/classes/${classId}/lessons`, 
+        formData, 
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+      
+      const updatedClassesResponse = await axios.get("https://it342-g3-neighbornet.onrender.com/api/classes/my-classes", {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+      
+      if (Array.isArray(updatedClassesResponse.data)) {
+        setClasses(updatedClassesResponse.data);
+      }
+      
+      setAddingLessonToClass(null);
+      
+      toast.success("Lesson added successfully!", {
+        icon: '🎉',
+        style: {
+          borderRadius: '10px',
+          background: '#333',
+          color: '#fff',
+        },
+      });
+    } catch (error) {
+      console.error("Error adding lesson:", error);
+      toast.error("Failed to add lesson. Please try again.");
+    }
+  };
   
   // Track scroll position for parallax effects
   useEffect(() => {
@@ -1528,21 +1511,31 @@ const YourClasses = () => {
       {/* Tree Container */}
       <div className="relative grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {filteredAndSortedClasses.map((classItem, index) => (
-          <TreeNode
-            key={classItem.id}
-            classItem={classItem}
-            index={index}
-            onExpand={handleExpand}
-            isExpanded={expandedClass === classItem.id}
-            onDelete={handleDeleteClass}
-            onEdit={handleEdit}
-            thumbnailUrl={thumbnailUrls[classItem.id]}
-          />
+           <TreeNode 
+           key={classItem.id}
+           classItem={classItem}
+           index={index}
+           onExpand={handleExpand}
+           isExpanded={expandedClass === classItem.id}
+           onDelete={handleDeleteClass}
+           onEdit={handleEdit}
+           thumbnailUrl={thumbnailUrls[classItem.id]}
+           onAddLessonClick={handleAddLessonClick}
+         />
         ))}
       </div>
     </motion.div>
   )}
 </div>
+
+    {addingLessonToClass && (
+            <AddLessonModal
+              isOpen={!!addingLessonToClass}
+              onClose={() => setAddingLessonToClass(null)}
+              onSubmit={handleAddLesson}
+              classId={addingLessonToClass}
+            />
+          )}
 <Footer />
 </div>
   )
