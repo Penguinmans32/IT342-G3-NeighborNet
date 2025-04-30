@@ -715,6 +715,21 @@ const Homepage = () => {
                     ⌘ K
                   </span>
                 </div>
+
+                 {/* Community Borrowing Button */}
+                  <motion.button
+                    onClick={() => navigate("/borrowing")}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className={`px-4 py-1.5 rounded-full flex items-center gap-2 
+                              ${isDarkMode 
+                                ? "bg-indigo-600 hover:bg-indigo-700 text-white" 
+                                : "bg-blue-600 hover:bg-blue-700 text-white"
+                              } transition-colors shadow-sm`}
+                  >
+                    <span>👋</span>
+                    <span className="text-sm font-medium">Community Borrowing</span>
+                  </motion.button>
               </motion.div>
 
               <motion.div
@@ -859,21 +874,6 @@ const Homepage = () => {
         <div className="hidden lg:block fixed left-12 top-32 z-40 w-72">
           <div className="sticky top-32 max-h-[calc(100vh-160px)] overflow-y-auto thin-scrollbar">
             <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="space-y-2">
-            <motion.button
-              onClick={() => navigate("/borrowing")}
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className={`inline-block sm:w-auto md:max-w-[80%] mb-4 px-6 py-2.5 rounded-lg flex items-center gap-2 justify-center
-                ${isDarkMode 
-                  ? "bg-indigo-600 hover:bg-indigo-700 text-white" 
-                  : "bg-blue-500 hover:bg-blue-600 text-white"
-                } transition-colors duration-200 font-medium shadow-sm hover:shadow mx-auto`}
-            >
-              <span>👋</span>
-              <span>Visit Community Borrowing</span>
-            </motion.button>
 
               <h2
                 className={`text-2xl font-bold ${isDarkMode ? "text-white" : "text-gray-900"} mb-8 pl-4 tracking-tight`}
